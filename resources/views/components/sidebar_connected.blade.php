@@ -66,6 +66,19 @@
                     </a>
                 </li>
             </ul>
+            @auth
+                @if (Auth::user()->role === 'livreur')
+                    <p class="menu-section">Livreur</p>
+                    <ul>
+                        <li class="{{ request()->routeIs('livreur.carte.vtc') ? 'active' : '' }}">
+                            <a href="{{ route('livreur.carte.vtc') }}">
+                                <i class="fa-solid fa-id-card"></i>
+                                <span>Carte VTC</span>
+                            </a>
+                        </li>
+                    </ul>
+                @endif
+            @endauth
 
             <p class="menu-section">COMPTE</p>
             <ul>
@@ -78,7 +91,8 @@
                 <li>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <x-responsive-nav-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();">
+                        <x-responsive-nav-link :href="route('logout')"
+                            onclick="event.preventDefault(); this.closest('form').submit();">
                             <i class="fa-solid fa-right-from-bracket"></i>
                             <span>Se déconnecter</span>
                         </x-responsive-nav-link>

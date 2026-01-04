@@ -4,42 +4,7 @@
 @section('page_title', 'Tableau de bord')
 
 @section('content')
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-    
-    body { 
-        font-family: 'Plus Jakarta Sans', sans-serif; 
-        background-color: #f4f6f8; /* Gris très clair */
-        color: #1a1c1e;
-    }
 
-    .accent-rouge { color: rgb(233, 29, 40); }
-    .bg-accent-rouge { background-color: rgb(233, 29, 40); }
-    .border-accent-rouge { border-color: rgb(233, 29, 40); }
-    
-    .stat-card {
-        background: white;
-        border: 1px solid #e2e8f0;
-        transition: all 0.25s ease;
-    }
-    
-    .stat-card:hover {
-        border-color: rgb(233, 29, 40);
-        box-shadow: 0 12px 20px -10px rgba(233, 29, 40, 0.1);
-    }
-
-    .btn-primary-custom {
-        background-color: rgb(233, 29, 40);
-        color: white;
-        transition: all 0.3s ease;
-    }
-
-    .btn-primary-custom:hover {
-        background-color: rgba(233, 29, 40, 0.9);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(233, 29, 40, 0.2);
-    }
-</style>
 
 <div class="p-6 lg:p-10">
     

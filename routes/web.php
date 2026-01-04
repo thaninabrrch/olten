@@ -9,9 +9,11 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\TypeServiceController;
 use App\Http\Controllers\Admin\ServiceController;
+use App\Http\Controllers\Admin\VtcAdminController;
 use App\Http\Controllers\Admin\SubCategoryController;
 use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\livrer\CarteVtcController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ContactController;
 use App\Http\Middleware\AdminMiddleware;
@@ -75,14 +77,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/annonces/{ad}/modifier', [AdController::class, 'edit'])->name('ads.edit');
     Route::delete('/annonces/{ad}', [AdController::class, 'destroy'])->name('ads.destroy');
 });
-
-// Routes admin protégées
-Route::prefix('admin')->name('admin.')->group(function () {
-
-
     // Login admin public
-    Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AdminAuthController::class, 'login'])->name('login.submit');
+    Route::get('admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
+    Route::post('admin/login', [AdminAuthController::class, 'login'])->name('admin.login.submit');
+// Routes admin protégées
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin']) ->group(function () {
+
     // Catégories
     Route::get('/categorie', [CategoryController::class, 'index'])->name('categories.index');
     Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
@@ -90,10 +90,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/categories/{category}/edit', [CategoryController::class, 'edit'])->name('categories.edit');
     Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
     Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
-    // Dashboard avec vérification rôle
-    Route::get('/', function () {
-        return app(\App\Http\Controllers\Admin\AdminDashboardController::class)->index();
-    })->name('dashboard');
+    // Dashboard
+    Route::get('/', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'index'])->name('dashboard');
     // Sous-catégories
     Route::resource('subcategories', SubCategoryController::class);
 
@@ -126,10 +124,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/admin/users/{user}/verify', [UserController::class, 'verify'])->name('users.verify');
     Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
-
-
+    // carte VTC
+    Route::get('vtc-cards', [VtcAdminController::class, 'index'])->name('vtc_cards.index');
+    Route::post('vtc-cards/{document}/approve', [VtcAdminController::class, 'approve'])->name('vtc_cards.approve');
+    Route::post('vtc-cards/{document}/reject', [VtcAdminController::class, 'reject'])->name('vtc_cards.reject');
     // Logout admin
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
 });
 
+
+Route::prefix('livreur')->group(function () {
+    Route::post('/documents/upload', [CarteVtcController::class, 'store'])->name('documents.upload');
+    Route::get('/livreur/carte-vtc', [CarteVtcController::class, 'index'])->name('livreur.carte.vtc');
+});
+
 require __DIR__.'/auth.php';
+

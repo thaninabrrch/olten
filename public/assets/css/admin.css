@@ -193,9 +193,11 @@
       pointer-events: none;
       transition: 0.18s ease-in-out;
   }
-a{
-    text-decoration: none;
-}
+
+  a {
+      text-decoration: none;
+  }
+
   .dropdown-menu-white.active {
       opacity: 1;
       transform: translateY(0);
@@ -249,30 +251,76 @@ a{
       color: #e91d28;
       /* Rouge */
   }
-              /* Toast container */
-            .toast-custom {
-                position: fixed;
-                top: 1rem;
-                right: 1rem;
-                background-color: #ffffff;
-                /* fond blanc */
-                color: #000000;
-                /* texte noir */
-                border-left: 5px solid #6ee7b7;
-                /* accent vert léger */
-                padding: 1rem 1.5rem;
-                border-radius: 0.5rem;
-                box-shadow: 0 4px 8px rgba(110, 231, 183, 0.3);
-                /* ombre verte subtile */
-                opacity: 0;
-                transform: translateY(-20px);
-                transition: opacity 0.3s ease, transform 0.3s ease;
-                z-index: 9999;
-                max-width: 300px;
-            }
 
-            /* Affichage actif */
-            .toast-custom.show {
-                opacity: 1;
-                transform: translateY(0);
-            }
+  /* Toast container */
+  .toast-custom {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      background-color: #ffffff;
+      /* fond blanc */
+      color: #000000;
+      /* texte noir */
+      border-left: 5px solid #6ee7b7;
+      /* accent vert léger */
+      padding: 1rem 1.5rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 8px rgba(110, 231, 183, 0.3);
+      /* ombre verte subtile */
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 9999;
+      max-width: 300px;
+  }
+
+  /* Affichage actif */
+  .toast-custom.show {
+      opacity: 1;
+      transform: translateY(0);
+  }
+
+
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+  body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f4f6f8;
+      /* Gris très clair */
+      color: #1a1c1e;
+  }
+
+  .accent-rouge {
+      color: rgb(233, 29, 40);
+  }
+
+  .bg-accent-rouge {
+      background-color: rgb(233, 29, 40);
+  }
+
+  .border-accent-rouge {
+      border-color: rgb(233, 29, 40);
+  }
+
+  .stat-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      transition: all 0.25s ease;
+  }
+
+  .stat-card:hover {
+      border-color: rgb(233, 29, 40);
+      box-shadow: 0 12px 20px -10px rgba(233, 29, 40, 0.1);
+  }
+
+  .btn-primary-custom {
+      background-color: rgb(233, 29, 40);
+      color: white;
+      transition: all 0.3s ease;
+  }
+
+  .btn-primary-custom:hover {
+      background-color: rgba(233, 29, 40, 0.9);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(233, 29, 40, 0.2);
+  }
