@@ -100,20 +100,84 @@ class AdController extends Controller
         return redirect()->route('ads.index')->with('success', 'Annonce créée avec succès !');
     }
 
+    public function edit(Ad $ad)
+    {
+        $this->authorize('update', $ad);
+        $categories = Category::all();
+        return view('pages.locateur.edit', compact('ad', 'categories'));
+    }
+
+    public function update(Request $request, Ad $ad)
+    {
+        $this->authorize('update', $ad);
+
+        $messages = [
+            'title.required' => 'Le titre est obligatoire.',
+            'title.max'      => 'Le titre ne peut pas dépasser :max caractères.',
+            'category_id.required' => 'La catégorie est obligatoire.',
+            'category_id.exists'   => 'La catégorie sélectionnée est invalide.',
+            'price_per_day.required' => 'Le prix par jour est obligatoire.',
+            'price_per_day.numeric'  => 'Le prix doit être un nombre.',
+            'image.image'    => "Le fichier doit être une image.",
+            'image.mimes'    => "L'image doit être au format :values.",
+            'image.max'      => "L'image ne peut pas dépasser 2Mo.",
+        ];
+
+        $validated = $request->validate([
+            'title'           => 'required|string|max:255',
+            'category_id'     => 'required|exists:categories,id',
+            'address'         => 'nullable|string|max:255',
+            'longitude'       => 'nullable|numeric',
+            'latitude'        => 'nullable|numeric',
+            'price_per_day'   => 'required|numeric|min:0',
+            'client_address'  => 'nullable|string|max:255',
+            'price_per_km'    => 'nullable|numeric|min:0',
+            'distance_km'     => 'nullable|numeric|min:0',
+            'delivery_cost'   => 'nullable|numeric|min:0',
+            'image'           => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ], $messages);
+
+        $deliveryActive = $request->has('delivery_active');
+        $validated['delivery_active'] = $deliveryActive;
+        if (! $deliveryActive) {
+            $validated['client_address'] = null;
+            $validated['price_per_km']   = null;
+            $validated['distance_km']    = null;
+            $validated['delivery_cost']  = null;
+        }
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $path = $file->store('images', 'public');
+            $validated['image'] = $path;
+        }
+
+        $ad->update($validated);
+
+        return redirect()->route('ads.index')->with('success', 'Annonce mise à jour avec succès.');
+    }
+
     public function exportICal(Ad $ad)
     {
-        $icalContent = "BEGIN:VCALENDAR
-                        VERSION:2.0
-                        PRODID:-//Olten//Annonce Calendar//FR
-                        BEGIN:VEVENT
-                        UID:ad-{$ad->id}@olten.fr
-                        DTSTAMP:" . now()->format('Ymd\THis\Z') . "
-                        SUMMARY:Annonce - {$ad->title}
-                        DESCRIPTION:Voir annonce sur Olten
-                        END:VEVENT
-                        END:VCALENDAR";
+        $start = now()->addDay()->format('Ymd\THis');
 
-        return response($icalContent, 200)->header('Content-Type', 'text/calendar')->header('Content-Disposition', "attachment; filename=ad-{$ad->id}.ics");
+        $icalContent = "BEGIN:VCALENDAR\r\n";
+        $icalContent .= "VERSION:2.0\r\n";
+        $icalContent .= "PRODID:-//Olten//Annonce Calendar//FR\r\n";
+        $icalContent .= "BEGIN:VEVENT\r\n";
+        $icalContent .= "UID:ad-{$ad->id}@olten.fr\r\n";
+        $icalContent .= "DTSTAMP:" . now()->format('Ymd\THis\Z') . "\r\n";
+        $icalContent .= "DTSTART:$start\r\n";
+        $icalContent .= "SUMMARY:Annonce - {$ad->title}\r\n";
+        $icalContent .= "DESCRIPTION:Voir annonce sur Olten\r\n";
+        $icalContent .= "END:VEVENT\r\n";
+        $icalContent .= "END:VCALENDAR";
+
+        return response($icalContent, 200)
+               ->header('Content-Type', 'text/calendar; charset=utf-8')
+               ->header(
+                    'Content-Disposition',
+                    "attachment; filename=ad-{$ad->id}.ics"
+               );
     }
 
     public function destroy(Ad $ad)

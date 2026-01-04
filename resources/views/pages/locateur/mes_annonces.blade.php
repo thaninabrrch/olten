@@ -76,13 +76,9 @@
                             <i class="fa-solid fa-pen"></i> Modifier
                         </a>
 
-                        <form action="{{ route('ads.destroy', $ad) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette annonce ?');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn-action btn-delete" title="Supprimer l'annonce">
-                                <i class="fa-solid fa-trash"></i> Supprimer
-                            </button>
-                        </form>
+                        <button type="button" class="btn-action btn-delete" data-bs-toggle="modal" data-bs-target="#deleteAdModal" data-title="{{ $ad->title }}" data-url="{{ route('ads.destroy', $ad) }}" title="Supprimer l'annonce" >
+                            <i class="fa-solid fa-trash"></i> Supprimer
+                        </button>
                     </div>
                 </div>
             @empty
@@ -121,7 +117,7 @@
                 </button>
             @endif
         </div>
-        
+        @include('pages.modals.ad_confim_delete')
         <!-- BOUTON NOUVELLE ANNONCE -->
         <div class="create-annonce-section">
             <a href="{{route('ads.create')}}" class="btn-create-annonce">
@@ -130,4 +126,5 @@
             </a>
         </div>
     </div>
+    <script src="{{ asset('assets/js/confirm_delete_ad.js') }}"></script>
 @endsection

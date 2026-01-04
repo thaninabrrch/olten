@@ -75,6 +75,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/annonces/mes-annonces', [AdController::class, 'index'])->name('ads.index');
     Route::get('/annonces/{ad}/ical', [AdController::class, 'exportICal'])->name('ads.ical');
     Route::get('/annonces/{ad}/modifier', [AdController::class, 'edit'])->name('ads.edit');
+    Route::put('/annonces/{ad}', [AdController::class, 'update'])->name('ads.update');
     Route::delete('/annonces/{ad}', [AdController::class, 'destroy'])->name('ads.destroy');
 });
     // Login admin public
