@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AdminAuthController extends Controller
 {
@@ -25,9 +26,11 @@ class AdminAuthController extends Controller
         $user = \App\Models\User::where('email', $credentials['email'])->first();
 
         // Vérifier si utilisateur existe et mot de passe correct
-        if (!$user || !\Illuminate\Support\Facades\Hash::check($credentials['mot_de_passe'], $user->mot_de_passe)) {
-            return back()->withErrors(['email' => 'Email ou mot de passe incorrect']);
-        }
+if (!$user || !Hash::check($credentials['mot_de_passe'], $user->password)) {
+    return back()->withErrors(['email' => 'Email ou mot de passe incorrect'])
+                 ->withInput($request->only('email'));
+}
+
 
 
 
