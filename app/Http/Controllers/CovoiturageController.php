@@ -113,5 +113,54 @@ class CovoiturageController extends Controller
             'covoiturage_id' => $covoiturage->covoiturage_id
         ]);
     }
+    public function destroy($id)
+    {
+        $covoiturage = Covoiturage::where('covoiturage_id', $id)
+            ->where('conducteur_id', Auth::id())
+            ->first();
 
+        if (!$covoiturage) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Trajet introuvable'
+            ], 404);
+        }
+
+        if ($covoiturage->photo_conducteur) {
+            \Storage::disk('public')->delete($covoiturage->photo_conducteur);
+        }
+
+        $covoiturage->delete();
+
+        return redirect()
+         ->route('covoiturage.index')
+         ->with('success', 'Trajet supprimé avec succès');
+    }
+    public function edit($id)
+    {
+        $trajet = Covoiturage::findOrFail($id);
+
+        return view('livreur.covoiturage.edit', compact('trajet'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $trajet = Covoiturage::findOrFail($id);
+
+        $data = $request->validate([
+            'depart' => 'required|string|max:255',
+            'destination' => 'required|string|max:255',
+            'date_depart' => 'required|date',
+            'heure_depart' => 'required',
+            'nb_places' => 'required|integer|min:1|max:8',
+            'prix_place' => 'required|numeric|min:0',
+            'passenger_mode' => 'required'
+        ]);
+
+        $trajet->update($data);
+
+        return redirect()
+            ->route('covoiturage.index', $trajet->covoiturage_id)
+            ->with('success', 'Trajet mis à jour');
+    }
 }

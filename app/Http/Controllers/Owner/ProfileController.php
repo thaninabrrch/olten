@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
+use App\Models\Role;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 
 class ProfileController extends Controller
@@ -118,5 +120,53 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+    public function toggleVtc(Request $request)
+    {
+        $user = Auth::user();
+
+        $request->validate([
+            'is_vtc_driver' => 'required|boolean',
+        ]);
+
+        $user->is_vtc_driver = $request->is_vtc_driver;
+        $user->save();
+
+        return response()->json([
+            'is_vtc_driver' => $user->is_vtc_driver
+        ]);
+    }
+
+    public function toggleLivreur(Request $request)
+    {
+        $user = Auth::user();
+        $request->validate([
+            'is_livreur' => 'required|boolean',
+        ]);
+
+        $role = Role::where('name', 'livreur')->first();
+
+        if (!$role) {
+            return response()->json(['message' => 'Rôle livreur non trouvé'], 500);
+        }
+
+        if ($request->is_livreur) {
+
+            if (!$user->roles()->where('role_id', $role->id)->exists()) {
+                $user->roles()->attach($role->id);
+            }
+
+        } else {
+
+            DB::table('role_user')
+                ->where('role_id', $role->id)
+                ->delete();
+        }
+
+        $activeRoles = $user->roles()->pluck('display_name')->toArray();
+
+        return response()->json([
+            'roles' => $activeRoles
+        ]);
     }
 }

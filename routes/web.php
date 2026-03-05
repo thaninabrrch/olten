@@ -44,6 +44,10 @@ Route::view('/categories', 'pages.annonces_pages.categories_annonces')
 ->name('categories');
 
 Route::middleware('auth')->group(function () {
+    Route::post('/profile/toggle-vtc', [ProfileController::class, 'toggleVtc'])->name('profile.toggleVtc');
+    Route::post('/profile/toggleLivreur', [ProfileController::class, 'toggleLivreur'])->name('profile.toggleLivreur');
+
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profile', [ProfileController::class, 'profile'])->name('profile');
     Route::get('/profile/modifer', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -100,6 +104,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/covoiturage/publish', [CovoiturageController::class, 'publish'])->middleware('auth');
     Route::get('/trajet/{covoiturage}', [CovoiturageController::class, 'show'])
         ->name('trajet.show');
+    Route::delete('/covoiturage/{id}', [CovoiturageController::class, 'destroy'])
+        ->name('covoiturage.destroy');
+    Route::get('/covoiturage/{id}/edit', [CovoiturageController::class, 'edit'])
+    ->name('covoiturage.edit');
+
+    Route::put('/covoiturage/{id}', [CovoiturageController::class, 'update'])
+        ->name('covoiturage.update');
 
 });
 //visualiser le détails d'une annonce meme pour un utilisateur visteur non connecté

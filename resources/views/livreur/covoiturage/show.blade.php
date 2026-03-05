@@ -337,16 +337,23 @@
 
                     <!-- Actions Rapides -->
                     <div class="grid grid-cols-2 gap-3">
-                        <button
+                        <a href="{{ route('covoiturage.edit', $trajet->covoiturage_id) }}"
                             class="flex flex-col items-center justify-center p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-[#FF4500] hover:text-[#FF4500] transition-all group">
                             <i class="fas fa-edit mb-2 text-gray-400 group-hover:text-[#FF4500]"></i>
                             <span class="text-xs font-bold uppercase">Modifier</span>
-                        </button>
-                        <button
-                            class="flex flex-col items-center justify-center p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-red-500 hover:text-red-500 transition-all group">
-                            <i class="fas fa-trash-alt mb-2 text-gray-400 group-hover:text-red-500"></i>
-                            <span class="text-xs font-bold uppercase">Annuler</span>
-                        </button>
+                        </a>
+                        <form action="{{ route('covoiturage.destroy', $trajet->covoiturage_id) }}" method="POST"
+                            onsubmit="return confirm('Voulez-vous vraiment annuler ce trajet ?');" class="flex">
+
+                            @csrf
+                            @method('DELETE')
+
+                            <button type="submit"
+                                class="flex flex-col items-center justify-center p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-red-500 hover:text-red-500 transition-all group">
+                                <i class="fas fa-trash-alt mb-2 text-gray-400 group-hover:text-red-500"></i>
+                                <span class="text-xs font-bold uppercase">Annuler</span>
+                            </button>
+                        </form>
                     </div>
 
                     <!-- Tip Card -->
@@ -465,6 +472,29 @@
             closeMapBtn.addEventListener('click', () => {
                 mapModal.classList.add('hidden');
                 if (mapFull) mapFull.remove();
+            });
+
+
+            let id = $(this).data('id');
+
+            if (!confirm('Voulez-vous vraiment annuler ce trajet ?')) {
+                return;
+            }
+
+            $.ajax({
+                url: '/covoiturage/' + id,
+                type: 'DELETE',
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    }
+                },
+                error: function() {
+                    alert('Erreur lors de la suppression');
+                }
             });
         </script>
     @endif

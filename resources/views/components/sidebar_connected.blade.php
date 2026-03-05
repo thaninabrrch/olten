@@ -78,7 +78,12 @@
 
             </ul>
             @auth
-                @if (Auth::user()->role === 'livreur')
+                @php
+                    $user = auth()->user();
+                @endphp
+
+                {{-- Section Chauffeur VTC --}}
+                @if ($user->is_vtc_driver)
                     <p class="menu-section">Chauffeur VTC</p>
                     <ul>
                         <li class="{{ request()->routeIs('livreur.carte.vtc') ? 'active' : '' }}">
@@ -88,13 +93,13 @@
                             </a>
                         </li>
 
-                        <!-- Covoiturage -->
                         <li class="{{ request()->routeIs('covoiturage.index') ? 'active' : '' }}">
                             <a href="{{ route('covoiturage.index') }}" class="flex items-center gap-3">
                                 <i class="fa-solid fa-car-side"></i>
-                                <span>Mes trajet</span>
+                                <span>Mes trajets</span>
                             </a>
                         </li>
+
                         <li class="{{ request()->routeIs('covoiturage.create') ? 'active' : '' }}">
                             <a href="{{ route('covoiturage.create') }}" class="flex items-center gap-3">
                                 <i class="fa-solid fa-plus-circle"></i>
@@ -103,12 +108,12 @@
                         </li>
                     </ul>
                 @endif
-            @endauth
-            @auth
-                @if (Auth::user()->role === 'livreur')
+
+
+                {{-- Section Livreur --}}
+                @if ($user->hasRole('livreur'))
                     <p class="menu-section">Livreur</p>
                     <ul>
-
                         <li class="{{ request()->routeIs('delivery.ads') ? 'active' : '' }}">
                             <a href="{{ route('delivery.ads') }}" class="flex items-center gap-3">
                                 <i class="fa-solid fa-truck"></i>
@@ -124,8 +129,8 @@
                         </li>
                     </ul>
                 @endif
-            @endauth
 
+            @endauth
 
 
             <p class="menu-section">COMPTE</p>
