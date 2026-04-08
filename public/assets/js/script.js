@@ -816,3 +816,37 @@ if (sortDropdown) {
     // Ajouter un menu dropdown ici
   });
 }
+
+// ========== ONGLETS TRANSPORT ==========
+document.addEventListener('DOMContentLoaded', function() {
+    const containerTransport = document.querySelector('.container-transport');
+    if (!containerTransport) return;
+    
+    const tabLinks = containerTransport.querySelectorAll('.tab-link');
+    const tabContents = containerTransport.querySelectorAll('.tab-content');
+    const tabItems = containerTransport.querySelectorAll('.tab-item');
+
+    // === INITIALISER LE PREMIER ONGLET ===
+    if (tabItems.length > 0) {
+        tabItems[0].classList.add('active');
+        tabContents[0].classList.add('active');
+    }
+
+    tabLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            const tabItem = link.closest('.tab-item');
+            const allTabItems = containerTransport.querySelectorAll('.tab-item');
+            
+            allTabItems.forEach(tab => tab.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            tabItem.classList.add('active');
+            
+            const tabName = tabItem.getAttribute('data-tab');
+            const tabContent = containerTransport.querySelector(`#${tabName}`);
+            if (tabContent) tabContent.classList.add('active');
+        });
+    });
+});

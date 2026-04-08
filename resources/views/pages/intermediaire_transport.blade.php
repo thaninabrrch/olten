@@ -15,96 +15,137 @@
 
   <main>
     <!-- HERO SECTION -->
-    <section class="hero-section" style="background: url('{{ asset('assets/images/tesla-8327257_1280.jpg') }}') center/cover no-repeat; padding: 80px 20px; height: 400px;">
-      <div class="hero-content" style="text-align: center; color: white;">
-        <!-- <h1 style="font-size: 48px; margin-bottom: 20px; font-weight: 700;">Comment voyager ?</h1> -->
-        <!-- <p style="font-size: 18px;">Choisissez votre mode de transport préféré</p> -->
+    <section class="intermediaire-hero-section" style="background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('{{ asset('assets/images/voitures-fdc.png') }}') center/cover no-repeat;">
+      <div class="hero-contenue">
+        <div class="intermediaire-hero-badge">
+          <div class="intermediaire-hero-trait"></div>
+          <p>Mobilité Nouvelle Génération</p>
+        </div>
+        <h1 class="intermediaire-hero-title">Redéfinir vos <br> <span class="orange-accent">trajets.</span></h1>
+        <p class="intermediaire-hero-desc">Une plateforme unique pour le covoiturage intelligent et la location de véhicules d'exception. Simple, sûr, premium.</p>
       </div>
-    </section>
 
-    <!-- TRANSPORT OPTIONS SECTION -->
-    <section class="transport-options" style="padding: 80px 20px; background: #f5f5f5;">
-      <div class="container" style="max-width: 1200px; margin: 0 auto;">
+
+      <!-- container location/covoiturage -->
+  <div class="container-transport">
+    
+    <!-- TABS NAVIGATION (Liste) -->
+    <ul class="tabs-list">
+      <li class="tab-item " data-tab="covoiturage">
+        <a href="#covoiturage" class="tab-link">
+          <i class="fa-solid fa-car"></i> Covoiturage
+        </a>
+      </li>
+      <li class="tab-item" data-tab="location">
+        <a href="#location" class="tab-link">
+          <i class="fa-solid fa-car"></i> Location
+        </a>
+      </li>
+    </ul>
+
+    <!-- TAB CONTENT - COVOITURAGE -->
+    <div class="tab-content tab-1" id="covoiturage">
+      <div class="tab-content-inner">
+        <div class="tab-header">
+          <div class="tab-left">
+            <h3>Covoiturage Intelligent</h3>
+            <p>Partagez vos frais et voyagez sereinement avec des membres certifiés de la communauté Olten.</p>
+          </div>
+          <div class="tab-avatars">
+            <div class="avatar"><img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User 1"></div>
+            <div class="avatar"><img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User 2"></div>
+            <div class="avatar"><img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User 3"></div>
+            <div class="avatar plus">+1k</div>
+          </div>
+        </div>
         
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
-          
-          <!-- COVOITURAGE/LOCATION -->
-          <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.3s, box-shadow 0.3s; text-align: center;">
-            <div style="background: #ff3c00; padding: 50px 20px; display: flex; align-items: center; justify-content: center;">
-              <i class="fa-solid fa-car" style="font-size: 80px; color: white;"></i>
+        <div class="tab-footer">
+          <div class="info-fields">
+            <div class="info-item">
+              <span class="label">DÉPART</span>
+              <span class="value">Paris, France</span>
             </div>
-            <div style="padding: 40px 30px;">
-              <h2 style="font-size: 28px; color: #1b1b18; margin-bottom: 15px; font-weight: 700;">Covoiturage/Location</h2>
-              <p style="color: #666; font-size: 16px; margin-bottom: 25px; line-height: 1.6;">
-                Allez partout, à prix mini. Partagez votre trajet avec d'autres passagers et économisez.
-              </p>
-              <a href="{{ route('location.vehicule', ['type' => 'covoiturage']) }}" style="display: inline-block; padding: 14px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 6px; font-weight: 600; transition: transform 0.2s;">
-                Parcourir
-              </a>
+            <div class="info-divider"></div>
+            <div class="info-item">
+              <span class="label">DESTINATION</span>
+              <span class="value">Lyon, France</span>
+            </div>
+            <button class="btn-primary" onclick="window.location.href='{{ route('covoiturages') }}';">Trouver un trajet</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB CONTENT - LOCATION -->
+    <div class="tab-content" id="location">
+      <div class="tab-content-inner">
+        <div class="tab-header">
+          <div class="tab-left">
+            <h3>Location de Véhicule</h3>
+            <p>Accédez à notre catalogue exclusif : des citadines électriques aux berlines de luxe pour vos besoins spécifiques.</p>
+          </div>
+          <div class="tab-avatars">
+            <div class="avatar"><img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="Vehicle 1"></div>
+            <div class="avatar"><img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="Vehicle 2"></div>
+            <div class="avatar"><img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="Vehicle 3"></div>
+            <div class="avatar plus">+2k</div>
+          </div>
+        </div>
+        
+        <div class="tab-footer">
+          <div class="info-fields">
+            <div class="info-item">
+              <span class="label">RÉCUPÉRATION</span>
+              <span class="value">Aéroport CDG</span>
+            </div>
+            <div class="info-divider"></div>
+            <div class="info-item">
+              <span class="label">PÉRIODE</span>
+              <span class="value">3 Jours</span>
+            </div>
+            <button class="btn-primary" onclick="window.location.href='{{ route('location.vehicule') }}';">Voir les véhicules</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+    </section>
+    <section class="presentation-olten">
+      <div class="texte-present">
+        <h2>Pourquoi faire confiance à <span class="orange-accent">Olten Location</span> ?</h2>
+        
+        <div>
+          <div class="info-item-container">
+            <i class="fa-solid fa-shield info-item-icon"></i>
+            <div>
+              <h3>Sécurité & Vérification</h3>
+              <p>Chaque conducteur et chaque véhicule passe par un processus de certification rigoureux.</p>
+            </div>
+          </div>
+          
+          <div class="info-item-container">
+            <i class="fa-solid fa-lock info-item-icon"></i>
+            <div>
+              <h3>Paiement Sécurisé</h3>
+              <p>Transactions protégées et remboursement garanti en cas d'annulation justifiée.</p>
+            </div>
+          </div>
+          
+          <div class="info-item-container">
+            <i class="fa-solid fa-leaf info-item-icon"></i>
+            <div>
+              <h3>Engagement Éco-responsable</h3>
+              <p>Nous favorisons les trajets partagés et les véhicules à faible émission.</p>
             </div>
           </div>
         </div>
       </div>
-    </section>
 
+        <img src="{{ asset('assets/images/sec1.png') }}" alt="Olten Location - Confiance">
+    </section>
     <!-- INFO SECTION -->
-    <section class="info-section" style="padding: 60px 20px; background: white;">
-      <div class="container" style="max-width: 1200px; margin: 0 auto;">
-        <h2 style="text-align: center; margin-bottom: 40px; font-size: 32px; color: #1b1b18;">Pourquoi Olten Location ?</h2>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px;">
-          
-          <div style="text-align: center;">
-            <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-              <i class="fa-solid fa-shield" style="font-size: 40px; color: white;"></i>
-            </div>
-            <h3 style="font-size: 20px; color: #1b1b18; margin-bottom: 10px;">Sécurisé</h3>
-            <p style="color: #666;">Plateforme sécurisée et certifiée</p>
-          </div>
 
-          <div style="text-align: center;">
-            <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-              <i class="fa-solid fa-euro-sign" style="font-size: 40px; color: white;"></i>
-            </div>
-            <h3 style="font-size: 20px; color: #1b1b18; margin-bottom: 10px;">Meilleurs prix</h3>
-            <p style="color: #666;">Les tarifs les plus compétitifs du marché</p>
-          </div>
-
-          <!-- <div style="text-align: center;">
-            <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-              <i class="fa-solid fa-headset" style="font-size: 40px; color: white;"></i>
-            </div>
-            <h3 style="font-size: 20px; color: #1b1b18; margin-bottom: 10px;">Support 24/7</h3>
-            <p style="color: #666;">À votre écoute en permanence</p>
-          </div> -->
-
-          <div style="text-align: center;">
-            <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-              <a href="#" target="blank"><i class="fa-solid fa-star" style="font-size: 40px; color: white;"></i></a>
-            </div>
-            <h3 style="font-size: 20px; color: #1b1b18; margin-bottom: 10px;">Notés 5⭐</h3>
-            <p style="color: #666;">Avis vérifiés de nos clients</p>
-          </div>
-
-          <div style="text-align: center;">
-            <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-              <i class="fa-solid fa-mouse" style="font-size: 40px; color: white;"></i>
-            </div>
-            <h3 style="font-size: 20px; color: #1b1b18; margin-bottom: 10px;">Réservation facile</h3>
-            <p style="color: #666;">En quelques clics seulement</p>
-          </div>
-
-          <!-- <div style="text-align: center;">
-            <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-              <i class="fa-solid fa-earth" style="font-size: 40px; color: white;"></i>
-            </div>
-            <h3 style="font-size: 20px; color: #1b1b18; margin-bottom: 10px;">Écologique</h3>
-            <p style="color: #666;">Transport durable et responsable</p>
-          </div> -->
-
-        </div>
-      </div>
-    </section>
 
   </main>
 

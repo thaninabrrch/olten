@@ -61,3 +61,7 @@ Route::get('/location-vehicule', function () {
 Route::get('/detail-trajet', function () {
     return view('pages.locateur.detail-trajet');
 })->name('detail.trajet');
+
+Route::get('/covoiturages', function () {
+    return view('pages.covoiturages');
+})->name('covoiturages');
