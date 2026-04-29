@@ -1,352 +1,308 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Olten-location.fr - Comment voyager ?</title>
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-  <!-- Feuille de style  -->
-  <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olten-location.fr - Location de véhicules</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            background: transparent;
+            bottom: 0;
+            color: transparent;
+            cursor: pointer;
+            height: auto;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: auto;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        .text-orange-olten {
+            color: #FF731D;
+        }
+
+        .bg-orange-olten {
+            background-color: #FF731D;
+        }
+
+        .border-orange-olten {
+            border-color: #FF731D;
+        }
+
+        .card-shadow {
+            box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(48%) sepia(89%) saturate(1483%) hue-rotate(345deg) brightness(101%) contrast(101%);
+            cursor: pointer;
+        }
+
+        /* Empêcher le défilement horizontal lors des animations */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
 </head>
 
-<body>
-  <x-header />
+<body class="bg-white">
 
-  <main class="covoiturage-main">
-    <!-- HERO SECTION -->
-    <section class="location-hero-section" style="background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('{{ asset('assets/images/voitures-fdc.png') }}') center/cover no-repeat;">
-      <div class="hero-contenue">
-        <div class="location-hero-badge">
-          <div class="location-hero-trait"></div>
-          <p>Location de véhicules d'exception</p>
-        </div>
-        <h1 class="location-hero-title">Réservez votre<span class="orange-dot"> trajet.</span></h1>
-        <p class="location-hero-desc">Profitez d’une expérience de covoiturage unique. Confort premium, sécurité totale et flexibilité à la demande.</p>
-      </div>
+    <x-header />
 
-      <!-- FORMULAIRE DE RECHERCHE -->
-      <div class="location-search-form">
-        <h3>Rechercher un véhicule</h3>
-        
-        <div class="location-search-grid">
-          
-          <!-- LIEU DE DÉPART -->
-          <div class="location-form-group">
-            <label class="location-form-label">Lieu de départ</label>
-            <div class="location-form-input-wrapper">
-              <i class="fa-solid fa-location-dot"></i>
-              <input type="text" placeholder="Où commencer votre ?">
+
+    <main>
+        {{-- ===================== HERO SECTION ===================== --}}
+        <section
+            class="relative min-h-[600px] lg:h-[650px] flex flex-col justify-center px-4 sm:px-8 lg:px-12 pt-32 pb-48 lg:pb-32"
+            style="background: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)),
+                    url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=1920') center/cover no-repeat;">
+
+            <div class="max-w-6xl mx-auto w-full">
+                <!-- Badge -->
+                <div class="flex items-center gap-3 mb-6 animate-fade-in">
+                    <div class="h-[2px] w-8 sm:w-12 bg-orange-olten"></div>
+                    <span class="text-white text-[10px] sm:text-xs uppercase tracking-[0.3em] font-extrabold">
+                        Location de véhicules d'exception
+                    </span>
+                </div>
+
+                <!-- Titre -->
+                <h1 class="text-white text-4xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.1] mb-6">
+                    Louez votre<br>
+                    <span class="text-orange-olten">liberté.</span>
+                </h1>
+
+                <!-- Desc -->
+                <p class="text-gray-200 text-sm sm:text-base max-w-sm sm:max-w-md leading-relaxed opacity-90">
+                    Découvrez une nouvelle façon de louer. Des véhicules premium, une sécurité totale et une expérience
+                    sans compromis.
+                </p>
             </div>
-          </div>
 
-          <!-- LIEU DE FIN -->
-          <div class="location-form-group">
-            <label class="location-form-label">Lieu de fin</label>
-            <div class="location-form-input-wrapper">
-              <i class="fa-solid fa-location-dot"></i>
-              <input type="text" placeholder="Où aller ?">
+            {{-- ---- FORMULAIRE DE RECHERCHE RESPONSIVE ---- --}}
+            <div
+                class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-[calc(100%-2rem)] sm:w-[calc(100%-4rem)] max-w-6xl bg-white rounded-[24px] sm:rounded-[32px] shadow-2xl p-5 sm:p-8 z-20">
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-5 sm:mb-6">Rechercher un véhicule</h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                    <!-- Lieu de départ -->
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest ml-1">Lieu de
+                            départ</label>
+                        <div class="relative group">
+                            <i
+                                class="fa-solid fa-location-dot absolute left-4 top-1/2 -translate-y-1/2 text-orange-olten opacity-50"></i>
+                            <input type="text" placeholder="D'où partez-vous ?"
+                                class="w-full bg-gray-50 border border-gray-100 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-olten transition-all">
+                        </div>
+                    </div>
+
+                    <!-- Lieu de fin -->
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest ml-1">Lieu de
+                            fin</label>
+                        <div class="relative group">
+                            <i
+                                class="fa-solid fa-location-dot absolute left-4 top-1/2 -translate-y-1/2 text-orange-olten opacity-50"></i>
+                            <input type="text" placeholder="Où allez-vous ?"
+                                class="w-full bg-gray-50 border border-gray-100 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 pl-11 pr-4 text-sm focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Dates -->
+                    <div class="sm:col-span-2 grid grid-cols-2 gap-3 sm:gap-4">
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest ml-1">Départ</label>
+                            <div class="relative">
+                                <i
+                                    class="fa-solid fa-calendar absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-orange-olten opacity-50 scale-90 sm:scale-100"></i>
+                                <input type="date"
+                                    class="w-full bg-gray-50 border border-gray-100 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 pl-10 sm:pl-11 pr-2 text-xs sm:text-sm focus:outline-none">
+                            </div>
+                        </div>
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest ml-1">Retour</label>
+                            <div class="relative">
+                                <i
+                                    class="fa-solid fa-calendar absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-orange-olten opacity-50 scale-90 sm:scale-100"></i>
+                                <input type="date"
+                                    class="w-full bg-gray-50 border border-gray-100 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 pl-10 sm:pl-11 pr-2 text-xs sm:text-sm focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bouton -->
+                    <button
+                        class="bg-orange-olten hover:bg-orange-600 text-white font-bold h-[52px] sm:h-[58px] rounded-xl sm:rounded-2xl shadow-lg shadow-orange-200 transition-all active:scale-95 flex items-center justify-center mt-2 lg:mt-0">
+                        <span class="px-6">Rechercher</span>
+                    </button>
+                </div>
             </div>
-          </div>
+        </section>
 
-          <!-- DATE DE DÉPART -->
-          <div class="location-form-group">
-            <label class="location-form-label">Date de départ</label>
-            <div class="location-form-input-wrapper">
-              <i class="fa-solid fa-calendar"></i>
-              <input type="text" placeholder="jj / mm / aaaa">
+        {{-- Spacer Responsive --}}
+        <div class="h-48 sm:h-40 lg:h-32"></div>
+
+        {{-- ===================== TYPES DE VÉHICULES ===================== --}}
+        <section class="max-w-6xl mx-auto px-6 py-12 sm:py-20">
+            <div class="flex flex-col mb-10 sm:mb-12">
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-gray-900 mb-2">
+                    Parcourez par type
+                </h2>
+                <div class="h-1 w-16 bg-orange-olten rounded-full"></div>
             </div>
-          </div>
 
-          <!-- DATE DE RETOUR -->
-          <div class="location-form-group">
-            <label class="location-form-label">Date de retour</label>
-            <div class="location-form-input-wrapper">
-              <i class="fa-solid fa-calendar"></i>
-              <input type="text" placeholder="jj / mm / aaaa">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">
+                <script>
+                    const types = [{
+                            icon: 'fa-car',
+                            label: 'Voiture',
+                            text: 'Une large gamme de citadines pour vos déplacements urbains.'
+                        },
+                        {
+                            icon: 'fa-truck-pickup',
+                            label: 'SUV',
+                            text: 'Pour vos aventures tout terrain et un confort supérieur.'
+                        },
+                        {
+                            icon: 'fa-van-shuttle',
+                            label: 'Monospace',
+                            text: 'L\'espace idéal pour toute la famille et vos bagages.'
+                        },
+                        {
+                            icon: 'fa-truck',
+                            label: 'Utilitaire',
+                            text: 'Idéal pour vos déménagements et transports encombrants.'
+                        },
+                        {
+                            icon: 'fa-motorcycle',
+                            label: 'Moto',
+                            text: 'Pour les passionnés de liberté et d\'agilité urbaine.'
+                        },
+                        {
+                            icon: 'fa-caravan',
+                            label: 'Camping-car',
+                            text: 'L\'aventure sans limites avec tout le confort de la maison.'
+                        }
+                    ];
+
+                    document.write(types.map(t => `
+                        <div class="group p-6 sm:p-8 border border-gray-100 rounded-[24px] sm:rounded-[32px] bg-white card-shadow hover:border-orange-olten transition-all duration-300 cursor-pointer">
+                            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-900 text-xl sm:text-2xl group-hover:bg-orange-olten group-hover:text-white transition-all duration-300 mb-6">
+                                <i class="fa-solid ${t.icon}"></i>
+                            </div>
+                            <h3 class="text-lg sm:text-xl font-bold text-gray-900 mb-2">${t.label}</h3>
+                            <p class="text-xs sm:text-sm text-gray-400 leading-relaxed mb-6">${t.text}</p>
+                            <div class="flex items-center gap-2 text-orange-olten font-bold text-[10px] sm:text-xs uppercase tracking-wider">
+                                Voir les annonces <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                            </div>
+                        </div>
+                    `).join(''));
+                </script>
             </div>
-          </div>
+        </section>
 
-          <!-- NOMBRES DE PASSAGERS -->
-          <div class="location-form-group">
-            <label class="location-form-label">Nombre de passagers</label>
-            <select class="location-form-select " name="passagers" id="passagers">
-              <option value="1">1 passager</option>
-              <option value="2">2 passagers</option>
-              <option value="3">3 passagers</option>
-              <option value="4">4 passagers</option>
-            </select>
-          </div>
-
-          <!-- BOUTON RECHERCHER -->
-          <div>
-            <button class="location-search-btn">Rechercher</button>
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- DESTINATIONS DISPONIBLES SECTION -->
-    <section class="covoiturage-destinations-section">
-      <div class="covoiturage-destinations-container">
-        <div class="covoiturage-destination-ajustement">
-          <div class="covoiturage-destinations-header">
-            <h2 class="covoiturage-destinations-title">Destinations disponible</h2>
-            <div class="covoiturage-destinations-trait"></div>
-          </div>
-          <div>
-            <a href="#" class="covoiturage-destinations-link">Voir tous les trajets <i class="fa-solid fa-arrow-right"></i></a>
-          </div>
-        </div>
-
-        <!-- DESTINATIONS GRID -->
-        <div class="covoiturage-destinations-grid">
-          
-          <!-- DESTINATION 1 -->
-          <div class="covoiturage-destination-card">
-            <div class="covoiturage-destination-image">
-              <img src="{{ asset('assets/images/paris-lyon.png') }}" alt="Paris - Lyon">
-              <div class="covoiturage-destination-label">Paris - Lyon</div>
+        {{-- ===================== ANNONCES RÉCENTES ===================== --}}
+        <section class="max-w-6xl mx-auto px-6 pb-20 sm:pb-32">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-10 sm:mb-12 gap-4">
+                <div class="flex flex-col">
+                    <h2 class="text-2xl sm:text-4xl font-extrabold text-gray-900 mb-2">Annonces récentes</h2>
+                    <div class="h-1 w-16 bg-orange-olten rounded-full"></div>
+                </div>
+                <a href="#"
+                    class="text-orange-olten font-bold border-b-2 border-orange-olten pb-1 hover:text-orange-700 hover:border-orange-700 transition-all text-xs sm:text-sm w-fit">
+                    Voir toutes les annonces
+                </a>
             </div>
-            <div class="covoiturage-destination-content">
-              <div class="covoiturage-destination-price">
-                <div class="covoiturage-destination-price2">
-                  <span class="covoiturage-price-label">PRIX À PARTIR DE</span>
-                  <span class="covoiturage-price">12,00 <span class="euros">€</span></span>
-                </div>
-                <div>
-                  <button class="covoiturage-btn"><i class="fa-solid fa-arrow-right"></i></button>
-                </div>
-              </div>
-              <!-- positionner le trait -->
-              <div class="covoiturage-destination-trait"></div>
-              <div class="covoiturage-destination-footer">
-                <div class="covoiturage-avatars">
-                  <img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User" class="covoiturage-avatar">
-                  <img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User" class="covoiturage-avatar">
-                  <span class="covoiturage-count">+4 trajets</span>
-                </div>
-                <div class="covoiturage-avatars-notes">
-                  <span class="covoiturage-note">4.8</span>
-                  <i class="fa-regular fa-star"></i>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <!-- DESTINATION 2 -->
-          <div class="covoiturage-destination-card">
-            <div class="covoiturage-destination-image">
-              <img src="{{ asset('assets/images/paris-lyon.png') }}" alt="Paris - Lyon">
-              <div class="covoiturage-destination-label">Paris - Lyon</div>
-            </div>
-            <div class="covoiturage-destination-content">
-              <div class="covoiturage-destination-price">
-                <div class="covoiturage-destination-price2">
-                  <span class="covoiturage-price-label">PRIX À PARTIR DE</span>
-                  <span class="covoiturage-price">12,00 <span class="euros">€</span></span>
-                </div>
-                <div>
-                  <button class="covoiturage-btn"><i class="fa-solid fa-arrow-right"></i></button>
-                </div>
-              </div>
-              <!-- positionner le trait -->
-              <div class="covoiturage-destination-trait"></div>
-              <div class="covoiturage-destination-footer">
-                <div class="covoiturage-avatars">
-                  <img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User" class="covoiturage-avatar">
-                  <img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User" class="covoiturage-avatar">
-                  <span class="covoiturage-count">+4 trajets</span>
-                </div>
-                <div class="covoiturage-avatars-notes">
-                  <span class="covoiturage-note">4.8</span>
-                  <i class="fa-regular fa-star"></i>
-                </div>
-              </div>
-            </div>
-          </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                <script>
+                    const annonces = [1, 2, 3];
+                    document.write(annonces.map(a => `
+                        <div class="bg-white rounded-[24px] sm:rounded-[32px] overflow-hidden card-shadow border border-gray-50 group">
+                            <!-- Image -->
+                            <div class="relative h-56 sm:h-64 overflow-hidden">
+                                <img src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=800" 
+                                     alt="BMW" 
+                                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                                <div class="absolute top-4 right-4 w-9 h-9 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white cursor-pointer hover:bg-white hover:text-red-500 transition-all">
+                                    <i class="fa-regular fa-heart"></i>
+                                </div>
+                            </div>
 
-          <!-- DESTINATION 3 -->
-          <div class="covoiturage-destination-card">
-            <div class="covoiturage-destination-image">
-              <img src="{{ asset('assets/images/paris-lyon.png') }}" alt="Paris - Lyon">
-              <div class="covoiturage-destination-label">Paris - Lyon</div>
-            </div>
-            <div class="covoiturage-destination-content">
-              <div class="covoiturage-destination-price">
-                <div class="covoiturage-destination-price2">
-                  <span class="covoiturage-price-label">PRIX À PARTIR DE</span>
-                  <span class="covoiturage-price">12,00 <span class="euros">€</span></span>
-                </div>
-                <div>
-                  <button class="covoiturage-btn"><i class="fa-solid fa-arrow-right"></i></button>
-                </div>
-              </div>
-              <!-- positionner le trait -->
-              <div class="covoiturage-destination-trait"></div>
-              <div class="covoiturage-destination-footer">
-                <div class="covoiturage-avatars">
-                  <img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User" class="covoiturage-avatar">
-                  <img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User" class="covoiturage-avatar">
-                  <span class="covoiturage-count">+4 trajets</span>
-                </div>
-                <div class="covoiturage-avatars-notes">
-                  <span class="covoiturage-note">4.8</span>
-                  <i class="fa-regular fa-star"></i>
-                </div>
-              </div>
-            </div>
-          </div>
+                            <!-- Content -->
+                            <div class="p-5 sm:p-6">
+                                <div class="flex justify-between items-start mb-4 gap-2">
+                                    <div class="min-w-0">
+                                        <h3 class="text-lg sm:text-xl font-extrabold text-gray-900 truncate">Peugeot 508</h3>
+                                        <div class="flex items-center gap-1 mt-1">
+                                            <i class="fa-solid fa-location-dot text-orange-olten text-[10px]"></i>
+                                            <span class="text-[11px] font-semibold text-gray-400 truncate">Paris, France</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right flex-shrink-0">
+                                        <span class="text-xl sm:text-2xl font-black text-gray-900">45€</span>
+                                        <span class="text-gray-400 text-[10px] font-bold block uppercase">/ Jour</span>
+                                    </div>
+                                </div>
 
-          <!-- DESTINATION 4 -->
-          <div class="covoiturage-destination-card">
-            <div class="covoiturage-destination-image">
-              <img src="{{ asset('assets/images/paris-lyon.png') }}" alt="Paris - Lyon">
-              <div class="covoiturage-destination-label">Paris - Lyon</div>
-            </div>
-            <div class="covoiturage-destination-content">
-              <div class="covoiturage-destination-price">
-                <div class="covoiturage-destination-price2">
-                  <span class="covoiturage-price-label">PRIX À PARTIR DE</span>
-                  <span class="covoiturage-price">12,00 <span class="euros">€</span></span>
-                </div>
-                <div>
-                  <button class="covoiturage-btn"><i class="fa-solid fa-arrow-right"></i></button>
-                </div>
-              </div>
-              <!-- positionner le trait -->
-              <div class="covoiturage-destination-trait"></div>
-              <div class="covoiturage-destination-footer">
-                <div class="covoiturage-avatars">
-                  <img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User" class="covoiturage-avatar">
-                  <img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User" class="covoiturage-avatar">
-                  <span class="covoiturage-count">+4 trajets</span>
-                </div>
-                <div class="covoiturage-avatars-notes">
-                  <span class="covoiturage-note">4.8</span>
-                  <i class="fa-regular fa-star"></i>
-                </div>
-              </div>
-            </div>
-          </div>
+                                <!-- Features -->
+                                <div class="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+                                    <div class="bg-gray-50 px-3 py-1.5 rounded-lg flex items-center gap-2 flex-shrink-0">
+                                        <i class="fa-solid fa-user text-gray-400 text-[10px]"></i>
+                                        <span class="text-[10px] font-bold text-gray-600">5 places</span>
+                                    </div>
+                                    <div class="bg-gray-50 px-3 py-1.5 rounded-lg flex items-center gap-2 flex-shrink-0">
+                                        <i class="fa-solid fa-gears text-gray-400 text-[10px]"></i>
+                                        <span class="text-[10px] font-bold text-gray-600">Auto</span>
+                                    </div>
+                                    <div class="bg-gray-50 px-3 py-1.5 rounded-lg flex items-center gap-2 flex-shrink-0">
+                                        <i class="fa-solid fa-gauge text-gray-400 text-[10px]"></i>
+                                        <span class="text-[10px] font-bold text-gray-600">250km/j</span>
+                                    </div>
+                                </div>
 
-          <!-- DESTINATION 5 -->
-          <div class="covoiturage-destination-card">
-            <div class="covoiturage-destination-image">
-              <img src="{{ asset('assets/images/paris-lyon.png') }}" alt="Paris - Lyon">
-              <div class="covoiturage-destination-label">Paris - Lyon</div>
+                                <!-- Footer -->
+                                <div class="flex items-center justify-between pt-2">
+                                    <div class="flex items-center gap-2.5">
+                                        <img src="https://i.pravatar.cc/150?u=${a}" alt="User" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-white shadow-sm">
+                                        <span class="text-xs sm:text-sm font-bold text-gray-900">Sylvain M.</span>
+                                    </div>
+                                    <button class="w-9 h-9 sm:w-10 sm:h-10 bg-[#0F172A] text-white rounded-lg sm:rounded-xl flex items-center justify-center hover:bg-orange-olten transition-all active:scale-90">
+                                        <i class="fa-solid fa-chevron-right text-[10px] sm:text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join(''));
+                </script>
             </div>
-            <div class="covoiturage-destination-content">
-              <div class="covoiturage-destination-price">
-                <div class="covoiturage-destination-price2">
-                  <span class="covoiturage-price-label">PRIX À PARTIR DE</span>
-                  <span class="covoiturage-price">12,00 <span class="euros">€</span></span>
-                </div>
-                <div>
-                  <button class="covoiturage-btn"><i class="fa-solid fa-arrow-right"></i></button>
-                </div>
-              </div>
-              <!-- positionner le trait -->
-              <div class="covoiturage-destination-trait"></div>
-              <div class="covoiturage-destination-footer">
-                <div class="covoiturage-avatars">
-                  <img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User" class="covoiturage-avatar">
-                  <img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User" class="covoiturage-avatar">
-                  <span class="covoiturage-count">+4 trajets</span>
-                </div>
-                <div class="covoiturage-avatars-notes">
-                  <span class="covoiturage-note">4.8</span>
-                  <i class="fa-regular fa-star"></i>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- DESTINATION 6 -->
-          <div class="covoiturage-destination-card">
-            <div class="covoiturage-destination-image">
-              <img src="{{ asset('assets/images/paris-lyon.png') }}" alt="Paris - Lyon">
-              <div class="covoiturage-destination-label">Paris - Lyon</div>
-            </div>
-            <div class="covoiturage-destination-content">
-              <div class="covoiturage-destination-price">
-                <div class="covoiturage-destination-price2">
-                  <span class="covoiturage-price-label">PRIX À PARTIR DE</span>
-                  <span class="covoiturage-price">12,00 <span class="euros">€</span></span>
-                </div>
-                <div>
-                  <button class="covoiturage-btn"><i class="fa-solid fa-arrow-right"></i></button>
-                </div>
-              </div>
-              <!-- positionner le trait -->
-              <div class="covoiturage-destination-trait"></div>
-              <div class="covoiturage-destination-footer">
-                <div class="covoiturage-avatars">
-                  <img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User" class="covoiturage-avatar">
-                  <img src="{{ asset('assets/images/photo-profil/provi-profil.jpg') }}" alt="User" class="covoiturage-avatar">
-                  <span class="covoiturage-count">+4 trajets</span>
-                </div>
-                <div class="covoiturage-avatars-notes">
-                  <span class="covoiturage-note">4.8</span>
-                  <i class="fa-regular fa-star"></i>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-        <!-- OFFRE CONDUCTEUR SECTION -->
-    <section class="offre-conducteur-section" style="background-image: url('{{ asset('assets/images/sec2.png') }}'); ">
-      <div class="offre-conducteur-container">
-        <div class="offre-conducteur-badge">
-          <span class="offre-badge-text">Offre Conducteur</span>
-        </div>
-        <h2 class="offre-conducteur-title">Récupérez <span class="offre-price">90 €</span> par trajet.</h2>
-        <p class="offre-conducteur-desc">Vous avez une voiture ? Faites-la travailler pour vous (et pas l'inverse). Récupérez jusqu'à 90 € en covoiturant sur un trajet de 300 km avec 3 passagers.</p>
-        <button class="offre-conducteur-btn">Publier un trajet</button>
-      </div>
-    </section>
-    <section class="engagement-section">
-      <div class="engagement-titre">
-        <h2>Notre Engagement</h2>
-        <div class="covoiturage-destinations-trait"></div>
-      </div>
-      <div class="engagement-block">
-        <div class="engagement-block-card">
-          <div class="engagement-contenue">
-            <img src="{{ asset('assets/images/logo-engagement/logo1.png') }}" alt="">
-            <h3>L'autonomie absolue</h3>
-            <p>Libérez-vous des contraintes horaires. Explorez le pays selon vos propres règles grâce à notre écosystème combinant bus, covoiturage et rail.</p>
-            <div class="covoiturage-destination-trait"></div>
-            <p>Flexibilité illimitée</p>
-          </div>
-        </div>
-        <div class="engagement-block-card">
-          <div class="engagement-contenue">
-            <img src="{{ asset('assets/images/logo-engagement/logo2.png') }}" alt="">
-            <h3>Le luxe de l'épargne</h3>
-            <p>Ne choisissez plus entre confort et budget. Accédez à un catalogue de destinations premium au tarif le plus juste du marché, sans frais cachés.</p>
-            <div class="covoiturage-destination-trait"></div>
-            <p>Meilleurs tarifs garantis</p>
-          </div>
-        </div>
-        <div class="engagement-block-card">
-          <div class="engagement-contenue">
-            <img src="{{ asset('assets/images/logo-engagement/logo3.png') }}" alt="">
-            <h3>Sérénité certifiée</h3>
-            <p>Nous sélectionnons rigoureusement nos partenaires et vérifions manuellement chaque profil. Identité, avis et véhicules : tout est passé au crible.</p>
-            <div class="covoiturage-destination-trait"></div>
-            <p>Réseau 100% vérifié</p>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
+        </section>
+    </main>
     <x-footer />
-    <script src="{{ asset('assets/js/script.js') }}"></script>
+
 </body>
+
+</html>
