@@ -1,6 +1,6 @@
 @extends('layouts.main')
 
-@section('title', 'Réinitialiser le mot de passe - Olten-location.fr')
+@section('title', 'Réinitialiser le mot de passe - Olten.fr')
 
 @section('content')
 <div class="container py-5">

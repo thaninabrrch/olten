@@ -8,7 +8,9 @@
     <span>></span>
     <span>Modifier une annonce</span>
 </div>
-
+@php
+    use Carbon\Carbon;
+@endphp
 <h1>Modifier une annonce</h1>
 
 <form action="{{ route('ads.update', $ad) }}" method="POST" enctype="multipart/form-data" id="annonceForm">
@@ -27,12 +29,18 @@
     <!-- SECTION INFORMATIONS -->
     <div class="form-container">
         <div class="form-section-header">
-            <div class="form-section-icon">
-                <i class="fa-solid fa-file-lines"></i>
+            <div class="d-flex justify-content-between flex-wrap w-100">
+                <div class="form-section-icon">
+                    <i class="fa-solid fa-file-lines"></i>
+                </div>
+                <h2 class="form-section-title mt-2">Informations</h2>
+                @if($ad->expires_at && Carbon::parse($ad->expires_at)->toDateString() < now()->toDateString())
+                    <span class="expired">Expirée</span>
+                @endif
             </div>
-            <h2 class="form-section-title">Informations</h2>
-        </div>
 
+        </div>
+                    
         <div class="form-grid">
             <div class="form-group">
                 <label class="form-label">
@@ -59,13 +67,69 @@
                 </select>
             </div>
         </div>
-
+        <div class="form-group">
+            <label class="form-label">Aperçu de l'annonce</label>
+            <textarea name="summary" id="summary">{{ old('summary', $ad->summary) }}</textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Description de l'annonce</label>
+            <textarea name="description" id="description">{{ old('description', $ad->description) }}</textarea>
+        </div>
         <div class="form-group">
             <label class="form-label">Photo de l'annonce</label>
-            <input type="file" name="image" class="form-input" accept="image/*">
-            @if($ad->image)
-                <p>Image actuelle : <img src="{{ asset('storage/' . $ad->image) }}" alt="Image annonce" width="100"></p>
+            <input type="file" name="images[]" class="form-input" accept="image/*" multiple>
+
+            @if($ad->images->count())
+                <br/>
+                <div class="current-images" style="display:flex; gap:10px; flex-wrap:wrap;">
+                    @foreach($ad->images as $img)
+                        <div class="image-wrapper" data-id="{{ $img->id }}" style="position:relative;">
+                            <img src="{{ asset('storage/' . $img->path) }}" alt="Image annonce" width="100">
+                            <button type="button" class="delete-image" style="position:absolute; top:0; right:0; background:red;color:white;border:none;">×</button>
+                        </div>
+                    @endforeach
+                </div>
             @endif
+        </div>
+    </div>
+    @php
+        $today = now()->format('Y-m-d');
+
+        $availableFrom = optional($ad->available_from)->format('Y-m-d');
+        $availableUntil = optional($ad->available_until)->format('Y-m-d');
+
+        $minFrom = ($availableFrom && $availableFrom < $today) ? $availableFrom : $today;
+    @endphp
+
+    <div class="form-grid">
+        <div class="form-group">
+            <label class="form-label">
+                Disponible à partir du <span class="required">*</span>
+            </label>
+
+            <input 
+                type="date"
+                name="available_from"
+                class="form-input"
+                value="{{ old('available_from', $availableFrom) }}"
+                min="{{ $minFrom }}"
+                required
+            >
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">
+                Disponible jusqu'au <span class="required">*</span>
+            </label>
+
+            <input 
+                type="date"
+                name="available_until"
+                class="form-input"
+                value="{{ old('available_until', $availableUntil) }}"
+                min="{{ old('available_from', $availableFrom ?? $today) }}"
+                required
+            >
         </div>
     </div>
 
@@ -90,7 +154,7 @@
                 <ul id="adresseSuggestions" class="suggestions"></ul>
             </div>
 
-            <div class="coordinate-fields">
+            <div class="coordinate-fields d-none">
                 <div class="form-group">
                     <label class="form-label">Longitude</label>
                     <input type="text" name="longitude" id="longitude" class="form-input"
@@ -146,28 +210,6 @@
             </div>
         </div>
 
-        <div id="livraisonDetails" style="display: {{ old('delivery_active', $ad->delivery_active) ? 'block' : 'none' }}">
-            <div class="form-group">
-                <label class="form-label">Adresse du client</label>
-                <input type="text" name="client_address" id="adresseClient" class="form-input"
-                       placeholder="Adresse de livraison" value="{{ old('client_address', $ad->client_address) }}">
-                <ul id="adresseClientSuggestions" class="suggestions"></ul>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Tarif par kilomètre</label>
-                <div class="input-group">
-                    <input type="number" name="price_per_km" id="tarifKm" class="form-input"
-                           step="0.01" value="{{ old('price_per_km', $ad->price_per_km ?? 0) }}">
-                    <span class="input-suffix">Euro / km</span>
-                </div>
-            </div>
-
-            <div class="distance-result" id="distanceResult">
-                Distance : {{ $ad->distance_km ?? '--' }} km<br>
-                Coût total livraison : {{ $ad->delivery_cost ?? '--' }} Euro
-            </div>
-        </div>
     </div>
 
     <div class="form-actions">
@@ -178,4 +220,5 @@
     <input type="hidden" name="distance_km" id="distanceKm" value="{{ old('distance_km', $ad->distance_km) }}">
     <input type="hidden" name="delivery_cost" id="deliveryCost" value="{{ old('delivery_cost', $ad->delivery_cost) }}">
 </form>
+<script src="{{ asset('assets/js/deleteAdsImgs.js') }}"></script>
 @endsection

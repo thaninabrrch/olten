@@ -26,7 +26,7 @@
                 @endif
                 <div
                     class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase shadow-lg shadow-blue-200">
-                    <i class="fa-solid fa-key"></i> Locateur
+                    <i class="fa-solid fa-key"></i> {{ Auth::user()->roles->pluck('name')->reject(fn($role) => $role === 'livreur')->first() }}
                 </div>
             </div>
         </header>
@@ -42,8 +42,14 @@
                         <x-stat-mini title="Revenus" :value="number_format($revenusTotal, 0) . '€'" trend="+12%" color="orange" icon="fa-wallet" />
                         <x-stat-mini title="Courses" :value="$totalCourses" trend="Top" color="orange" icon="fa-truck-fast" />
                     @endif
+                    @if ($user->hasRole('locateur'))
                     <x-stat-mini title="Annonces" :value="$activeAds" trend="Live" color="blue" icon="fa-layer-group" />
                     <x-stat-mini title="Vues" :value="$totalViews" trend="+5.2%" color="blue" icon="fa-chart-line" />
+                    @endif
+                    @if ($user->hasRole('vendeur'))
+                    <x-stat-mini title="Commandes" :value="$totalCommandes" trend="Live" color="blue" icon="fa-layer-group" />
+                    <x-stat-mini title="Ventes" :value="$ventesTotal" trend="+5.2%" color="blue" icon="fa-chart-line" />
+                    @endif
                     <x-stat-mini title="Note" :value="$noteClient ?? '5.0'" trend="★ 4.9" color="yellow" icon="fa-star" />
                     <x-stat-mini title="Favoris" :value="$favoritesCount ?? '0'" trend="New" color="pink" icon="fa-heart" />
                 </div>

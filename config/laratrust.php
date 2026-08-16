@@ -115,9 +115,8 @@ return [
     'models' => [
 
         'role' => \App\Models\Role::class,
-
         'permission' => \App\Models\Permission::class,
-
+        'user' => \App\Models\User::class,
         /**
          * Will be used only if the teams functionality is enabled.
          */

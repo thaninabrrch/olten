@@ -47,26 +47,5 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
             </a>
-
-            <!-- Exemple de Card d'Action Similaire -->
-            <a href="#"
-                class="group flex items-center p-3 rounded-xl bg-white border border-gray-200
-                       shadow-sm hover:shadow-md transition duration-200 ease-in-out
-                       hover:border-blue-500 hover:bg-blue-50/70 cursor-pointer">
-                <div class="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-600 transition duration-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-600 group-hover:text-white"
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M9 13l3 3m0 0l3-3m-3 3V8" />
-                    </svg>
-                </div>
-                <span class="text-gray-800 font-medium text-base ml-4 flex-grow truncate">autre ......</span>
-                <svg xmlns="http://www.w3.org/2000/svg"
-                    class="w-4 h-4 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition duration-200"
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-            </a>
-
         </div>
 </aside>

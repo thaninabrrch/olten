@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('vehicle_type')->nullable()->after('role')->comment('Type de véhicule du livreur (velo, moto, voiture)');
+            $table->string('vehicle_type')->nullable()->comment('Type de véhicule du livreur (velo, moto, voiture)');
         });
     }
 

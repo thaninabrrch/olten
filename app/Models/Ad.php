@@ -21,7 +21,21 @@ class Ad extends Model
         'distance_km',
         'delivery_cost',
         'image',
-        'user_id'
+        'user_id',
+        'summary',
+        'description',
+        'available_from',
+        'available_until',
+        'expires_at',
+        'is_approved',
+        'views',
+        'rejected_at'
+    ];
+
+    protected $casts = [
+        'available_from' => 'date',
+        'available_until' => 'date',
+        'expires_at' => 'date',
     ];
 
     public function category()
@@ -32,5 +46,26 @@ class Ad extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function images()
+    {
+        return $this->hasMany(AdImage::class);
+    }
+    public function demandes()
+    {
+        return $this->hasMany(DemandeLivreur::class, 'id_annonce', 'id')
+                    ->with('livreur');
+    }
+
+
+    public function reports()
+    {
+        return $this->hasMany(AdReport::class);
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class, 'ad_id', 'id');
     }
 }

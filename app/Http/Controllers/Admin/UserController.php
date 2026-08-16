@@ -7,6 +7,9 @@ use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\PasswordUpdatedByAdmin;
+use Laratrust\Models\Role;
 
 class UserController extends Controller
 {
@@ -20,6 +23,7 @@ class UserController extends Controller
                       ->orWhere('lastname', 'like', "%{$search}%")
                       ->orWhere('email', 'like', "%{$search}%");
             })
+            ->orderBy('id', 'desc')
             ->paginate(10);
 
         return view('admin.users.index', compact('users'));
@@ -89,14 +93,15 @@ class UserController extends Controller
     }
     public function verify(User $user)
     {
-        $user->verifie = true;
+        $user->is_approved = true;
         $user->save();
 
         return redirect()->back()->with('success', 'Utilisateur Approuver avec succès.');
     }
     public function edit(User $user)
     {
-        return view('admin.users.edit', compact('user'));
+        $roles = Role::all();
+        return view('admin.users.edit', compact('user', 'roles'));
     }
 
     public function update(Request $request, User $user)
@@ -107,7 +112,6 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:6|confirmed',
             'phone' => 'nullable|string|max:20',
-            'role' => 'required|in:particulier,livreur,conducteur,admin,locateur',
             'gender' => 'nullable|in:male,female,other',
             'about_me' => 'nullable|string|max:500',
             'profile_photo' => 'nullable|image|max:2048',
@@ -121,12 +125,15 @@ class UserController extends Controller
         ]);
 
         $data = $request->only([
-            'firstname', 'lastname', 'email', 'telephone', 'role', 'gender', 'about_me',
+            'firstname', 'lastname', 'email', 'phone', 'gender', 'about_me',
             'x_com','facebook','linkedin','instagram','youtube','tiktok','whatsapp'
         ]);
 
+        $passwordChanged = false;
+
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
+            $passwordChanged = true;
         }
 
         if ($request->hasFile('profile_photo')) {
@@ -135,8 +142,16 @@ class UserController extends Controller
 
         $user->update($data);
 
+        if ($request->has('roles')) {
+            $user->syncRoles($request->roles);
+        }
+
+        if ($passwordChanged) {
+            Mail::to($user->email)->send(
+                new PasswordUpdatedByAdmin($user)
+            );
+        }
+
         return redirect()->route('admin.users.index')->with('success', 'Utilisateur modifié avec succès !');
     }
-
-
 }

@@ -3,20 +3,27 @@
 namespace App\Http\Controllers\Owner;
 
 use App\Models\Ad;
+use App\Models\AdImage;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
+use App\Models\AdVisit;
 
 class AdController extends Controller
 {
     public function index(Request $request)
     {
-        $search = $request->input('search');
+        $search     = $request->input('search');
         $categoryId = $request->input('category_id');
+        $status     = $request->input('status');          // ← nouveau
 
-        $query = Ad::where('user_id', Auth::id())->with('category')->latest();
+        $query = Ad::where('user_id', Auth::id())
+                ->with('category')
+                ->latest();
 
         if ($search) {
             $query->where('title', 'ILIKE', "%{$search}%");
@@ -26,11 +33,59 @@ class AdController extends Controller
             $query->where('category_id', $categoryId);
         }
 
-        $ads = $query->paginate(8)->withQueryString();
+      
+        match($status) {
+            'approved' => $query->where('is_approved', true)->whereNull('rejected_at'),
+            'pending'  => $query->where('is_approved', false)->whereNull('rejected_at')
+                                ->where(fn($q) => $q->whereNull('expires_at')
+                                                ->orWhere('expires_at', '>=', now())),
+            'rejected' => $query->whereNotNull('rejected_at'),
+            'expired'  => $query->whereNotNull('expires_at')->where('expires_at', '<', now()),
+            default    => null,
+        };
 
+        $ads        = $query->paginate(8)->withQueryString();
         $categories = Category::all();
 
         return view('pages.locateur.mes_annonces', compact('ads', 'categories'));
+    }
+
+    public function show($id)
+    {
+        if (!request()->isMethod('get')) {
+            return view('pages.annonces_pages.annonces_details', [
+                'ad' => Ad::findOrFail($id)
+            ]);
+        }
+
+        $ad = Ad::findOrFail($id);
+
+        if (Auth::id() !== $ad->user_id) {
+            AdVisit::create([
+                'ad_id' => $ad->id,
+                'user_id' => Auth::id(),
+                'ip' => request()->ip(),
+            ]);
+
+            $ad->increment('views');
+        }
+
+        $reservedDates = [];
+
+        foreach ($ad->bookings()
+                    ->whereIn('booking_status', ['pending', 'confirmed'])
+                    ->get() as $booking) {
+
+                $period = \Carbon\CarbonPeriod::create(
+                    $booking->start_date,
+                    $booking->end_date
+                );
+
+                foreach ($period as $date) {
+                    $reservedDates[] = $date->format('Y-m-d');
+                }
+        }
+        return view('pages.annonces_pages.annonces_details', compact('ad','reservedDates'));
     }
 
     public function create()
@@ -61,14 +116,23 @@ class AdController extends Controller
     {
         $messages = [
             'title.required' => 'Le titre est obligatoire.',
+            'title.max' => 'Le titre ne peut pas dépasser :max caractères.',
+            'summary.string' => "L'aperçu doit être un texte.",
+            'summary.max' => "L'aperçu ne peut pas dépasser :max caractères.",
+            'title.required' => 'Le titre est obligatoire.',
             'title.max'      => 'Le titre ne peut pas dépasser :max caractères.',
             'category_id.required' => 'La catégorie est obligatoire.',
             'category_id.exists'   => 'La catégorie sélectionnée est invalide.',
             'price_per_day.required' => 'Le prix par jour est obligatoire.',
             'price_per_day.numeric'  => 'Le prix doit être un nombre.',
-            'image.image'    => "Le fichier doit être une image.",
-            'image.mimes'    => "L'image doit être au format :values.",
-            'image.max'      => "L'image ne peut pas dépasser 2Mo.",
+            'description.string' => 'La description doit être un texte.',
+            'summary.string' => "L'aperçu doit être un texte.",
+            'images.*.image' => "Chaque fichier doit être une image.",
+            'images.*.mimes' => "Les images doivent être au format :values.",
+            'images.*.max' => "Chaque image ne peut pas dépasser 2Mo.",
+            'available_from.required' => 'La date de disponibilité est obligatoire.',
+            'available_until.required' => 'La date de fin de disponibilité est obligatoire.',
+            'available_until.after_or_equal' => 'La date de fin doit être égale ou après la date de début.',
         ];
 
         $validated = $request->validate([
@@ -82,21 +146,29 @@ class AdController extends Controller
             'price_per_km'    => 'nullable|numeric|min:0',
             'distance_km'     => 'nullable|numeric|min:0',
             'delivery_cost'   => 'nullable|numeric|min:0',
-            'image'           => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images'   => 'nullable|array',
+            'summary' => 'nullable|string|max:500',
+            'description' => 'nullable|string',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'available_from'  => 'required|date',
+            'available_until' => 'required|date|after_or_equal:available_from',
         ], $messages);
 
+        $validated['expires_at'] = $validated['available_until'];
         $validated['delivery_active'] = $request->has('delivery_active');
-
         $validated['user_id'] = Auth::id();
 
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $path = $file->store('images', 'public'); 
-            $validated['image'] = $path;
+        $ad = Ad::create($validated);
+
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $path = $image->store('ads', 'public');
+
+                $ad->images()->create([
+                    'path' => $path
+                ]);
+            }
         }
-
-        Ad::create($validated);
-
         return redirect()->route('ads.index')->with('success', 'Annonce créée avec succès !');
     }
 
@@ -110,7 +182,6 @@ class AdController extends Controller
     public function update(Request $request, Ad $ad)
     {
         $this->authorize('update', $ad);
-
         $messages = [
             'title.required' => 'Le titre est obligatoire.',
             'title.max'      => 'Le titre ne peut pas dépasser :max caractères.',
@@ -118,9 +189,14 @@ class AdController extends Controller
             'category_id.exists'   => 'La catégorie sélectionnée est invalide.',
             'price_per_day.required' => 'Le prix par jour est obligatoire.',
             'price_per_day.numeric'  => 'Le prix doit être un nombre.',
-            'image.image'    => "Le fichier doit être une image.",
-            'image.mimes'    => "L'image doit être au format :values.",
-            'image.max'      => "L'image ne peut pas dépasser 2Mo.",
+            'description.string' => 'La description doit être un texte.',
+            'summary.string' => "L'aperçu doit être un texte.",
+            'images.*.image' => "Chaque fichier doit être une image.",
+            'images.*.mimes' => "Les images doivent être au format :values.",
+            'images.*.max' => "Chaque image ne peut pas dépasser 2Mo.",
+            'available_from.required' => 'La date de disponibilité est obligatoire.',
+            'available_until.required' => 'La date de fin de disponibilité est obligatoire.',
+            'available_until.after_or_equal' => 'La date de fin doit être égale ou après la date de début.',
         ];
 
         $validated = $request->validate([
@@ -134,9 +210,15 @@ class AdController extends Controller
             'price_per_km'    => 'nullable|numeric|min:0',
             'distance_km'     => 'nullable|numeric|min:0',
             'delivery_cost'   => 'nullable|numeric|min:0',
-            'image'           => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images'   => 'nullable|array',
+            'summary' => 'nullable|string|max:500',
+            'description' => 'nullable|string',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'available_from'  => 'required|date',
+            'available_until' => 'required|date|after_or_equal:available_from',
         ], $messages);
 
+        $validated['expires_at'] = $validated['available_until'];
         $deliveryActive = $request->has('delivery_active');
         $validated['delivery_active'] = $deliveryActive;
         if (! $deliveryActive) {
@@ -145,12 +227,13 @@ class AdController extends Controller
             $validated['distance_km']    = null;
             $validated['delivery_cost']  = null;
         }
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $path = $file->store('images', 'public');
-            $validated['image'] = $path;
-        }
 
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $file) {
+                $path = $file->store('images', 'public');
+                $ad->images()->create(['path' => $path]);
+            }
+        }
         $ad->update($validated);
 
         return redirect()->route('ads.index')->with('success', 'Annonce mise à jour avec succès.');
@@ -185,5 +268,14 @@ class AdController extends Controller
         $this->authorize('delete', $ad);
         $ad->delete();
         return redirect()->route('ads.index')->with('success', 'Annonce supprimée avec succès.');
+    }
+
+    public function destroyImgs(AdImage $image)
+    {
+        Storage::disk('public')->delete($image->path);
+
+        $image->delete();
+
+        return response()->json(['success' => true]);
     }
 }

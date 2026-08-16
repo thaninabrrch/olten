@@ -72,14 +72,25 @@
             {{-- Rôle --}}
             <div class="mb-4">
                 <label for="role" class="block text-gray-700 font-medium mb-1">Rôle</label>
-                <select name="role" id="role"
-                    class="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500">
-                    @foreach (['particulier', 'livreur', 'conducteur', 'admin', 'locateur'] as $role)
-                        <option value="{{ $role }}" {{ old('role', $user->role) == $role ? 'selected' : '' }}>
-                            {{ ucfirst($role) }}
-                        </option>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+
+                    @foreach ($roles as $role)
+                        <label class="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+
+                            <input type="checkbox"
+                                name="roles[]"
+                                value="{{ $role->name }}"
+                                class="accent-red-500"
+                                {{ $user->roles->pluck('name')->contains($role->name) ? 'checked' : '' }}>
+
+                            <span class="text-sm font-medium">
+                                {{ ucfirst($role->name) }}
+                            </span>
+
+                        </label>
                     @endforeach
-                </select>
+
+                </div>
             </div>
 
             {{-- Téléphone / Genre / Photo --}}

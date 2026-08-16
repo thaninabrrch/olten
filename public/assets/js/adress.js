@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
     adresseVendeur.addEventListener('input', async () => {
         if (adresseVendeur.value.length < 3) return;
 
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=fr&q=${adresseVendeur.value}`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(adresseVendeur.value)}`);
         const data = await res.json();
 
         suggestionsVendeur.innerHTML = '';
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function () {
     adresseClient.addEventListener('input', async () => {
         if (adresseClient.value.length < 3) return;
 
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=fr&q=${adresseClient.value}`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(adresseClient.value)}`);
         const data = await res.json();
 
         suggestionsClient.innerHTML = '';

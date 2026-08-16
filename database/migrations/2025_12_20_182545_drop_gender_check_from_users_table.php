@@ -9,11 +9,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_gender_check;');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_gender_check;');
+        }
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE users ADD CONSTRAINT users_gender_check CHECK (gender IN ('f', 'm', 'o'));");
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE users ADD CONSTRAINT users_gender_check CHECK (gender IN ('f', 'm', 'o'));");
+        }
     }
 };

@@ -1,213 +1,110 @@
--- ========================================================
--- 1. TABLE UTILISATEURS
--- ========================================================
-CREATE TABLE users (
-    user_id BIGSERIAL PRIMARY KEY,
-    nom VARCHAR(100) NOT NULL,
-    email VARCHAR(150) UNIQUE NOT NULL,
-    mot_de_passe VARCHAR(255) NOT NULL,
-    telephone VARCHAR(20),
-    role VARCHAR(20) CHECK (role IN ('particulier','livreur','conducteur','admin')) DEFAULT 'particulier',
-    solde_points INT DEFAULT 0,
-    statut_compte VARCHAR(20) CHECK (statut_compte IN ('actif','suspendu','banni')) DEFAULT 'actif',
-    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    verifie BOOLEAN DEFAULT FALSE
-);
-
--- ========================================================
--- 2. OBJETS (location entre particuliers)
--- ========================================================
 CREATE TABLE objets (
-    objet_id BIGSERIAL PRIMARY KEY,
-    proprietaire_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    objet_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    proprietaire_id BIGINT UNSIGNED NOT NULL,
     titre VARCHAR(150) NOT NULL,
     description TEXT NOT NULL,
     categorie VARCHAR(100),
-    prix_jour DECIMAL(10,2) CHECK (prix_jour >= 0),
+    prix_jour DECIMAL(10,2),
     disponible BOOLEAN DEFAULT TRUE,
     localisation VARCHAR(255) NOT NULL,
     condition_sanitaire TEXT,
-    date_ajout TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    date_ajout TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_objets_proprietaire
+        FOREIGN KEY (proprietaire_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
 );
+
 CREATE INDEX idx_objets_categorie ON objets(categorie);
+CREATE INDEX idx_objets_proprietaire ON objets(proprietaire_id);
 
--- ========================================================
--- 3. RÉSERVATIONS (location d’objets)
--- ========================================================
-CREATE TABLE reservations (
-    reservation_id BIGSERIAL PRIMARY KEY,
-    objet_id BIGINT NOT NULL REFERENCES objets(objet_id) ON DELETE CASCADE,
-    locataire_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    date_debut DATE NOT NULL,
-    date_fin DATE NOT NULL CHECK (date_fin > date_debut),
-    montant_total DECIMAL(10,2) CHECK (montant_total >= 0),
-    commission_plateforme DECIMAL(10,2) DEFAULT 0,
-    statut VARCHAR(20) CHECK (statut IN ('en_attente','confirmée','annulée','terminée')) DEFAULT 'en_attente',
-    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    reglementation_applicable TEXT
-);
-
--- ========================================================
--- 4. COVOITURAGE
--- ========================================================
 CREATE TABLE covoiturages (
-    covoiturage_id BIGSERIAL PRIMARY KEY,
-    conducteur_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    covoiturage_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    conducteur_id BIGINT UNSIGNED NOT NULL,
     depart VARCHAR(255) NOT NULL,
     destination VARCHAR(255) NOT NULL,
     date_depart TIMESTAMP NOT NULL,
-    nb_places INT CHECK (nb_places > 0),
-    prix_place DECIMAL(10,2) CHECK (prix_place >= 0),
+    nb_places INT,
+    prix_place DECIMAL(10,2),
     commission_plateforme DECIMAL(10,2) DEFAULT 0,
-    statut VARCHAR(20) CHECK (statut IN ('actif','complet','annulé','terminé')) DEFAULT 'actif',
-    reglementation_applicable TEXT
+    statut ENUM('actif','complet','annule') DEFAULT 'actif',
+    reglementation_applicable TEXT,
+
+    FOREIGN KEY (conducteur_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- ========================================================
--- 5. LIVRAISONS REPAS
--- ========================================================
-CREATE TABLE livraisons_repas (
-    livraison_repas_id BIGSERIAL PRIMARY KEY,
-    client_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    livreur_id BIGINT REFERENCES users(user_id),
-    restaurant_nom VARCHAR(255),
-    adresse_depart VARCHAR(255) NOT NULL,
-    adresse_arrivee VARCHAR(255) NOT NULL,
-    distance_km DECIMAL(5,2) CHECK (distance_km >= 0),
-    prix_base DECIMAL(10,2) CHECK (prix_base >= 0),
-    commission_plateforme DECIMAL(10,2) DEFAULT 0,
-    prix_total_affiche DECIMAL(10,2) CHECK (prix_total_affiche >= 0),
-    statut VARCHAR(20) CHECK (statut IN ('en_attente','en_cours','livré','annulé')) DEFAULT 'en_attente',
-    reglementation_sanitaire TEXT NOT NULL,
-    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+CREATE INDEX idx_covoiturages_conducteur ON covoiturages(conducteur_id);
 
--- ========================================================
--- 6. LIVRAISONS COLIS
--- ========================================================
-CREATE TABLE livraisons_colis (
-    colis_id BIGSERIAL PRIMARY KEY,
-    expediteur_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    livreur_id BIGINT REFERENCES users(user_id),
-    objet_description TEXT,
-    adresse_depart VARCHAR(255) NOT NULL,
-    adresse_arrivee VARCHAR(255) NOT NULL,
-    distance_km DECIMAL(5,2) CHECK (distance_km >= 0),
-    prix_base DECIMAL(10,2) CHECK (prix_base >= 0),
-    commission_plateforme DECIMAL(10,2) DEFAULT 0,
-    prix_total_affiche DECIMAL(10,2) CHECK (prix_total_affiche >= 0),
-    statut VARCHAR(20) CHECK (statut IN ('en_attente','en_cours','livré','annulé')) DEFAULT 'en_attente',
-    reglementation_transport TEXT,
-    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- ========================================================
--- 7. CHAUFFEUR VTC
--- ========================================================
 CREATE TABLE livraisons_vtc (
-    vtc_id BIGSERIAL PRIMARY KEY,
-    client_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    chauffeur_id BIGINT REFERENCES users(user_id),
+    vtc_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    client_id BIGINT UNSIGNED NOT NULL,
+    chauffeur_id BIGINT UNSIGNED NULL,
     adresse_depart VARCHAR(255) NOT NULL,
     adresse_arrivee VARCHAR(255) NOT NULL,
-    distance_km DECIMAL(5,2) CHECK (distance_km >= 0),
-    prix_base DECIMAL(10,2) CHECK (prix_base >= 0),
+    distance_km DECIMAL(5,2),
+    prix_base DECIMAL(10,2),
     commission_plateforme DECIMAL(10,2) DEFAULT 0,
-    prix_total_affiche DECIMAL(10,2) CHECK (prix_total_affiche >= 0),
-    statut VARCHAR(20) CHECK (statut IN ('en_attente','en_cours','terminé','annulé')) DEFAULT 'en_attente',
+    prix_total_affiche DECIMAL(10,2),
+    statut ENUM('en_attente','en_cours','termine','annule') DEFAULT 'en_attente',
     reglementation_transport TEXT,
-    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (chauffeur_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- ========================================================
--- 8. COMMISSIONS
--- ========================================================
+CREATE INDEX idx_vtc_client ON livraisons_vtc(client_id);
+CREATE INDEX idx_vtc_chauffeur ON livraisons_vtc(chauffeur_id);
+
 CREATE TABLE commissions (
-    commission_id BIGSERIAL PRIMARY KEY,
-    type_service VARCHAR(30) CHECK (type_service IN ('location','livraison_colis','livraison_repas','vtc','covoiturage')) UNIQUE NOT NULL,
-    taux DECIMAL(5,2) CHECK (taux >= 0 AND taux <= 100),
+    commission_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    type_service VARCHAR(30) UNIQUE NOT NULL,
+    taux DECIMAL(5,2),
     date_modification TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ========================================================
--- 9. TRANSACTIONS
--- ========================================================
 CREATE TABLE transactions (
-    transaction_id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    type_operation VARCHAR(20) CHECK (type_operation IN ('paiement','remboursement','commission','points')) NOT NULL,
-    service_type VARCHAR(30) CHECK (service_type IN ('location','livraison_colis','livraison_repas','vtc','covoiturage')) NOT NULL,
-    service_id BIGINT NOT NULL,
-    montant DECIMAL(10,2) CHECK (montant >= 0),
-    moyen_paiement VARCHAR(20) CHECK (moyen_paiement IN ('CB','PayPal','points','virement')),
-    statut VARCHAR(20) CHECK (statut IN ('en_attente','validée','échouée')) DEFAULT 'en_attente',
-    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX idx_transactions_service ON transactions(service_type, service_id);
+    transaction_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    type_operation VARCHAR(20) NOT NULL,
+    service_type VARCHAR(30) NOT NULL,
+    service_id BIGINT UNSIGNED NOT NULL,
+    montant DECIMAL(10,2),
+    moyen_paiement VARCHAR(20),
+    statut ENUM('en_attente','validee','echouee') DEFAULT 'en_attente',
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
--- ========================================================
--- 10. REVENUS PLATEFORME
--- ========================================================
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_transactions_service
+ON transactions(service_type, service_id);
+
+CREATE INDEX idx_transactions_user ON transactions(user_id);
+
 CREATE TABLE revenus_plateforme (
-    revenu_id BIGSERIAL PRIMARY KEY,
-    transaction_id BIGINT NOT NULL REFERENCES transactions(transaction_id) ON DELETE CASCADE,
+    revenu_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    transaction_id BIGINT UNSIGNED NOT NULL,
     montant_commission DECIMAL(10,2) NOT NULL,
-    date_reception TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    date_reception TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (transaction_id)
+        REFERENCES transactions(transaction_id)
+        ON DELETE CASCADE
 );
 
--- ========================================================
--- 11. POINTS FIDÉLITÉ
--- ========================================================
 CREATE TABLE points_fidelite (
-    fidelite_id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    action_source VARCHAR(30) CHECK (action_source IN ('location','livraison_colis','livraison_repas','vtc','covoiturage','invitation')),
+    fidelite_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    action_source VARCHAR(30),
     points_gagnes INT DEFAULT 0,
     points_utilises INT DEFAULT 0,
-    date_operation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    date_operation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
 );
--- ========================================================
---⚙️ TRIGGER : Calcul automatique de la commission
---Ce trigger met à jour la commission lors de l’insertion d’un enregistrement dans les tables de services.
--- ========================================================
--- Fonction pour appliquer le taux de commission automatiquement
-CREATE OR REPLACE FUNCTION appliquer_commission()
-RETURNS TRIGGER AS $$
-DECLARE
-    taux DECIMAL(5,2);
-BEGIN
-    SELECT c.taux INTO taux
-    FROM commissions c
-    WHERE c.type_service = TG_ARGV[0];
 
-    IF taux IS NULL THEN
-        taux := 10; -- taux par défaut 10%
-    END IF;
-
-    NEW.commission_plateforme := ROUND(NEW.prix_base * (taux / 100), 2);
-    NEW.prix_total_affiche := ROUND(NEW.prix_base + NEW.commission_plateforme, 2);
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Déclencheurs pour chaque type de service
-CREATE TRIGGER trg_commission_location
-BEFORE INSERT ON reservations
-FOR EACH ROW EXECUTE FUNCTION appliquer_commission('location');
-
-CREATE TRIGGER trg_commission_colis
-BEFORE INSERT ON livraisons_colis
-FOR EACH ROW EXECUTE FUNCTION appliquer_commission('livraison_colis');
-
-CREATE TRIGGER trg_commission_repas
-BEFORE INSERT ON livraisons_repas
-FOR EACH ROW EXECUTE FUNCTION appliquer_commission('livraison_repas');
-
-CREATE TRIGGER trg_commission_vtc
-BEFORE INSERT ON livraisons_vtc
-FOR EACH ROW EXECUTE FUNCTION appliquer_commission('vtc');
-
-CREATE TRIGGER trg_commission_covoiturage
-BEFORE INSERT ON covoiturages
-FOR EACH ROW EXECUTE FUNCTION appliquer_commission('covoiturage');
+CREATE INDEX idx_points_user ON points_fidelite(user_id);

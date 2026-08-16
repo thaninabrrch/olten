@@ -37,8 +37,7 @@
                 <label class="form-label">
                     Titre de l'annonce <span class="required">*</span>
                 </label>
-                <input type="text" name="title" class="form-input" 
-                        placeholder="Titre de l'annonce" required>
+                <input type="text" name="title" class="form-input" placeholder="Titre de l'annonce" required>
             </div>
 
             <div class="form-group">
@@ -56,8 +55,37 @@
             </div>
         </div>
         <div class="form-group">
-            <label class="form-label">Photo de l'annonce</label>
-            <input type="file" name="image" class="form-input" accept="image/*">
+            <label class="form-label">
+                Aperçu de l'annonce
+            </label>
+            <textarea name="summary" placeholder="Aperçu de l'annonce" id="summary"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">
+                Description de l'annonce
+            </label>
+            <textarea name="description" placeholder="Description complète" id="description"></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Photos de l'annonce</label>
+            <input type="file" name="images[]" class="form-input" accept="image/*" multiple>
+        </div>
+    </div>
+
+    <div class="form-grid">
+        <div class="form-group">
+            <label class="form-label">
+                Disponible à partir du <span class="required">*</span>
+            </label>
+            <input type="date" name="available_from" class="form-input" min="{{ now()->format('Y-m-d') }}" required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">
+                Disponible jusqu'au <span class="required">*</span>
+            </label>
+            <input type="date" name="available_until" class="form-input" min="{{ now()->format('Y-m-d') }}" required>
         </div>
     </div>
 
@@ -81,7 +109,7 @@
                 <ul id="adresseSuggestions" class="suggestions"></ul>
             </div>
 
-            <div class="coordinate-fields">
+            <div class="coordinate-fields d-none">
                 <div class="form-group">
                     <label class="form-label">Longitude</label>
                     <input type="text" name="longitude" id="longitude" class="form-input" placeholder="Longitude">
@@ -130,27 +158,6 @@
             <div class="toggle-switch">
                 <input type="checkbox" name="delivery_active" id="livraisonActive">
                 <label for="livraisonActive" class="toggle-label"></label>
-            </div>
-        </div>
-
-        <div id="livraisonDetails" style="display:none;">
-            <div class="form-group">
-                <label class="form-label">Adresse du client</label>
-                <input type="text" name="client_address" id="adresseClient" class="form-input" placeholder="Adresse de livraison">
-                <ul id="adresseClientSuggestions" class="suggestions"></ul>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Tarif par kilomètre</label>
-                <div class="input-group">
-                    <input type="number" name="price_per_km" id="tarifKm" class="form-input" value="50" step="0.01">
-                    <span class="input-suffix">Euro / km</span>
-                </div>
-            </div>
-
-            <div class="distance-result" id="distanceResult">
-                Distance : -- km<br>
-                Coût total livraison : -- Euro
             </div>
         </div>
     </div>

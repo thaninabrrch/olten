@@ -72,25 +72,39 @@
                                 @php
                                     $roleColors = [
                                         'admin' => ['text' => 'text-red-600', 'bg' => 'bg-red-100'],
-                                        'particulier' => ['text' => 'text-gray-800', 'bg' => 'bg-gray-200'],
-                                        'livreur' => ['text' => 'text-blue-600', 'bg' => 'bg-blue-100'],
-                                        'conducteur' => ['text' => 'text-green-600', 'bg' => 'bg-green-100'],
-                                    ];
 
-                                    $colors = $roleColors[$user->role] ?? [
-                                        'text' => 'text-gray-800',
-                                        'bg' => 'bg-gray-200',
+                                        'particulier' => ['text' => 'text-gray-800', 'bg' => 'bg-gray-200'],
+
+                                        'livreur' => ['text' => 'text-blue-600', 'bg' => 'bg-blue-100'],
+
+                                        'conducteur' => ['text' => 'text-green-600', 'bg' => 'bg-green-100'],
+
+                                        'locateur' => ['text' => 'text-purple-600', 'bg' => 'bg-purple-100'],
+
+                                        'vendeur' => ['text' => 'text-yellow-600', 'bg' => 'bg-yellow-100'],
                                     ];
                                 @endphp
 
-                                <span
-                                    class="inline-block px-3 py-1 text-xs font-semibold {{ $colors['text'] }} {{ $colors['bg'] }} rounded-full">
-                                    {{ ucfirst($user->role) }}
-                                </span>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach ($user->roles as $role)
+                                        @php
+                                            $colors = $roleColors[$role->name] ?? [
+                                                'text' => 'text-gray-800',
+                                                'bg' => 'bg-gray-200',
+                                            ];
+                                        @endphp
+
+                                        <span class="px-3 py-1 text-xs font-semibold rounded-full {{ $colors['text'] }} {{ $colors['bg'] }}">
+                                            {{ ucfirst($role->name) }}
+                                        </span>
+                                    @endforeach
+                                </div>
                             </td>
 
                             <td class="px-6 py-4">
-                                @if ($user->verifie)
+                                @if($user->hasRole('admin'))
+                                    <span class="text-gray-500">-</span>
+                                @elseif ($user->is_approved)
                                     <span
                                         class="inline-block px-3 py-1 text-xs font-semibold text-green-600 bg-green-100 rounded-full">
                                         Approuver
@@ -117,7 +131,7 @@
                                     </button>
 
                                     <div class="dropdown-menu-white absolute right-9 w-36 divide-y divide-gray-200">
-                                        @if (!$user->verifie)
+                                        @if (!$user->hasRole('admin') && !$user->is_approved)
                                             <form action="{{ route('admin.users.verify', $user) }}" method="POST">
                                                 @csrf
                                                 <button type="submit"

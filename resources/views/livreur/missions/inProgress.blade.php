@@ -1,0 +1,412 @@
+@extends('layouts.connected')
+@section('title', 'Missions Livreur | ' . config('app.name'))
+
+@section('content')
+<section class="tab-content active animate-fade min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <nav aria-label="Breadcrumb" class="flex-1">
+                <ol class="flex items-center space-x-2 text-sm font-medium">
+                    <li>
+                        <a href="#" class="text-slate-400 hover:text-slate-600 transition-colors">
+                            Espace Driver
+                        </a>
+                    </li>
+                    <li>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300"></i>
+                    </li>
+                    <li class="text-slate-900 font-bold uppercase tracking-tight text-xs">
+                        Missions en cours
+                    </li>
+                </ol>
+            </nav>
+
+            <div class="flex bg-slate-100 p-1 rounded-full border border-slate-200">
+                <a href="{{ route('livreur.missions') }}" class="tab-btn-vtc {{ request()->routeIs('livreur.missions') ? 'active' : '' }}">
+                    Disponibles
+                </a>
+                <a href="{{ route('livreur.demandes') }}" class="tab-btn-vtc {{ request()->routeIs('livreur.demandes') ? 'active' : '' }}">
+                    En attente
+                </a>
+                <a href="{{ route('livreur.livraisons') }}" class="tab-btn-vtc {{ request()->routeIs('livreur.livraisons') ? 'active' : '' }}">
+                    En cours
+                </a>
+            </div>
+        </div>
+
+        <div id="tab-dispo" class="tab-pane-vtc">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                @forelse ($missions as $mission)
+                    <div class="group relative bg-white rounded-[2.8rem] p-8 border border-slate-200 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_-12px_rgba(255,60,0,0.12)] hover:-translate-y-2 transition-all duration-500 flex flex-col justify-between min-h-[480px] overflow-hidden">
+                        <div
+                            class="absolute -top-24 -right-24 w-48 h-48 bg-slate-50 rounded-full group-hover:bg-orange-50 transition-colors duration-500 -z-10">
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-start mb-8">
+                                <div class="flex items-center gap-4">
+                                    <div class="relative">
+                                        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 p-[2px] shadow-sm group-hover:rotate-6 transition-transform duration-500">
+                                            <div class="w-full h-full rounded-2xl bg-white overflow-hidden flex items-center justify-center">
+                                                @if (($mission->booking?->ad?->user && $mission->booking?->ad?->user->avatar) || ($mission->productSale?->ad?->user && $mission->productSale?->ad?->user->avatar))
+                                                    <img src="{{ $mission->booking?->ad?->user->avatar ??  $mission->productSale?->ad?->user->avatar ?? '' }}" alt="" class="w-full h-full object-cover">
+                                                @else
+                                                    <i data-lucide="user" class="w-6 h-6 text-slate-300"></i>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-4 border-white rounded-full">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="text-[9px] font-black text-[#ff3c00] uppercase tracking-[0.15em] leading-none mb-1.5">
+                                            Expéditeur
+                                        </p>
+                                        <p class="text-sm font-[900] text-slate-900 tracking-tight">
+                                            {{ Str::limit ($mission->booking?->ad?->user?->name ?? $mission->productSale?->product?->user?->name ?? '') }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-3xl font-[1000] text-slate-900 tracking-tighter leading-none">
+                                        {{ number_format($mission->booking?->delivery_cost ?? $mission->productSale?->delivery_cost, 0) }}
+                                        <span class="text-lg ml-0.5 text-[#ff3c00]">€</span>
+                                    </div>
+                                    <span
+                                        class="inline-block px-2 py-1 rounded-lg bg-slate-900 text-[8px] font-black text-white uppercase tracking-widest mt-2 shadow-lg shadow-slate-200">Net</span>
+                                </div>
+                            </div>
+                           
+                            <h3 class="text-xl font-[1000] text-slate-900 uppercase tracking-tighter leading-[1.1] mb-8 line-clamp-2 min-h-[2.2em] group-hover:text-[#ff3c00] transition-colors">
+                                {{ Str::limit ($mission->booking?->ad?->title ?? $mission->productSale?->product?->name ?? '') }}
+                            </h3>
+                            <div class="space-y-7 relative px-1">
+                                <div
+                                    class="absolute left-[11px] top-3 bottom-3 w-[2px] bg-gradient-to-b from-slate-200 via-slate-100 to-[#ff3c00] rounded-full">
+                                </div>
+                                <div class="flex items-start gap-5 relative z-10">
+                                    <div
+                                        class="w-[22px] h-[22px] rounded-full bg-white border-[3px] border-slate-900 flex items-center justify-center shrink-0 shadow-sm">
+                                        <div class="w-1.5 h-1.5 rounded-full bg-slate-900"></div>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Point de
+                                            départ</p>
+                                        <p class="text-[12px] font-bold text-slate-600 leading-tight uppercase tracking-tight group-hover:text-slate-900 transition-colors">
+                                            {{ $mission->booking?->address ?? $mission->productSale?->address }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-5 relative z-10">
+
+                                    @php
+                                        $status = $mission->status;
+
+                                        $marginTop = match($status) {
+                                            'picked_up' => 'mt-16',
+                                            'in_transit' => 'mt-32',
+                                            default => 'mt-0',
+                                        };
+
+                                        $icon = match($status) {
+                                            'picked_up' => 'package-check',
+                                            'in_transit' => 'truck',
+                                            default => 'map-pin',
+                                        };
+
+                                        $bg = match($status) {
+                                            'picked_up' => 'bg-amber-500',
+                                            'in_transit' => 'bg-blue-600',
+                                            default => 'bg-[#ff3c00]',
+                                        };
+                                    @endphp
+
+                                    <div class="{{ $marginTop }} w-[22px] h-[22px] rounded-full {{ $bg }} border-[3px] border-white shadow-lg flex items-center justify-center shrink-0 transition-all duration-700">
+                                        <i data-lucide="{{ $icon }}" class="w-2.5 h-2.5 text-white"></i>
+                                    </div>
+
+                                    <div class="{{ $marginTop }} min-w-0 transition-all duration-700">
+                                        <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                                            Destination
+                                        </p>
+
+                                        <p class="text-[12px] font-bold text-slate-600 leading-tight uppercase tracking-tight">
+                                            {{ $mission->booking?->delivery_address ?? $mission->productSale?->delivery_address }}
+                                        </p>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-10 space-y-2">
+                            <div class="mt-10 space-y-2">
+
+                                @if($mission->status === 'pending')
+                                    <form action="{{ route('livreur.livraison.pickup', $mission) }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-all">
+                                            <i data-lucide="package-check" class="w-4 h-4"></i>
+                                            J'ai récupéré le colis
+                                        </button>
+                                    </form>
+                                @endif
+                                @if($mission->status === 'picked_up')
+                                    <form action="{{ route('livreur.livraison.start', $mission) }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="w-full h-11 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-all">
+                                            <i data-lucide="truck" class="w-4 h-4"></i>
+                                            Démarrer la livraison
+                                        </button>
+                                    </form>
+                                @endif
+
+                                @if($mission->status === 'in_transit')
+                                    <button type="button"
+                                        onclick="openConfirmModal({{ $mission->id }})"
+                                        class="w-full h-11 bg-green-600 hover:bg-green-700 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-all">
+                                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                        Terminer la livraison
+                                    </button>
+                                @endif
+                                <button type="button"
+                                    onclick='openMissionModal(@json($mission))'
+                                    class="w-full h-10 bg-slate-100 text-slate-700 rounded-xl font-black text-[9px] uppercase tracking-[0.12em] flex items-center justify-center gap-2 hover:bg-slate-200 transition-all">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                    Voir les détails
+                                </button>
+
+                            </div>
+                        </div>
+                    </div>
+
+                @empty
+                    <div
+                        class="col-span-full py-24 flex flex-col items-center justify-center text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-100 shadow-sm">
+                        <div class="relative mb-8">
+                            <div class="w-32 h-32 bg-slate-50 rounded-[3.5rem] flex items-center justify-center animate-float">
+                                <i data-lucide="ghost" class="w-16 h-16 text-slate-200"></i>
+                            </div>
+                            <div
+                                class="absolute -bottom-2 -right-2 w-12 h-12 bg-white border-4 border-slate-50 rounded-full flex items-center justify-center shadow-lg">
+                                <i data-lucide="search" class="w-5 h-5 text-[#ff3c00]"></i>
+                            </div>
+                        </div>
+
+                        <h3 class="text-2xl font-[1000] text-slate-900 uppercase tracking-tighter italic">
+                            C'est bien <span class="text-[#ff3c00]">calme</span> ici...
+                        </h3>
+                        <p class="text-slate-400 text-sm mt-3 max-w-xs mx-auto font-bold uppercase tracking-tight leading-relaxed opacity-70">
+                            Aucune mission en cours pour le moment. Revenez d'ici quelques minutes !
+                        </p>
+                        <button onclick="window.location.reload()" class="mt-10 px-10 py-4 bg-slate-900 hover:bg-[#ff3c00] text-white rounded-full font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-xl shadow-slate-200 active:scale-95 flex items-center gap-3">
+                            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Actualiser le flux
+                        </button>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<div id="missionModal" class="fixed inset-0 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-2  z-[9999] hidden flex items-center justify-center">
+    <div class="absolute inset-0 bg-black/60" onclick="closeMissionModal()"></div>
+    <div class="relative z-10 bg-white w-full max-w-xl rounded-[2rem] shadow-2xl m-auto">
+        <div class="flex items-center justify-between px-4 py-2 border-b overflow-auto">
+            <div>
+                <p class="text-xs font-black uppercase tracking-widest text-[#ff3c00]">
+                    Mission
+                </p>
+
+                <h2 id="modalTitle"
+                    class="text-2xl font-[1000] text-slate-900 uppercase tracking-tight">
+                </h2>
+            </div>
+
+            <button onclick="closeMissionModal()" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div class="p-8 space-y-6 overflow-auto h-[25rem]">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-50 rounded-2xl p-4">
+                    <p class="text-[10px] uppercase font-black text-slate-400">
+                        Type
+                    </p>
+                    <p id="modalType" class="font-bold text-slate-900"></p>
+                </div>
+
+                <div class="bg-slate-50 rounded-2xl p-4">
+                    <p class="text-[10px] uppercase font-black text-slate-400">
+                        Prix
+                    </p>
+                    <p id="modalPrice"
+                        class="font-black text-xl text-[#ff3c00]">
+                    </p>
+                </div>
+
+            </div>
+
+            <div>
+                <p class="text-[10px] uppercase font-black text-slate-400 mb-1">
+                    Expéditeur
+                </p>
+
+                <p id="modalSender"
+                    class="font-bold text-slate-900">
+                </p>
+            </div>
+
+            <div>
+                <p class="text-[10px] uppercase font-black text-slate-400 mb-1">
+                    Adresse de départ
+                </p>
+
+                <p id="modalPickup"
+                    class="font-bold text-slate-700">
+                </p>
+            </div>
+
+            <div>
+                <p class="text-[10px] uppercase font-black text-slate-400 mb-1">
+                    Adresse de livraison
+                </p>
+
+                <p id="modalDelivery"
+                    class="font-bold text-slate-700">
+                </p>
+            </div>
+
+            <div id="datesBlock" class="hidden">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 rounded-2xl p-4">
+                        <p class="text-[10px] uppercase font-black text-slate-400">
+                            Début
+                        </p>
+                        <p id="modalStartDate"></p>
+                    </div>
+
+                    <div class="bg-slate-50 rounded-2xl p-4">
+                        <p class="text-[10px] uppercase font-black text-slate-400">
+                            Fin
+                        </p>
+                        <p id="modalEndDate"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-[10px] uppercase font-black text-slate-400 mb-1">
+                    Description
+                </p>
+
+                <div id="modalDescription" class="bg-slate-50 rounded-2xl p-4 text-slate-700">
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+<div id="confirmDeliveryModal"
+    class="fixed inset-0 hidden z-[99999] items-center justify-center bg-black/60 backdrop-blur-sm">
+
+    <div class="bg-white rounded-[2rem] w-full max-w-md mx-4 overflow-hidden shadow-2xl">
+
+        <div class="p-8 text-center">
+
+            <div class="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center mb-6">
+                <i data-lucide="check-circle" class="w-10 h-10 text-green-600"></i>
+            </div>
+
+            <h3 class="text-xl font-[1000] text-slate-900 uppercase tracking-tight">
+                Terminer la livraison ?
+            </h3>
+
+            <p class="mt-3 text-sm text-slate-500">
+                Cette action indiquera que le colis a été livré au destinataire.
+            </p>
+
+            <form id="confirmDeliveryForm" method="POST" class="mt-8">
+                @csrf
+
+                <div class="flex gap-3">
+                    <button
+                        type="button"
+                        onclick="closeConfirmModal()"
+                        class="flex-1 h-12 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50">
+                        Annuler
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white rounded-xl font-black uppercase text-xs tracking-wider">
+                        Confirmer
+                    </button>
+                </div>
+            </form>
+
+        </div>
+
+    </div>
+</div>
+<script>
+    function openMissionModal(ad) {
+        console.log('ad',ad)
+        document.getElementById('modalTitle').innerText = ad.product_sale?.product?.name ?? ad.booking?.ad?.title ?? 'Mission';
+        document.getElementById('modalPrice').innerText = (ad.product_sale?.delivery_cost ?? ad.booking?.delivery_cost ?? 0) + ' €';
+        document.getElementById('modalSender').innerText = ad.product_sale?.product.user?.name ?? ad.booking?.ad.user?.name ?? 'Client';
+        document.getElementById('modalPickup').innerText = ad.product_sale?.address ?? ad.booking?.address ?? '-';
+        document.getElementById('modalDelivery').innerText = ad.product_sale?.delivery_address ?? ad.booking?.delivery_address ?? '-';
+        document.getElementById('modalDescription').innerHTML = ad.product_sale?.product?.description ?? ad.booking?.ad?.description ?? 'Aucune description';
+        document.getElementById('modalType').innerText = ad.booking ? 'Location' : 'Vente';
+
+        if (ad.product_sale?.start_date || ad.booking?.start_date) {
+            document.getElementById('datesBlock').classList.remove('hidden');
+            document.getElementById('modalStartDate').innerText = new Date(ad.product_sale?.start_date ?? ad.booking?.start_date).toLocaleDateString('fr-FR');
+            document.getElementById('modalEndDate').innerText = new Date(ad.product_sale?.end_date ?? ad.booking?.end_date).toLocaleDateString('fr-FR');
+        } else {
+            document.getElementById('datesBlock').classList.add('hidden');
+        }
+
+        document.getElementById('missionModal').classList.remove('hidden');
+
+        lucide.createIcons();
+    }
+
+    function closeMissionModal() {
+        document.getElementById('missionModal').classList.add('hidden');
+    }
+
+    document.getElementById('missionModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeMissionModal();
+        }
+    });
+</script>
+<script>
+    function openConfirmModal(deliveryId)
+    {
+        const form = document.getElementById('confirmDeliveryForm');
+
+        form.action = `/espace-livraison/livraison/${deliveryId}/finaliser`;
+
+        document.getElementById('confirmDeliveryModal')
+            .classList.remove('hidden');
+
+        document.getElementById('confirmDeliveryModal')
+            .classList.add('flex');
+    }
+
+    function closeConfirmModal()
+    {
+        document.getElementById('confirmDeliveryModal')
+            .classList.add('hidden');
+
+        document.getElementById('confirmDeliveryModal')
+            .classList.remove('flex');
+    }
+</script>
+@endsection

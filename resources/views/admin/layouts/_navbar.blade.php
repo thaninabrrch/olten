@@ -25,9 +25,7 @@
     <!-- Profil Utilisateur & Notifications & Paramètres -->
     <div class="flex items-center space-x-4">
 
-        <button id="settings-toggle">
-            <i class="bi bi-gear-fill"></i>
-        </button>
+
 
 
 

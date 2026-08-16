@@ -12,6 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         //
+        $middleware->alias([
+            'approved' => \App\Http\Middleware\EnsureUserIsApproved::class,
+            'subscription' => \App\Http\Middleware\CheckSubscription::class,
+            'subscription.level' => \App\Http\Middleware\SubscriptionLevel::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

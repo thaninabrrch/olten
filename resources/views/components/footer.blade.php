@@ -5,7 +5,7 @@
     <div class="footer-section logo-section">
       <img src="{{ asset('assets/images/logo/olten_location.jpg') }}" alt="Olten Location" class="footer-logo">
       <p>
-        Avec Olten-location.fr, trouvez ce qu’il vous faut près de chez vous, 
+        Avec Olten.fr, trouvez ce qu’il vous faut près de chez vous, 
         ou mettez vos propres affaires en location pour arrondir vos fins de mois.
       </p>
     </div>
@@ -14,17 +14,23 @@
     <div class="footer-section links-section">
       <h3>Nos Pages</h3>
       <ul>
-        <li><a href="/">› Accueil</a></li>
-        <li><a href="#">› Location véhicule</a></li>
-        <li><a href="#">› Location immobilier</a></li>
-        <li><a href="#">› Location mode & famille</a></li>
-        <li><a href="#">› Location sport & loisir</a></li>
-        <li><a href="#">› Location maison & bricolage</a></li>
-        <li><a href="#">› Location événementiel</a></li>
-        <li><a href="#">› Location nautisme</a></li>
-        <li><a href="#">› Location électronique</a></li>
-        <li><a href="#">› Location médical</a></li>
-        <li><a href="#">› Contact</a></li>
+        <li class="d-flex">
+          <a class="d-flex gap-2" href="/" >
+            <i class="fas fa-home category-icon-small"></i> Accueil
+          </a>
+        </li>
+        @foreach($footerCategories as $category)
+          <li class="d-flex">
+              <a href="{{ route('categories.show', $category->slug) }}" class="d-flex gap-2">
+                <i class="{{ $category->icon }} category-icon-small"></i> {{ $category->nom }}
+            </a>
+          </li>
+        @endforeach
+        <li class="d-flex">
+          <a class="d-flex gap-2" href="/contact">
+            <i class="fas fa-envelope category-icon-small"></i> Contact
+          </a>
+        </li>
       </ul>
     </div>
 
@@ -47,7 +53,7 @@
 
   <!-- Bas du footer -->
   <div class="footer-bottom">
-    © 2025 Tous droits réservés. <a href="#">olten-location.fr</a>
+    © 2025 Tous droits réservés. <a href="#">olten.fr</a>
   </div>
 
   <!-- Bouton retour haut -->

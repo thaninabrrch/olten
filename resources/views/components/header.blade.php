@@ -10,25 +10,41 @@
 
     <!-- Barre de recherche (PC uniquement) -->
     <div class="search-bar">
-        <div class="search-field">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" placeholder="Que recherchez-vous ?" class="search-input">
-        </div>
-        <div class="divider"></div>
-        <div class="search-field">
-            <i class="fa-solid fa-location-dot"></i>
-            <input type="text" placeholder="Emplacement" class="location-input">
-        </div>
-        <div class="divider"></div>
-        <div class="search-field">
-            <select class="category-select">
-                <option>Toutes les catégories</option>
-                <option>Auto</option>
-                <option>Immobilier</option>
-                <option>Emploi</option>
-            </select>
-        </div>
-        <button class="search-btn">Rechercher</button>
+        <form method="GET" action="{{ route('home') }}" class="search-bar w-100">
+
+            <div class="search-field">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" name="search" placeholder="Que recherchez-vous ?" class="search-input"
+                    value="{{ request('search') }}">
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="search-field">
+                <i class="fa-solid fa-location-dot"></i>
+                <input type="text" name="location" placeholder="Emplacement" class="location-input"
+                    value="{{ request('location') }}">
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="search-field">
+                <select name="category" class="category-select">
+                    <option value="">Toutes les catégories</option>
+
+                    @foreach ($categories as $category)
+                        <option value="{{ $category->id }}"
+                            {{ request('category') == $category->id ? 'selected' : '' }}>
+                            {{ $category->nom }}
+                        </option>
+                    @endforeach
+
+                </select>
+            </div>
+
+            <button type="submit" class="search-btn">Rechercher</button>
+
+        </form>
     </div>
 
     <!-- Profil / Menu / Icônes Mobile -->
@@ -37,10 +53,71 @@
             <i class="fa-solid fa-magnifying-glass"></i>
         </button>
 
-        @if(Auth::check())
-            <button class="icon-btn">
-                <i class="fa-solid fa-user"></i>
-            </button>
+        @if (Auth::check())
+            <div class="user-menu">
+                @php
+                    $name = Auth::user()->name;
+                    $initial = strtoupper(substr($name, 0, 1));
+                @endphp
+                <div class="user-avatar">{{ $initial }}</div>
+                <i class="fa-solid fa-chevron-down"></i>
+                <!-- DROPDOWN MENU -->
+                <ul class="user-dropdown">
+                    <li>
+                        <a href="{{ url('/dashboard') }}">
+                            <i class="fa-solid fa-table-columns"></i>
+                            Tableau de bord
+                        </a>
+                    </li>
+                    @if(auth()->user()->hasRole('locateur'))
+                    <li class="{{ Route::is('bookings.receivedBookings') ? 'active' : '' }}">
+                        <a href="{{ url('/mes-reservations-recues') }}">
+                            <i class="fa-solid fa-calendar-check"></i>
+                            <span>Mes réservations reçues</span>
+                        </a>
+                    </li>
+                    @endif
+                    <li class="{{ Route::is('bookings.myBookings') ? 'active' : '' }}">
+                        <a href="{{ url('/mes-reservations') }}">
+                            <i class="fa-solid fa-calendar-check"></i>
+                            <span>Mes réservations</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('ads.index') }}">
+                            <i class="fa-solid fa-list"></i>
+                            Mes annonces
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('favoris') }}">
+                            <i class="fa-solid fa-heart"></i>
+                            Favoris
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('messages') }}">
+                            <i class="fa-solid fa-envelope"></i>
+                            Messages
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('profile') }}">
+                            <i class="fa-solid fa-user"></i>
+                            Mon profil
+                        </a>
+                    </li>
+                    <li>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <a href="{{ route('logout') }}"
+                                onclick="event.preventDefault(); this.closest('form').submit();">
+                                <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+                            </a>
+                        </form>
+                    </li>
+                </ul>
+            </div>
         @else
             <button class="icon-btn">
                 <i class="fa-solid fa-right-to-bracket"></i>
@@ -55,23 +132,41 @@
     <!-- Bloc de recherche mobile -->
     <div class="mobile-search" id="mobileSearch">
         <div class="mobile-search-content">
-            <div class="search-field">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" placeholder="Que recherchez-vous ?" class="search-input">
-            </div>
-            <div class="search-field">
-                <i class="fa-solid fa-location-dot"></i>
-                <input type="text" placeholder="Emplacement" class="location-input">
-            </div>
-            <div class="search-field">
-                <select class="category-select">
-                    <option>Toutes les catégories</option>
-                    <option>Auto</option>
-                    <option>Immobilier</option>
-                    <option>Emploi</option>
-                </select>
-            </div>
-            <button class="search-btn">Rechercher</button>
+
+            <form method="GET" action="{{ route('home') }}">
+
+                <div class="search-field">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" name="search" placeholder="Que recherchez-vous ?" class="search-input"
+                        value="{{ request('search') }}">
+                </div>
+
+                <div class="search-field">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <input type="text" name="location" placeholder="Emplacement" class="location-input"
+                        value="{{ request('location') }}">
+                </div>
+
+                <div class="search-field">
+                    <select name="category" class="category-select">
+                        <option value="">Toutes les catégories</option>
+
+                        @foreach ($categories as $category)
+                            <option value="{{ $category->id }}"
+                                {{ request('category') == $category->id ? 'selected' : '' }}>
+                                {{ $category->nom }}
+                            </option>
+                        @endforeach
+
+                    </select>
+                </div>
+
+                <button type="submit" class="search-btn w-100">
+                    Rechercher
+                </button>
+
+            </form>
+
         </div>
     </div>
 
@@ -86,20 +181,24 @@
             </button>
         </div>
         <ul class="menu-list">
-            <li><a href="{{ url('/') }}">Accueil</a></li>
-            <li><a href="">Location véhicule</a></li>
-            <li><a href="">Location immobilier</a></li>
-            <li><a href="">Location mode & famille</a></li>
-            <li><a href="">Location sport & loisir</a></li>
-            <li><a href="">Location maison & bricolage</a></li>
-            <li><a href="">Location événementiel</a></li>
-            <li><a href="">Location nautisme</a></li>
-            <li><a href="">Location électronique</a></li>
-            <li><a href="">Location médical</a></li>
-            <li><a href="{{ url('/contact') }}">Contact</a></li>
+            <li class="d-flex">
+            <a class="d-flex gap-2" href="/" >
+                <i class="fas fa-home category-icon-small bg-transparent"></i> Accueil
+            </a>
+            </li>
+            @foreach($footerCategories as $category)
+            <li class="d-flex">
+                <a href="{{ route('categories.show', $category->slug) }}" class="d-flex gap-2">
+                    <i class="{{ $category->icon }} category-icon-small bg-transparent"></i> {{ $category->nom }}
+                </a>
+            </li>
+            @endforeach
+            <li class="d-flex">
+            <a class="d-flex gap-2" href="/contact">
+                <i class="fas fa-envelope category-icon-small bg-transparent"></i> Contact
+            </a>
+            </li>
         </ul>
-
-
         <div class="sidebar-footer">
             <h3>Contactez-nous</h3>
             <p>olten-location@outlook.fr</p>
@@ -151,29 +250,52 @@
         <div class="tab-content" id="register" style="display:none;">
             <form id="registerForm">
                 @csrf
+
                 <div class="input-group">
                     <i class="fa-solid fa-pen"></i>
                     <input type="text" name="first_name" placeholder="Prénom" required>
                 </div>
+
                 <div class="input-group">
                     <i class="fa-solid fa-pen"></i>
                     <input type="text" name="last_name" placeholder="Nom de famille" required>
                 </div>
+
                 <div class="input-group">
                     <i class="fa-solid fa-envelope"></i>
                     <input type="email" name="email" placeholder="Adresse e-mail" required>
                 </div>
+
                 <div class="input-group">
                     <i class="fa-solid fa-lock"></i>
                     <input type="password" name="password" placeholder="Mot de passe" required>
                     <i class="fa-solid fa-eye toggle-password"></i>
                 </div>
+
+                {{-- ✅ Confirmation mot de passe remontée avant le rôle --}}
                 <div class="input-group">
                     <i class="fa-solid fa-lock"></i>
-                    <input type="password" name="password_confirmation" placeholder="Confirmer le mot de passe" required>
+                    <input type="password" name="password_confirmation" placeholder="Confirmer le mot de passe"
+                        required>
+                    <i class="fa-solid fa-eye toggle-password"></i>
                 </div>
+
+                {{-- ✅ Rôle en dernier (masqué si géré par l'admin, voir point 2) --}}
+                <div class="input-group">
+                    <i class="fa-solid fa-user-tag"></i>
+                    <select name="role" required>
+                        <option value="">Choisir un rôle</option>
+                        <option value="locateur">Locateur</option>
+                        <option value="vendeur">Vendeur</option>
+                        <option value="livreur">Livreur</option>
+                        <option value="locateur|livreur">Locataire + Livreur</option>
+                        <option value="vendeur|livreur">Vendeur + Livreur</option>
+                    </select>
+                </div>
+
                 <label>
-                    <input type="checkbox" name="terms" required> J'accepte les <a href="#">Conditions de confidentialité</a>
+                    <input type="checkbox" name="terms" required>
+                    J'accepte les <a href="#">Conditions de confidentialité</a>
                 </label>
 
                 <div id="registerErrors"></div>
@@ -192,4 +314,3 @@
     window.PASSWORD_RESET_STATUS = @json(session('status', null));
 </script>
 <script src="{{ asset('assets/js/auth.js') }}"></script>
-

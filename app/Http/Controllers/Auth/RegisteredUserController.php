@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Laratrust\Models\Role;
 
 class RegisteredUserController extends Controller
 {
@@ -41,6 +43,7 @@ class RegisteredUserController extends Controller
             'password.min' => 'Le mot de passe doit contenir au moins 8 caractères.',
             'password.regex' => 'Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial.',
             'terms.accepted' => 'Vous devez accepter les conditions pour continuer.',
+            'role.required' => 'Le role est obligatoire.',
         ];
 
         $validator = Validator::make($request->all(), [
@@ -54,6 +57,7 @@ class RegisteredUserController extends Controller
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/'
             ],
             'terms'      => ['accepted'],
+            'role' => ['required'],
         ], $messages);
 
         if ($validator->fails()) {
@@ -70,13 +74,34 @@ class RegisteredUserController extends Controller
             'email'    => $request->email,
             'password' => Hash::make($request->password),
         ]);
+        
+        $roles = explode('|', $request->role);
+
+        $roleIds = [];
+
+        foreach ($roles as $roleName) {
+            $role = Role::where('name', $roleName)->first();
+
+            if (!$role) {
+                throw new \Exception("Rôle invalide: $roleName");
+            }
+
+            $roleIds[] = $role->id;
+        }
+
+        $user->syncRoles($roleIds);
 
         event(new Registered($user));
+
         Auth::login($user);
 
+        // return response()->json([
+        //     'status' => 'success',
+        //     'redirect' => route('dashboard'),
+        // ]);
         return response()->json([
             'status' => 'success',
-            'redirect' => route('dashboard'),
+            'redirect' => route('subscriptions.index'),
         ]);
     }
 }

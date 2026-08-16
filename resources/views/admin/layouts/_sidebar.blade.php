@@ -1,5 +1,5 @@
 <aside id="sidebar"
-    class="sidebar fixed inset-y-0 left-0 z-30 w-64 shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out p-4 flex flex-col border-r">
+    class="sidebar overflow-auto fixed inset-y-0 left-0 z-30 w-64 shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out p-4 flex flex-col border-r">
 
     <!-- Logo -->
     <div class="flex items-center justify-center h-16 mb-6 border-b" style="border-color: #E5E7EB;">
@@ -59,7 +59,22 @@
             <i class="bi bi-card-checklist mr-3 w-5 h-5"></i>
             Cartes VTC
         </a>
-
+        <a href="{{ route('admin.admin.ads.index') }}"
+            class="sidebar-link flex items-center p-3 rounded-xl text-sm font-medium">
+            <i class="bi bi-megaphone-fill mr-3 w-5 h-5"></i>
+            Annonces
+        </a>
+        <a href="{{ route('admin.rides.index') }}"
+            class="sidebar-link flex items-center p-3 rounded-xl text-sm font-medium hover:text-primary-accent hover:bg-gray-100">
+            <i class="bi bi-car-front-fill mr-3 w-5 h-5"></i>
+            Trajets
+        </a>
+        {{-- Paramètres --}}
+        <a href="{{ route('admin.settings.index') }}"
+            class="sidebar-link flex items-center p-3 rounded-xl text-sm font-medium hover:text-primary-accent hover:bg-gray-100">
+            <i class="bi bi-gear-fill mr-3 w-5 h-5"></i>
+            Paramètres
+        </a>
     </nav>
 
     <!-- Déconnexion -->

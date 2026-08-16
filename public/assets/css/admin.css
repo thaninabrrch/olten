@@ -324,3 +324,11 @@
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(233, 29, 40, 0.2);
   }
+  .ts-control{
+    border: 1px solid rgba(255, 122, 129, 0.757) !important;
+    border-radius: 8px  !important;
+    padding: 0.7rem !important;
+  }
+  .ts-dropdown{
+    background-color: white !important;
+  }

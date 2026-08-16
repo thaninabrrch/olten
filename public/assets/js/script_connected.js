@@ -1,8 +1,8 @@
-  // Initialisation de la carte
     const map = L.map('map').setView([48.866667, 2.333333], 18); 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
     }).addTo(map);
+    
     let vendeurMarker;
 
     map.on('click', function (e) {

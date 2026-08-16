@@ -26,7 +26,7 @@ public function store(Request $request)
     ContactMessage::create($validated);
 
     // Envoi du mail
-    Mail::to('massaidsafia2@gmail.com')->send(new ContactMessageMail($validated));
+    Mail::to($validated['email'])->send(new ContactMessageMail($validated));
 
     return redirect()
         ->route('contact')
