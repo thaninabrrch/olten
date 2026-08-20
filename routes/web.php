@@ -68,6 +68,9 @@ Route::get('/compte-en-attente', function () { return view('auth.pending-approva
 Route::get('/verify-email', function () { return view('auth.verify-email');})->name('account.verify');
 
 Route::middleware('auth')->group(function () {
+    Route::post('/ads/{ad}/favorite', [FavoriteController::class, 'toggle'])->name('ads.favorite');
+    Route::post('/products/{product}/favorite', [FavoriteController::class, 'toggleProduct'])->name('products.favorite');
+    Route::get('/favoris', [FavoriteController::class, 'index'])->name('favoris');
     Route::get('/abonnements', [SubscriptionController::class, 'index'])->name('subscriptions.index');
     Route::post('/abonnements/{slug}/choisir', [SubscriptionController::class, 'select'])->name('subscriptions.select');
     Route::get('/abonnements/{subscription}/paiement', [SubscriptionController::class, 'payment'])->name('subscriptions.payment');
@@ -121,8 +124,6 @@ Route::middleware('auth', 'verified', 'subscription', 'approved', 'subscription.
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::get('/messages/{user}', [MessageController::class, 'show'])->name('messages.show');
     Route::post('/messages/{user}', [MessageController::class, 'store'])->name('messages.store');
-    Route::post('/ads/{ad}/favorite', [FavoriteController::class, 'toggle'])->name('ads.favorite');
-    Route::get('/favoris', [FavoriteController::class, 'index'])->name('favoris');
     Route::post('/ads/{ad}/bookings', [BookingController::class, 'store'])->name('bookings.store');
     Route::get('/bookings/confirm', [BookingController::class, 'confirm'])->name('bookings.confirm');
     Route::post('/bookings/pay', [BookingController::class, 'pay'])->name('bookings.pay');

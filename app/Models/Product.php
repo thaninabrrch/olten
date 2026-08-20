@@ -42,7 +42,6 @@ class Product extends Model
         return $this->hasMany(ProductImage::class);
     }
 
-
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
@@ -56,5 +55,10 @@ class Product extends Model
     public function sales()
     {
         return $this->hasMany(ProductSale::class);
+    }
+
+    public function favorites()
+    {
+        return $this->hasMany(Favorite::class, 'product_id');
     }
 }

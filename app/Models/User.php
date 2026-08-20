@@ -91,12 +91,36 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail
 
     public function favorites()
     {
-        return $this->belongsToMany(Ad::class, 'favorites', 'user_id', 'ad_id')->withTimestamps();
+        return $this->belongsToMany(
+            Ad::class,
+            'favorites',
+            'user_id',
+            'ad_id'
+        )->withTimestamps();
+    }
+
+    public function productFavorites()
+    {
+        return $this->belongsToMany(
+            Product::class,
+            'favorites',
+            'user_id',
+            'product_id'
+        )->withTimestamps();
     }
 
     public function hasFavorited(Ad $ad)
     {
-        return $this->favorites()->where('ad_id', $ad->id)->exists();
+        return $this->favorites()
+            ->where('ad_id', $ad->id)
+            ->exists();
+    }
+
+    public function hasFavoritedProduct(Product $product)
+    {
+        return $this->productFavorites()
+            ->where('product_id', $product->id)
+            ->exists();
     }
     
     public function demandesLivreur()

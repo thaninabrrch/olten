@@ -68,4 +68,9 @@ class Ad extends Model
     {
         return $this->hasMany(Booking::class, 'ad_id', 'id');
     }
+
+    public function favorites()
+    {
+        return $this->hasMany(Favorite::class);
+    }
 }

@@ -86,71 +86,180 @@
     </p>
 @endif
 
-<!----------Plus récent annonce-------------->
-@php
-    $approvedAds = $ads->where('is_approved', true);
-    use Carbon\Carbon;
-@endphp
+<!---------- Plus récent annonce / produit -------------->
+@if($latestItems->isNotEmpty())
 
-@if($approvedAds->isNotEmpty())
     <section class="annonces-section">
+
         <div class="section-header">
+
             <h2 class="section-title">
-                Les Annonces qui Font Parler d'elles sur <span class="site-name">Olten.fr</span>
+                Les Annonces qui Font Parler d'elles sur
+                <span class="site-name">Olten.fr</span>
             </h2>
+
             <div class="carousel-nav">
+
                 <button class="carousel-btn prev-btn" aria-label="Précédent">
                     <i class="fas fa-chevron-left"></i>
                 </button>
+
                 <button class="carousel-btn next-btn" aria-label="Suivant">
                     <i class="fas fa-chevron-right"></i>
                 </button>
+
             </div>
         </div>
 
         <div class="carousel-wrapper">
+
             <div class="carousel-track">
-                @forelse($ads as $ad)
-                    @if($ad->is_approved)
-                        <a href="#" id="ad-link" class="annonce-card {{ $ad->expires_at && \Carbon\Carbon::parse($ad->expires_at)->toDateString() < now()->toDateString() ? 'expired-card' : '' }}">
+                @foreach($latestItems as $latest)
+                    @if($latest->type === 'ad')
+
+                        @php
+                            $ad = $latest->item;
+
+                            $isExpired = $ad->expires_at &&
+                                \Carbon\Carbon::parse($ad->expires_at)->toDateString() < now()->toDateString();
+                        @endphp
+
+                        {{-- ================= ANNONCE ================= --}}
+
+                        <a href="{{ route('ads.show', $ad->id) }}"
+                        class="annonce-card {{ $isExpired ? 'expired-card' : '' }}">
+
                             <div class="card-image-container">
-                                <img src="{{ $ad->images->first() ? asset('storage/' . $ad->images->first()->path) : asset('assets/images/no-image.jpg') }}" alt="{{ $ad->title }}" class="card-image">
-                                <span class="category-badge">{{ $ad->category->nom ?? 'Catégorie non définie' }}</span>
-                                <button class="favorite-btn" aria-label="Ajouter aux favoris" data-ad-id="{{ $ad->id }}" data-favorited="{{ auth()->check() && auth()->user()->hasFavorited($ad) ? 'true' : 'false' }}">
+
+                                <img
+                                    src="{{ $ad->images->first()
+                                        ? asset('storage/' . $ad->images->first()->path)
+                                        : asset('assets/images/no-image.jpg') }}"
+                                    alt="{{ $ad->title }}"
+                                    class="card-image"
+                                >
+                                <span class="category-badge">
+                                    {{ $ad->category->nom ?? 'Catégorie non définie' }}
+                                </span>
+
+                                <button
+                                    type="button"
+                                    class="favorite-btn"
+                                    aria-label="Ajouter aux favoris"
+                                    data-type="ad"
+                                    data-id="{{ $ad->id }}"
+                                    data-favorited="{{ auth()->check() && auth()->user()->hasFavorited($ad) ? 'true' : 'false' }}"
+                                >
                                     <i class="{{ auth()->check() && auth()->user()->hasFavorited($ad) ? 'fas fa-heart' : 'far fa-heart' }}"></i>
                                 </button>
+
                             </div>
+
                             <div class="card-content">
+
                                 <div class="d-flex justify-content-between">
+
                                     <h3 class="card-title">
                                         {{ $ad->title }}
                                     </h3>
-                                    @if($ad->expires_at && Carbon::parse($ad->expires_at)->toDateString() < now()->toDateString())
-                                        <span class="expired">Expirée</span>
+
+                                    @if($isExpired)
+                                        <span class="expired">
+                                            Expirée
+                                        </span>
                                     @endif
+
                                     @if($ad->delivery_active)
-                                        <span class="mt-auto mb-auto bg-success text-white fs-6 p-1 radius-2">Livraison disponible</span>
+                                        <span class="mt-auto mb-auto bg-success text-white fs-6 p-1 radius-2">
+                                            Livraison disponible
+                                        </span>
                                     @endif
+
                                 </div>
 
-                                <p class="card-price">Commence à partir de {{ number_format($ad->price_per_day, 2) }} € / jour</p>
+                                <p class="card-price">
+                                    Commence à partir de
+                                    {{ number_format($ad->price_per_day, 2) }} € / jour
+                                </p>
+
                             </div>
+
                         </a>
+
+                    @else
+
+                        @php
+                            $product = $latest->item;
+                        @endphp
+
+                        {{-- ================= PRODUIT ================= --}}
+
+                        <a href="{{ route('products.show', $product->id) }}"
+                        class="annonce-card">
+
+                            <div class="card-image-container">
+
+                                <img
+                                    src="{{ $product->images->first()
+                                        ? asset('storage/' . $product->images->first()->image)
+                                        : asset('assets/images/no-image.jpg') }}"
+                                    alt="{{ $product->name }}"
+                                    class="card-image"
+                                >
+
+                                <span class="category-badge">
+                                    {{ $product->category->nom ?? 'Catégorie non définie' }}
+                                </span>
+
+                                <button
+                                    type="button"
+                                    class="favorite-btn"
+                                    aria-label="Ajouter aux favoris"
+                                    data-type="product"
+                                    data-id="{{ $product->id }}"
+                                    data-favorited="{{ auth()->check() && auth()->user()->hasFavoritedProduct($product) ? 'true' : 'false' }}"
+                                >
+                                    <i class="{{ auth()->check() && auth()->user()->hasFavoritedProduct($product) ? 'fas fa-heart' : 'far fa-heart' }}"></i>
+                                </button>
+
+                                @if($product->delivery_available)
+                                    <span class="mt-auto mb-auto bg-success text-white fs-6 p-1 radius-2">
+                                        Livraison disponible
+                                    </span>
+                                @endif
+
+                            </div>
+
+                            <div class="card-content">
+
+                                <h3 class="card-title">
+                                    {{ $product->name }}
+                                </h3>
+
+                                <p class="card-price">
+                                    {{ number_format($product->price, 2) }} €
+                                </p>
+
+                            </div>
+
+                        </a>
+
                     @endif
-                @empty
-                    <p class="text-center">
-                        Aucune annonce disponible pour le moment.
-                    </p>
-                @endforelse
+                @endforeach
             </div>
+
         </div>
 
         <div class="carousel-dots"></div>
+
     </section>
+
 @else
+
     <p class="text-center">
-        Aucune annonce disponible pour le moment.
+        Aucune annonce ou produit disponible pour le moment.
     </p>
+
 @endif
 
 <!----------À PROPOS D'OLTEN-------------->

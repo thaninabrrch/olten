@@ -491,115 +491,98 @@ function initializeViewToggle() {
 // ============================================
 // FAVORITES
 // ============================================
-document.addEventListener('click', async function(e) {
+document.addEventListener('click', async function (e) {
     const btn = e.target.closest('.favorite-btn');
+
     if (!btn) return;
 
-    e.stopPropagation();
     e.preventDefault();
+    e.stopPropagation();
 
     const icon = btn.querySelector('i');
-    const adId = btn.dataset.adId;
 
-    try {
-        const response = await fetch(`/ads/${adId}/favorite`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json'
-            }
-        });
+    if (!icon) return;
 
-        const data = await response.json();
+    const type = btn.dataset.type || 'ad';
+    const id = btn.dataset.id;
 
-        if (response.status === 401) {
-            // Non authentifié -> ouvrir le modal login
-            const modal = document.getElementById('authModal');
-            if (modal) modal.style.display = 'block';
-            // Activer l'onglet login
-            const loginTab = document.querySelector('.tab-btn[data-tab="login"]');
-            const registerTab = document.querySelector('.tab-btn[data-tab="register"]');
-            const loginContent = document.getElementById('login');
-            const registerContent = document.getElementById('register');
-            if (loginTab && registerTab && loginContent && registerContent) {
-                loginTab.classList.add('active');
-                registerTab.classList.remove('active');
-                loginContent.style.display = 'block';
-                registerContent.style.display = 'none';
-            }
-            return;
-        } else if (data.status === 'added') {
-            icon.classList.remove('far');
-            icon.classList.add('fas');
-            btn.classList.add('active');
-        } else {
-            icon.classList.remove('fas');
-            icon.classList.add('far');
-            btn.classList.remove('active');
-        }
-
-        btn.dataset.favorited = data.status === 'added' ? 'true' : 'false';
-
-        btn.style.transform = 'scale(1.2)';
-        setTimeout(() => btn.style.transform = '', 200);
-
-    } catch(err) {
-        console.error('Erreur favoris:', err);
+    if (!id) {
+        console.error('ID du favori manquant', btn);
+        return;
     }
-});
-document.addEventListener('click', async function(e) {
-    const btn = e.target.closest('.action-btn');
-    if (!btn) return;
 
-    e.stopPropagation();
-    e.preventDefault();
-
-    const icon = btn.querySelector('i');
-    const adId = btn.dataset.adId;
+    const url = type === 'product'
+        ? `/products/${id}/favorite`
+        : `/ads/${id}/favorite`;
 
     try {
-        const response = await fetch(`/ads/${adId}/favorite`, {
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
             }
         });
 
         const data = await response.json();
 
+        // Utilisateur non connecté
         if (response.status === 401) {
-            // Non authentifié -> ouvrir le modal login
             const modal = document.getElementById('authModal');
-            if (modal) modal.style.display = 'block';
-            // Activer l'onglet login
+
+            if (modal) {
+                modal.style.display = 'block';
+            }
+
             const loginTab = document.querySelector('.tab-btn[data-tab="login"]');
             const registerTab = document.querySelector('.tab-btn[data-tab="register"]');
             const loginContent = document.getElementById('login');
             const registerContent = document.getElementById('register');
+
             if (loginTab && registerTab && loginContent && registerContent) {
                 loginTab.classList.add('active');
                 registerTab.classList.remove('active');
+
                 loginContent.style.display = 'block';
                 registerContent.style.display = 'none';
             }
+
             return;
-        } else if (data.status === 'added') {
-            icon.classList.remove('far');
-            icon.classList.add('fas');
-            btn.classList.add('active');
-        } else {
-            icon.classList.remove('fas');
-            icon.classList.add('far');
-            btn.classList.remove('active');
         }
 
-        btn.dataset.favorited = data.status === 'added' ? 'true' : 'false';
+        // Erreur serveur
+        if (!response.ok) {
+            console.error('Erreur serveur:', data);
+            return;
+        }
 
+        // Favori ajouté
+        if (data.status === 'added') {
+            icon.classList.remove('far');
+            icon.classList.add('fas');
+
+            btn.classList.add('active');
+            btn.dataset.favorited = 'true';
+        }
+
+        // Favori supprimé
+        if (data.status === 'removed') {
+            icon.classList.remove('fas');
+            icon.classList.add('far');
+
+            btn.classList.remove('active');
+            btn.dataset.favorited = 'false';
+        }
+
+        // Petite animation
         btn.style.transform = 'scale(1.2)';
-        setTimeout(() => btn.style.transform = '', 200);
 
-    } catch(err) {
+        setTimeout(() => {
+            btn.style.transform = '';
+        }, 200);
+
+    } catch (err) {
         console.error('Erreur favoris:', err);
     }
 });
