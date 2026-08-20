@@ -272,7 +272,6 @@
                     <i class="fa-solid fa-eye toggle-password"></i>
                 </div>
 
-                {{-- ✅ Confirmation mot de passe remontée avant le rôle --}}
                 <div class="input-group">
                     <i class="fa-solid fa-lock"></i>
                     <input type="password" name="password_confirmation" placeholder="Confirmer le mot de passe"
@@ -280,7 +279,6 @@
                     <i class="fa-solid fa-eye toggle-password"></i>
                 </div>
 
-                {{-- ✅ Rôle en dernier (masqué si géré par l'admin, voir point 2) --}}
                 <div class="input-group">
                     <i class="fa-solid fa-user-tag"></i>
                     <select name="role" required>
@@ -300,7 +298,13 @@
 
                 <div id="registerErrors"></div>
 
-                <button type="submit" class="submit-btn">S'inscrire</button>
+                <button type="submit" class="submit-btn" id="registerSubmitBtn">
+                    <span class="register-btn-text">S'inscrire</span>
+
+                    <span class="register-loader" style="display: none;">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                    </span>
+                </button>
             </form>
         </div>
     </div>

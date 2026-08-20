@@ -46,7 +46,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
         registerForm.addEventListener('submit', function(e) {
             e.preventDefault();
+
+            // Empêcher les doubles clics
+            if (registerForm.dataset.submitting === 'true') {
+                return;
+            }
+
+            registerForm.dataset.submitting = 'true';
+
             registerErrorsDiv.innerHTML = '';
+
+            const submitBtn = document.getElementById('registerSubmitBtn');
+            const btnText = submitBtn?.querySelector('.register-btn-text');
+            const loader = submitBtn?.querySelector('.register-loader');
+
+            // Désactiver le bouton immédiatement
+            if (submitBtn) {
+                submitBtn.disabled = true;
+
+                if (btnText) {
+                    btnText.style.display = 'none';
+                }
+
+                if (loader) {
+                    loader.style.display = 'inline-flex';
+                }
+            }
 
             const formData = new FormData(registerForm);
 
@@ -60,10 +85,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: formData
             })
             .then(async response => {
+
                 const data = await response.json();
 
                 if (response.status === 422 || data.status === 'error') {
+
                     const errors = data.errors || {};
+
                     for (let key in errors) {
                         errors[key].forEach(msg => {
                             const p = document.createElement('p');
@@ -72,16 +100,53 @@ document.addEventListener('DOMContentLoaded', function() {
                             registerErrorsDiv.appendChild(p);
                         });
                     }
+
+                    // La requête est terminée et il y a une erreur :
+                    // on réactive le bouton
+                    registerForm.dataset.submitting = 'false';
+
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+
+                        if (btnText) {
+                            btnText.style.display = 'inline';
+                        }
+
+                        if (loader) {
+                            loader.style.display = 'none';
+                        }
+                    }
+
                 } else if (data.status === 'success') {
+
+                    // On NE réactive PAS le bouton.
+                    // L'utilisateur va être redirigé.
                     window.location.href = data.redirect;
                 }
             })
             .catch(err => {
+
                 console.error(err);
+
                 const p = document.createElement('p');
                 p.className = 'text-danger';
                 p.textContent = 'Une erreur est survenue. Veuillez réessayer.';
                 registerErrorsDiv.appendChild(p);
+
+                // Réactiver seulement en cas d'erreur réseau
+                registerForm.dataset.submitting = 'false';
+
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+
+                    if (btnText) {
+                        btnText.style.display = 'inline';
+                    }
+
+                    if (loader) {
+                        loader.style.display = 'none';
+                    }
+                }
             });
         });
     }
