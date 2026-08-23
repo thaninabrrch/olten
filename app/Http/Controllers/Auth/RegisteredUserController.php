@@ -40,7 +40,7 @@ class RegisteredUserController extends Controller
             'email.email' => 'L’adresse e-mail doit être valide.',
             'email.unique' => 'Cette adresse e-mail est déjà utilisée.',
             'password.required' => 'Le mot de passe est obligatoire.',
-            'password.confirmed' => 'Les mots de passe ne correspondent pas.',
+            // 'password.confirmed' => 'Les mots de passe ne correspondent pas.',
             'password.min' => 'Le mot de passe doit contenir au moins 8 caractères.',
             'password.regex' => 'Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial.',
             'terms.accepted' => 'Vous devez accepter les conditions pour continuer.',
@@ -53,7 +53,7 @@ class RegisteredUserController extends Controller
             'email'      => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password'   => [
                 'required',
-                'confirmed',
+                // 'confirmed',
                 'min:8',
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/'
             ],

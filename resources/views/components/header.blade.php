@@ -272,12 +272,12 @@
                     <i class="fa-solid fa-eye toggle-password"></i>
                 </div>
 
-                <div class="input-group">
+                <!-- <div class="input-group">
                     <i class="fa-solid fa-lock"></i>
                     <input type="password" name="password_confirmation" placeholder="Confirmer le mot de passe"
                         required>
                     <i class="fa-solid fa-eye toggle-password"></i>
-                </div>
+                </div> -->
 
                 <div class="input-group">
                     <i class="fa-solid fa-user-tag"></i>
