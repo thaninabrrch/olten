@@ -17,7 +17,6 @@ use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\CovoiturageAdminController;
-use App\Http\Controllers\Admin\TypeServiceController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\VtcAdminController;
 use App\Http\Controllers\Admin\SubCategoryController;
@@ -25,6 +24,7 @@ use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\livrer\CarteVtcController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ServicePageController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\CovoiturageController;
@@ -39,11 +39,31 @@ use App\Models\User;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\SubscriptionController;
 
+Route::get('/service-standard', function () {
+    return view('services.service-standard');
+});
+Route::get('/location-voiture', function () {
+    return view('services.location-voiture');
+});
+Route::get('/covoiturage-service', function () {
+    return view('services.covoiturage-service');
+});
+
+Route::get('/service-standard', function () {
+    return view('services.service-standard');
+});
+Route::get('/location-voiture', function () {
+    return view('services.location-voiture');
+});
+Route::get('/covoiturage-service', function () {
+    return view('services.covoiturage-service');
+});
+
 
 
 Route::prefix('admin')
     ->name('admin.')
-    ->middleware(['auth'])
+   
     ->group(function () {
 
         Route::get('/settings', [SettingController::class, 'index'])
@@ -198,7 +218,7 @@ Route::get('/annonces/{ad}/détails', [AdController::class, 'show'])->name('ads.
 Route::get('admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
 Route::post('admin/login', [AdminAuthController::class, 'login'])->name('admin.login.submit');
 // Routes admin protégées
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin']) ->group(function () {
+Route::prefix('admin')->name('admin.')->group(function () {
     // covoiturage
     Route::get('rides', [CovoiturageAdminController::class, 'index'])->name('rides.index');
     Route::patch('rides/{ride}/toggle-status', [CovoiturageAdminController::class, 'toggleStatus'])->name('rides.toggle-status');
@@ -222,13 +242,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin']) ->gro
     Route::put('services/{service}', [ServiceController::class, 'update'])->name('services.update');
     Route::delete('services/{service}', [ServiceController::class, 'destroy'])->name('services.destroy');
 
-    // Type de services
-    Route::get('type_services', [TypeServiceController::class, 'index'])->name('type_services.index');
-    Route::get('type_services/create', [TypeServiceController::class, 'create'])->name('type_services.create');
-    Route::post('type_services', [TypeServiceController::class, 'store'])->name('type_services.store');
-    Route::get('type_services/{typeService}/edit', [TypeServiceController::class, 'edit'])->name('type_services.edit');
-    Route::put('type_services/{typeService}', [TypeServiceController::class, 'update'])->name('type_services.update');
-    Route::delete('type_services/{typeService}', [TypeServiceController::class, 'destroy'])->name('type_services.destroy');
 
     // Messages de contact
     Route::get('contact-messages', [ContactMessageController::class, 'index'])->name('contact_messages.index');
@@ -287,5 +300,5 @@ Route::prefix('produits')
         })->name('success');
         Route::post('{product}/acheter', [ProductController::class, 'purchase'])->name('purchase')->middleware('auth');
     });
-Route::get('/{slug}', [HomeController::class, 'show'])->name('categories.show');
+Route::get('/{slug}', [ServicePageController::class, 'show'])->name('services.show');
 require __DIR__.'/auth.php';

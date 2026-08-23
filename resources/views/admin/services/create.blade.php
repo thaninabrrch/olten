@@ -52,6 +52,26 @@
             @enderror
         </div>
 
+        {{-- Slug --}}
+        <div class="mb-4">
+            <label for="slug" class="block text-gray-700 font-medium mb-1">Slug du service *</label>
+
+            <input type="text" name="slug" id="slug"
+                class="w-full border @error('slug') border-red-500 @else border-gray-300 @enderror
+                       rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+                value="{{ old('slug', '') }}" placeholder="ex : vente">
+
+            <p class="text-gray-500 text-sm mt-1">
+                Identifiant unique du service dans l'URL : <code>/mon-slug</code>.
+                C'est lui qui détermine le design affiché côté front.
+                Laisser vide pour le générer automatiquement depuis le nom.
+            </p>
+
+            @error('slug')
+                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
         {{-- Description --}}
         <div class="mb-4">
             <label for="description" class="block text-gray-700 font-medium mb-1">Description</label>
@@ -61,27 +81,6 @@
                        rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500">{{ old('description') }}</textarea>
 
             @error('description')
-                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
-            @enderror
-        </div>
-
-        {{-- Type de service --}}
-        <div class="mb-4">
-            <label for="type_service_id" class="block text-gray-700 font-medium mb-1">Type de service *</label>
-
-            <select name="type_service_id" id="type_service_id"
-                class="w-full border @error('type_service_id') border-red-500 @else border-gray-300 @enderror
-                       rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500">
-                <option value="">-- Choisir un type --</option>
-
-                @foreach ($types as $type)
-                    <option value="{{ $type->id }}" {{ old('type_service_id') == $type->id ? 'selected' : '' }}>
-                        {{ $type->nom }}
-                    </option>
-                @endforeach
-            </select>
-
-            @error('type_service_id')
                 <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
             @enderror
         </div>
@@ -118,5 +117,32 @@
     </form>
 
 </div>
+
+{{-- Génération automatique du slug depuis le nom --}}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const nom  = document.getElementById('nom');
+        const slug = document.getElementById('slug');
+
+        if (!nom || !slug) return;
+
+        const slugify = (value) => value
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+
+        // On ne remplace jamais un slug saisi manuellement
+        let touched = slug.value.trim() !== '';
+
+        slug.addEventListener('input', () => { touched = true; });
+
+        nom.addEventListener('input', () => {
+            if (!touched) slug.value = slugify(nom.value);
+        });
+    });
+</script>
 
 @endsection

@@ -3573,17 +3573,6 @@ product-card:hover {
     display: none !important;
 }
 
-#registerSubmitBtn {
-    position: relative;
-}
-
-#registerSubmitBtn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-.register-loader {
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+.font-12 {
+    font-size: 12px;
 }

@@ -53,6 +53,26 @@
             @enderror
         </div>
 
+        {{-- Slug --}}
+        <div class="mb-4">
+            <label for="slug" class="block text-gray-700 font-medium mb-1">Slug du service *</label>
+
+            <input type="text" name="slug" id="slug"
+                class="w-full border @error('slug') border-red-500 @else border-gray-300 @enderror
+                       rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+                value="{{ old('slug', $service->slug) }}" placeholder="ex : vente">
+
+            <p class="text-gray-500 text-sm mt-1">
+                Identifiant unique du service dans l'URL : <code>/mon-slug</code>.
+                C'est lui qui détermine le design affiché côté front.
+                Laisser vide pour le générer automatiquement depuis le nom.
+            </p>
+
+            @error('slug')
+                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
         {{-- Description --}}
         <div class="mb-4">
             <label for="description" class="block text-gray-700 font-medium mb-1">Description</label>
@@ -62,27 +82,6 @@
                        rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500">{{ old('description', $service->description) }}</textarea>
 
             @error('description')
-                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
-            @enderror
-        </div>
-
-        {{-- Type de service --}}
-        <div class="mb-4">
-            <label for="type_service_id" class="block text-gray-700 font-medium mb-1">Type de service *</label>
-
-            <select name="type_service_id" id="type_service_id"
-                class="w-full border @error('type_service_id') border-red-500 @else border-gray-300 @enderror
-                       rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500" required>
-                <option value="">-- Choisir un type --</option>
-                @foreach ($types as $type)
-                    <option value="{{ $type->id }}"
-                        {{ old('type_service_id', $service->type_service_id) == $type->id ? 'selected' : '' }}>
-                        {{ $type->nom }}
-                    </option>
-                @endforeach
-            </select>
-
-            @error('type_service_id')
                 <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
             @enderror
         </div>

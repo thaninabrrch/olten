@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Models\Category;
 use App\Models\SubCategory;
 use App\Models\Service;
-use App\Models\TypeService;
 use App\Models\ContactMessage;
 use App\Models\Covoiturage;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -263,84 +262,70 @@ class AdminActionsTest extends TestCase
     }
 
     // ──────────────────────────────────────────────
-    // 05 TYPES DE SERVICE
+    // 05 SERVICES (identifiés par leur slug)
     // ──────────────────────────────────────────────
-    public function test_05_01_liste_types_service(): void
-    {
-        $r = $this->actingAs($this->admin)->get(route('admin.type_services.index'));
-        $r->assertStatus(200);
-    }
-
-    public function test_05_02_creer_type_service(): void
-    {
-        $r = $this->actingAs($this->admin)->post(route('admin.type_services.store'), [
-            'nom' => 'Type Test PHPUnit',
-        ]);
-        $r->assertRedirect();
-        $this->assertDatabaseHas('type_services', ['nom' => 'Type Test PHPUnit']);
-    }
-
-    public function test_05_03_modifier_type_service(): void
-    {
-        $type = TypeService::firstOrFail();
-        $r = $this->actingAs($this->admin)->put(route('admin.type_services.update', $type), [
-            'nom' => $type->nom . ' Modifié',
-        ]);
-        $r->assertRedirect();
-    }
-
-    public function test_05_04_supprimer_type_service(): void
-    {
-        $type = TypeService::create(['nom' => 'Type à Supprimer PHPUnit']);
-        $r = $this->actingAs($this->admin)->delete(route('admin.type_services.destroy', $type));
-        $r->assertRedirect();
-        $this->assertDatabaseMissing('type_services', ['nom' => 'Type à Supprimer PHPUnit']);
-    }
-
-    // ──────────────────────────────────────────────
-    // 06 SERVICES
-    // ──────────────────────────────────────────────
-    public function test_06_01_liste_services(): void
+    public function test_05_01_liste_services(): void
     {
         $r = $this->actingAs($this->admin)->get(route('admin.services.index'));
         $r->assertStatus(200);
     }
 
-    public function test_06_02_formulaire_creation_service(): void
+    public function test_05_02_formulaire_creation_service(): void
     {
         $r = $this->actingAs($this->admin)->get(route('admin.services.create'));
         $r->assertStatus(200);
     }
 
-    public function test_06_03_creer_service(): void
+    public function test_05_03_creer_service(): void
     {
-        $type = TypeService::firstOrFail();
         $r = $this->actingAs($this->admin)->post(route('admin.services.store'), [
-            'nom'             => 'Service Test PHPUnit',
-            'description'     => 'Description test',
-            'type_service_id' => $type->id,
+            'nom'         => 'Service Test PHPUnit',
+            'slug'        => 'service-test-phpunit',
+            'description' => 'Description test',
         ]);
         $r->assertRedirect();
-        $this->assertDatabaseHas('services', ['nom' => 'Service Test PHPUnit']);
+        $this->assertDatabaseHas('services', [
+            'nom'  => 'Service Test PHPUnit',
+            'slug' => 'service-test-phpunit',
+        ]);
     }
 
-    public function test_06_04_modifier_service(): void
+    public function test_05_04_slug_genere_depuis_le_nom_si_absent(): void
+    {
+        $r = $this->actingAs($this->admin)->post(route('admin.services.store'), [
+            'nom' => 'Vente Entre Particuliers PHPUnit',
+        ]);
+        $r->assertRedirect();
+        $this->assertDatabaseHas('services', ['slug' => 'vente-entre-particuliers-phpunit']);
+    }
+
+    public function test_05_05_slug_doit_etre_unique(): void
+    {
+        Service::create(['nom' => 'Service Slug Unique PHPUnit', 'slug' => 'slug-unique-phpunit']);
+
+        $r = $this->actingAs($this->admin)->post(route('admin.services.store'), [
+            'nom'  => 'Un Autre Service PHPUnit',
+            'slug' => 'slug-unique-phpunit',
+        ]);
+        $r->assertSessionHasErrors('slug');
+    }
+
+    public function test_05_06_modifier_service(): void
     {
         $svc = Service::firstOrFail();
         $r = $this->actingAs($this->admin)->put(route('admin.services.update', $svc), [
-            'nom'             => $svc->nom . ' Modifié',
-            'type_service_id' => $svc->type_service_id,
+            'nom'  => $svc->nom . ' Modifié',
+            'slug' => $svc->slug,
         ]);
         $r->assertRedirect();
     }
 
-    public function test_06_05_supprimer_service(): void
+    public function test_05_07_supprimer_service(): void
     {
-        $type = TypeService::firstOrFail();
-        $svc = Service::create(['nom' => 'Service Delete PHPUnit', 'type_service_id' => $type->id]);
+        $svc = Service::create(['nom' => 'Service Delete PHPUnit', 'slug' => 'service-delete-phpunit']);
         $r = $this->actingAs($this->admin)->delete(route('admin.services.destroy', $svc));
         $r->assertRedirect();
-        $this->assertDatabaseMissing('services', ['nom' => 'Service Delete PHPUnit']);
+        $this->assertDatabaseMissing('services', ['slug' => 'service-delete-phpunit']);
     }
 
     // ──────────────────────────────────────────────
