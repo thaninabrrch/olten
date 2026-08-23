@@ -120,7 +120,7 @@
             </div>
         @else
             <button class="icon-btn">
-                <i class="fa-solid fa-right-to-bracket"></i>
+                <i class="far fa-user"></i>
             </button>
         @endif
 
