@@ -20,11 +20,11 @@ const registerTab = document.querySelector('.tab-btn[data-tab="register"]');
 const loginContent = document.getElementById('login');
 const registerContent = document.getElementById('register');
 const closeModal = document.getElementById('closeModal');
-const loginIcon = document.querySelector('.header-right .fa-right-to-bracket');
+const loginIcon = document.querySelector('.header-right .fa-user');
 
 if (loginIcon && loginIcon.parentElement) {
   // Ouvrir modal sur clic bouton header
-  document.querySelector('.header-right .fa-right-to-bracket').parentElement.addEventListener('click', () => {
+  document.querySelector('.header-right .fa-user').parentElement.addEventListener('click', () => {
       modal.style.display = 'block';
   });
 }
