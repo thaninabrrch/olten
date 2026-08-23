@@ -84,8 +84,7 @@ class DashboardController extends Controller
             $activeAds = Ad::where('user_id', $user->id)->count();
             $totalViews = Ad::where('user_id', $user->id)->sum('views');
 
-            $favoritesCount = $user->favorites()->count();
-
+            $favoritesCount = $user->favorites()->count() + $user->productFavorites()->count();
             $recentActivities = [
                 ['description' => 'Nouvelle réservation reçue', 'time' => 'Il y a 2h'],
                 ['description' => 'Votre annonce a été vue', 'time' => 'Hier'],

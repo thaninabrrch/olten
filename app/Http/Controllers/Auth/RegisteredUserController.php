@@ -14,6 +14,7 @@ use Illuminate\View\View;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Laratrust\Models\Role;
+use App\Models\Subscription;
 
 class RegisteredUserController extends Controller
 {
@@ -39,7 +40,7 @@ class RegisteredUserController extends Controller
             'email.email' => 'L’adresse e-mail doit être valide.',
             'email.unique' => 'Cette adresse e-mail est déjà utilisée.',
             'password.required' => 'Le mot de passe est obligatoire.',
-            'password.confirmed' => 'Les mots de passe ne correspondent pas.',
+            // 'password.confirmed' => 'Les mots de passe ne correspondent pas.',
             'password.min' => 'Le mot de passe doit contenir au moins 8 caractères.',
             'password.regex' => 'Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial.',
             'terms.accepted' => 'Vous devez accepter les conditions pour continuer.',
@@ -52,7 +53,7 @@ class RegisteredUserController extends Controller
             'email'      => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password'   => [
                 'required',
-                'confirmed',
+                // 'confirmed',
                 'min:8',
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/'
             ],
@@ -95,13 +96,27 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        // return response()->json([
-        //     'status' => 'success',
-        //     'redirect' => route('dashboard'),
-        // ]);
-        return response()->json([
-            'status' => 'success',
-            'redirect' => route('subscriptions.index'),
-        ]);
+        $roles = explode('|', $request->role);
+
+        if (in_array('vendeur', $roles) || in_array('locateur', $roles)) {
+            $subscription = Subscription::where('slug', 'vip')->first();
+
+            if ($subscription) {
+                $user->update([
+                    'subscription_id' => $subscription->id,
+                    'subscription_expired_at' => now()->addMonth(),
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'redirect' => route('dashboard'),
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'success',
+                'redirect' => route('subscriptions.index'),
+            ]);
+        }
     }
 }

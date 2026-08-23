@@ -20,11 +20,11 @@ const registerTab = document.querySelector('.tab-btn[data-tab="register"]');
 const loginContent = document.getElementById('login');
 const registerContent = document.getElementById('register');
 const closeModal = document.getElementById('closeModal');
-const loginIcon = document.querySelector('.header-right .fa-right-to-bracket');
+const loginIcon = document.querySelector('.header-right .fa-user');
 
 if (loginIcon && loginIcon.parentElement) {
   // Ouvrir modal sur clic bouton header
-  document.querySelector('.header-right .fa-right-to-bracket').parentElement.addEventListener('click', () => {
+  document.querySelector('.header-right .fa-user').parentElement.addEventListener('click', () => {
       modal.style.display = 'block';
   });
 }
@@ -55,105 +55,105 @@ window.addEventListener('click', (e) => {
 
 
 
-// ========== CAROUSEL CATEGORIES ==========
-document.addEventListener('DOMContentLoaded', function() {
-    const categoriesSection = document.querySelector('.categories-section');
-    if (!categoriesSection) return;
-
-    const track = categoriesSection.querySelector('.carousel-track');
-    const cards = categoriesSection.querySelectorAll('.category-card');
-    const prevBtn = categoriesSection.querySelector('.prev-btn');
-    const nextBtn = categoriesSection.querySelector('.next-btn');
-    const dotsContainer = categoriesSection.querySelector('.carousel-dots');
-    
-    let currentIndex = 0;
-    let cardsPerView = 5;
-
-    function updateCardsPerView() {
-        const width = window.innerWidth;
-        if (width < 576) cardsPerView = 1;
-        else if (width < 768) cardsPerView = 2;
-        else if (width < 992) cardsPerView = 3;
-        else if (width < 1200) cardsPerView = 4;
-        else cardsPerView = 5;
-    }
-
-    function createDots() {
-        const totalDots = Math.ceil(cards.length / cardsPerView);
-        dotsContainer.innerHTML = '';
-        
-        for (let i = 0; i < totalDots; i++) {
-            const dot = document.createElement('div');
-            dot.classList.add('dot');
-            if (i === 0) dot.classList.add('active');
-            dot.addEventListener('click', () => goToSlide(i * cardsPerView));
-            dotsContainer.appendChild(dot);
-        }
-    }
-
-    function goToSlide(index) {
-        const maxIndex = cards.length - cardsPerView;
-        currentIndex = Math.max(0, Math.min(index, maxIndex));
-        
-        const cardWidth = cards[0].offsetWidth;
-        const gap = 25;
-        const offset = -(currentIndex * (cardWidth + gap));
-        
-        track.style.transform = `translateX(${offset}px)`;
-        
-        const currentDot = Math.floor(currentIndex / cardsPerView);
-        dotsContainer.querySelectorAll('.dot').forEach((dot, i) => {
-            dot.classList.toggle('active', i === currentDot);
-        });
-
-        prevBtn.disabled = currentIndex === 0;
-        nextBtn.disabled = currentIndex >= maxIndex;
-    }
-
-    prevBtn.addEventListener('click', () => {
-        goToSlide(currentIndex - cardsPerView);
-    });
-
-    nextBtn.addEventListener('click', () => {
-        goToSlide(currentIndex + cardsPerView);
-    });
-
-    // Touch events for mobile
-    let startX = 0;
-    let isDragging = false;
-
-    track.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX;
-        isDragging = true;
-    });
-
-    track.addEventListener('touchend', (e) => {
-        if (!isDragging) return;
-        isDragging = false;
-        
-        const endX = e.changedTouches[0].clientX;
-        const diff = startX - endX;
-        
-        if (Math.abs(diff) > 50) {
-            if (diff > 0) {
-                goToSlide(currentIndex + cardsPerView);
-            } else {
-                goToSlide(currentIndex - cardsPerView);
-            }
-        }
-    });
-
-    updateCardsPerView();
-    createDots();
-    goToSlide(0);
-
-    window.addEventListener('resize', () => {
-        updateCardsPerView();
-        createDots();
-        goToSlide(0);
-    });
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.carousel-wrapper').forEach(initInfiniteCarousel);
 });
 
+function initInfiniteCarousel(wrapper) {
+    const track = wrapper.querySelector('.carousel-track');
+    if (!track) return;
+
+    const originalItems = Array.from(track.children);
+    const count = originalItems.length;
+    if (count === 0) return;
+
+    // Clone the full set before and after the real items so there is always
+    // content on both sides, no matter how far the user scrolls or clicks.
+    const cloneSet = () => originalItems.map(el => {
+        const clone = el.cloneNode(true);
+        clone.setAttribute('aria-hidden', 'true');
+        clone.querySelectorAll('a, button').forEach(f => f.tabIndex = -1);
+        if (clone.tagName === 'A') clone.tabIndex = -1;
+        return clone;
+    });
+
+    cloneSet().reverse().forEach(el => track.insertBefore(el, track.firstChild));
+    cloneSet().forEach(el => track.appendChild(el));
+
+    let groupWidth = 0;
+    let firstRealItem = track.children[count];
+    let resetting = false;
+
+    function measure() {
+        firstRealItem = track.children[count];
+        const firstCloneAfter = track.children[count * 2];
+        groupWidth = firstCloneAfter.offsetLeft - firstRealItem.offsetLeft;
+        wrapper.scrollLeft = firstRealItem.offsetLeft;
+    }
+
+    function itemStep() {
+        const styles = getComputedStyle(track);
+        const gap = parseFloat(styles.columnGap || styles.gap || '0') || 0;
+        return firstRealItem.getBoundingClientRect().width + gap;
+    }
+
+    function visibleCount() {
+        return Math.max(1, Math.round(wrapper.clientWidth / itemStep()));
+    }
+
+    // When the scroll position drifts into a cloned zone, jump back into the
+    // real zone by exactly one group width. Because both zones are visually
+    // identical, the jump is invisible to the user.
+    function handleScroll() {
+        if (resetting) return;
+        const startBoundary = firstRealItem.offsetLeft - groupWidth * 0.5;
+        const endBoundary = firstRealItem.offsetLeft + groupWidth * 1.5;
+
+        if (wrapper.scrollLeft < startBoundary) {
+            resetting = true;
+            wrapper.scrollLeft += groupWidth;
+            resetting = false;
+        } else if (wrapper.scrollLeft > endBoundary) {
+            resetting = true;
+            wrapper.scrollLeft -= groupWidth;
+            resetting = false;
+        }
+    }
+
+    let ticking = false;
+    wrapper.addEventListener('scroll', () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+            handleScroll();
+            ticking = false;
+        });
+    });
+
+    const section = wrapper.closest('section');
+    const prevBtn = section ? section.querySelector('.prev-btn') : null;
+    const nextBtn = section ? section.querySelector('.next-btn') : null;
+
+    prevBtn && prevBtn.addEventListener('click', () => {
+        wrapper.scrollBy({ left: -itemStep() * visibleCount(), behavior: 'smooth' });
+    });
+
+    nextBtn && nextBtn.addEventListener('click', () => {
+        wrapper.scrollBy({ left: itemStep() * visibleCount(), behavior: 'smooth' });
+    });
+
+    window.addEventListener('load', measure);
+    window.addEventListener('resize', debounce(measure, 200));
+    measure();
+}
+
+function debounce(fn, wait) {
+    let t;
+    return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), wait);
+    };
+}
 
 // ========== CAROUSEL ANNONCES ==========
 document.addEventListener('DOMContentLoaded', function() {
@@ -251,7 +251,30 @@ document.addEventListener('DOMContentLoaded', function() {
         goToSlide(0);
     });
 });
+//FAQ Toggle 
+document.addEventListener('DOMContentLoaded', function () {
+    const faqItems = document.querySelectorAll('.faq-item');
 
+    faqItems.forEach(function (item) {
+        const question = item.querySelector('.faq-question');
+
+        question.addEventListener('click', function () {
+            const isActive = item.classList.contains('active');
+
+            // Ferme tous les autres items (accordéon : un seul ouvert à la fois)
+            faqItems.forEach(function (otherItem) {
+                otherItem.classList.remove('active');
+                otherItem.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+            });
+
+            // Rouvre celui cliqué s'il n'était pas déjà ouvert
+            if (!isActive) {
+                item.classList.add('active');
+                question.setAttribute('aria-expanded', 'true');
+            }
+        });
+    });
+});
 //form creer un site
 document.addEventListener('DOMContentLoaded', function() {
   const siteType = document.getElementById('siteType');
@@ -468,115 +491,98 @@ function initializeViewToggle() {
 // ============================================
 // FAVORITES
 // ============================================
-document.addEventListener('click', async function(e) {
+document.addEventListener('click', async function (e) {
     const btn = e.target.closest('.favorite-btn');
+
     if (!btn) return;
 
-    e.stopPropagation();
     e.preventDefault();
+    e.stopPropagation();
 
     const icon = btn.querySelector('i');
-    const adId = btn.dataset.adId;
 
-    try {
-        const response = await fetch(`/ads/${adId}/favorite`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json'
-            }
-        });
+    if (!icon) return;
 
-        const data = await response.json();
+    const type = btn.dataset.type || 'ad';
+    const id = btn.dataset.id;
 
-        if (response.status === 401) {
-            // Non authentifié -> ouvrir le modal login
-            const modal = document.getElementById('authModal');
-            if (modal) modal.style.display = 'block';
-            // Activer l'onglet login
-            const loginTab = document.querySelector('.tab-btn[data-tab="login"]');
-            const registerTab = document.querySelector('.tab-btn[data-tab="register"]');
-            const loginContent = document.getElementById('login');
-            const registerContent = document.getElementById('register');
-            if (loginTab && registerTab && loginContent && registerContent) {
-                loginTab.classList.add('active');
-                registerTab.classList.remove('active');
-                loginContent.style.display = 'block';
-                registerContent.style.display = 'none';
-            }
-            return;
-        } else if (data.status === 'added') {
-            icon.classList.remove('far');
-            icon.classList.add('fas');
-            btn.classList.add('active');
-        } else {
-            icon.classList.remove('fas');
-            icon.classList.add('far');
-            btn.classList.remove('active');
-        }
-
-        btn.dataset.favorited = data.status === 'added' ? 'true' : 'false';
-
-        btn.style.transform = 'scale(1.2)';
-        setTimeout(() => btn.style.transform = '', 200);
-
-    } catch(err) {
-        console.error('Erreur favoris:', err);
+    if (!id) {
+        console.error('ID du favori manquant', btn);
+        return;
     }
-});
-document.addEventListener('click', async function(e) {
-    const btn = e.target.closest('.action-btn');
-    if (!btn) return;
 
-    e.stopPropagation();
-    e.preventDefault();
-
-    const icon = btn.querySelector('i');
-    const adId = btn.dataset.adId;
+    const url = type === 'product'
+        ? `/products/${id}/favorite`
+        : `/ads/${id}/favorite`;
 
     try {
-        const response = await fetch(`/ads/${adId}/favorite`, {
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
             }
         });
 
         const data = await response.json();
 
+        // Utilisateur non connecté
         if (response.status === 401) {
-            // Non authentifié -> ouvrir le modal login
             const modal = document.getElementById('authModal');
-            if (modal) modal.style.display = 'block';
-            // Activer l'onglet login
+
+            if (modal) {
+                modal.style.display = 'block';
+            }
+
             const loginTab = document.querySelector('.tab-btn[data-tab="login"]');
             const registerTab = document.querySelector('.tab-btn[data-tab="register"]');
             const loginContent = document.getElementById('login');
             const registerContent = document.getElementById('register');
+
             if (loginTab && registerTab && loginContent && registerContent) {
                 loginTab.classList.add('active');
                 registerTab.classList.remove('active');
+
                 loginContent.style.display = 'block';
                 registerContent.style.display = 'none';
             }
+
             return;
-        } else if (data.status === 'added') {
-            icon.classList.remove('far');
-            icon.classList.add('fas');
-            btn.classList.add('active');
-        } else {
-            icon.classList.remove('fas');
-            icon.classList.add('far');
-            btn.classList.remove('active');
         }
 
-        btn.dataset.favorited = data.status === 'added' ? 'true' : 'false';
+        // Erreur serveur
+        if (!response.ok) {
+            console.error('Erreur serveur:', data);
+            return;
+        }
 
+        // Favori ajouté
+        if (data.status === 'added') {
+            icon.classList.remove('far');
+            icon.classList.add('fas');
+
+            btn.classList.add('active');
+            btn.dataset.favorited = 'true';
+        }
+
+        // Favori supprimé
+        if (data.status === 'removed') {
+            icon.classList.remove('fas');
+            icon.classList.add('far');
+
+            btn.classList.remove('active');
+            btn.dataset.favorited = 'false';
+        }
+
+        // Petite animation
         btn.style.transform = 'scale(1.2)';
-        setTimeout(() => btn.style.transform = '', 200);
 
-    } catch(err) {
+        setTimeout(() => {
+            btn.style.transform = '';
+        }, 200);
+
+    } catch (err) {
         console.error('Erreur favoris:', err);
     }
 });

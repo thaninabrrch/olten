@@ -9,16 +9,19 @@ use Illuminate\Http\Request;
 
 class HomeController extends Controller
 {
-    public function home(Request $request) {
+    public function home(Request $request)
+    {
         $categories = Category::orderBy('id', 'asc')->get();
-        $query = Ad::query()->where('is_approved', true);
+
+        $query = Ad::with(['images', 'category'])->where('is_approved', true);
+
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('title', 'like', '%' . $request->search . '%')
-                ->orWhere('description', 'like', '%' . $request->search . '%')
-                ->orWhereHas('category', function ($q2) use ($request) {
-                    $q2->where('nom', 'like', '%' . $request->search . '%');
-                });
+                    ->orWhere('description', 'like', '%' . $request->search . '%')
+                    ->orWhereHas('category', function ($q2) use ($request) {
+                        $q2->where('nom', 'like', '%' . $request->search . '%');
+                    });
             });
         }
 
@@ -31,9 +34,38 @@ class HomeController extends Controller
         }
 
         $ads = $query->latest()->get();
-        $products = Product::active()->inStock()->latest()->get();
 
-        return view('home', compact('categories', 'ads', 'products'));
+        $products = Product::with(['images', 'category'])
+                            ->active()
+                            ->inStock()
+                            ->latest()
+                            ->get();
+
+        $latestItems = $ads->map(function ($ad) {
+                                return (object) [
+                                    'type' => 'ad',
+                                    'item' => $ad,
+                                    'created_at' => $ad->created_at,
+                                ];
+                            })->concat(
+                                $products->map(function ($product) {
+                                    return (object) [
+                                        'type' => 'product',
+                                        'item' => $product,
+                                        'created_at' => $product->created_at,
+                                    ];
+                                })
+                            )
+                            ->sortByDesc('created_at')
+                            ->take(10)
+                            ->values();
+
+        return view('home', compact(
+                                'categories',
+                                'ads',
+                                'products',
+                                'latestItems'
+                            ));
     }
 
     public function show($slug)

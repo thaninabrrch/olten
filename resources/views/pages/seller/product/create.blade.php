@@ -114,7 +114,7 @@
                 </label>
                 <div class="input-group">
                     <input type="number" name="price" class="form-input" step="0.01" required>
-                    <span class="input-suffix">DA</span>
+                    <span class="input-suffix">€</span>
                 </div>
             </div>
 

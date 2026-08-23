@@ -135,7 +135,7 @@
                 <div class="input-group">
                     <input type="number" name="price" step="0.01" class="form-input"
                            value="{{ old('price', $product->price) }}" required>
-                    <span class="input-suffix">DA</span>
+                    <span class="input-suffix">€</span>
                 </div>
             </div>
 

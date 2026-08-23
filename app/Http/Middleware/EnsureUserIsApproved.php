@@ -15,9 +15,14 @@ class EnsureUserIsApproved
             return redirect()->route('account.verify');
         }
 
-        if ($user && !$user->is_approved) {
+        if (
+            $user &&
+            !$user->is_approved &&
+            ($user->hasRole('livreur') || $user->hasRole('conducteur'))
+        ) {
             return redirect()->route('account.pending');
         }
+
         return $next($request);
     }
 }

@@ -120,7 +120,7 @@
             </div>
         @else
             <button class="icon-btn">
-                <i class="fa-solid fa-right-to-bracket"></i>
+                <i class="far fa-user"></i>
             </button>
         @endif
 
@@ -183,19 +183,19 @@
         <ul class="menu-list">
             <li class="d-flex">
             <a class="d-flex gap-2" href="/" >
-                <i class="fas fa-home category-icon-small bg-transparent"></i> Accueil
+                Accueil
             </a>
             </li>
             @foreach($footerCategories as $category)
             <li class="d-flex">
                 <a href="{{ route('categories.show', $category->slug) }}" class="d-flex gap-2">
-                    <i class="{{ $category->icon }} category-icon-small bg-transparent"></i> {{ $category->nom }}
+                    {{ $category->nom }}
                 </a>
             </li>
             @endforeach
             <li class="d-flex">
             <a class="d-flex gap-2" href="/contact">
-                <i class="fas fa-envelope category-icon-small bg-transparent"></i> Contact
+                Contact
             </a>
             </li>
         </ul>
@@ -272,15 +272,13 @@
                     <i class="fa-solid fa-eye toggle-password"></i>
                 </div>
 
-                {{-- ✅ Confirmation mot de passe remontée avant le rôle --}}
-                <div class="input-group">
+                <!-- <div class="input-group">
                     <i class="fa-solid fa-lock"></i>
                     <input type="password" name="password_confirmation" placeholder="Confirmer le mot de passe"
                         required>
                     <i class="fa-solid fa-eye toggle-password"></i>
-                </div>
+                </div> -->
 
-                {{-- ✅ Rôle en dernier (masqué si géré par l'admin, voir point 2) --}}
                 <div class="input-group">
                     <i class="fa-solid fa-user-tag"></i>
                     <select name="role" required>
@@ -300,7 +298,13 @@
 
                 <div id="registerErrors"></div>
 
-                <button type="submit" class="submit-btn">S'inscrire</button>
+                <button type="submit" class="submit-btn" id="registerSubmitBtn">
+                    <span class="register-btn-text">S'inscrire</span>
+
+                    <span class="register-loader" style="display: none;">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                    </span>
+                </button>
             </form>
         </div>
     </div>
