@@ -17,7 +17,7 @@
             @forelse($categories as $category)
                 <div class="category-card  m-4">
                     <div class="category-overlay">
-                        <a href="{{ route('categories.show', $category->slug) }}">
+                        <a href="{{ route('services.show', $category->slug) }}">
                             Parcourir
                         </a>
                     </div>

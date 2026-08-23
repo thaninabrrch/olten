@@ -25,8 +25,8 @@
         {{-- Cards --}}
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
 
-            {{-- Types Services --}}
-            <a href="{{ route('admin.type_services.index') }}"
+            {{-- Services --}}
+            <a href="{{ route('admin.services.index') }}"
                 class="group bg-white border border-gray-200 rounded-2xl p-5
                    hover:border-red-500 hover:shadow-md transition duration-200">
 
@@ -46,11 +46,11 @@
 
                         <div>
                             <h3 class="font-semibold text-gray-800">
-                                Types de service
+                                Services
                             </h3>
 
                             <p class="text-sm text-gray-500 mt-1">
-                                Configurer les types de service.
+                                Configurer les services et leurs slugs.
                             </p>
                         </div>
 

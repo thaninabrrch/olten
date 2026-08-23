@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\Service;
-use App\Models\TypeService;
 use App\Models\Covoiturage;
 use App\Models\ContactMessage;
 use App\Models\ProductSale;
@@ -52,29 +51,21 @@ class DashboardTestSeeder extends Seeder
             }
         }
 
-        // --- 2. Types de service + Services ---
-        $types = ['Transport', 'Livraison', 'Location', 'Restauration'];
-        foreach ($types as $typeName) {
-            TypeService::firstOrCreate(['nom' => $typeName]);
-        }
-
+        // --- 2. Services (identifiés par leur slug) ---
         $servicesList = [
-            ['nom' => 'Livraison Express Urbaine',  'type' => 'Livraison'],
-            ['nom' => 'Covoiturage Longue Distance', 'type' => 'Transport'],
-            ['nom' => 'Location Véhicule Utilitaire','type' => 'Location'],
-            ['nom' => 'Livraison Repas Domicile',    'type' => 'Restauration'],
-            ['nom' => 'VTC Premium',                 'type' => 'Transport'],
-            ['nom' => 'Livraison Colis Inter-Ville', 'type' => 'Livraison'],
+            ['nom' => 'Livraison Express Urbaine',   'slug' => 'livraison-express-urbaine'],
+            ['nom' => 'Covoiturage Longue Distance', 'slug' => 'covoiturage-longue-distance'],
+            ['nom' => 'Location Véhicule Utilitaire','slug' => 'location-vehicule-utilitaire'],
+            ['nom' => 'Livraison Repas Domicile',    'slug' => 'livraison-repas-domicile'],
+            ['nom' => 'VTC Premium',                 'slug' => 'vtc-premium'],
+            ['nom' => 'Livraison Colis Inter-Ville', 'slug' => 'livraison-colis-inter-ville'],
         ];
 
         foreach ($servicesList as $s) {
-            $type = TypeService::where('nom', $s['type'])->first();
-            if ($type) {
-                Service::firstOrCreate(
-                    ['nom' => $s['nom']],
-                    ['description' => 'Service de test — ' . $s['nom'], 'type_service_id' => $type->id]
-                );
-            }
+            Service::firstOrCreate(
+                ['slug' => $s['slug']],
+                ['nom' => $s['nom'], 'description' => 'Service de test — ' . $s['nom']]
+            );
         }
 
         // --- 3. Covoiturages avec statuts variés ---

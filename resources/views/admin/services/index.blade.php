@@ -23,10 +23,10 @@
         <form method="GET" action="{{ route('admin.services.index') }}"
               class="flex flex-col md:flex-row gap-4 md:items-center">
 
-            {{-- Recherche --}}
+            {{-- Recherche (nom ou slug) --}}
             <div class="relative w-full md:w-1/3">
                 <input name="search" value="{{ request('search') }}" type="text"
-                       placeholder="Rechercher..."
+                       placeholder="Rechercher un nom ou un slug..."
                        class="w-full pl-10 pr-4 py-3 rounded-lg bg-white text-gray-700
                        border border-[rgba(255,187,191,1)]
                        focus:ring-2 focus:ring-[rgba(255,187,191,1)]
@@ -38,34 +38,6 @@
                          fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M21 21l-4.35-4.35m1.35-5.65a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                </span>
-            </div>
-
-            {{-- Filtre type service --}}
-            <div class="relative">
-                <select name="type_service_id"
-                        class="appearance-none px-4 py-3 pr-10 rounded-lg bg-white text-gray-700
-                        border border-[rgba(255,187,191,1)]
-                        focus:ring-2 focus:ring-[rgba(255,187,191,1)]
-                        focus:border-[rgba(255,187,191,1)]">
-                    <option value="">Tous les types</option>
-                    @foreach($types as $type)
-                        <option value="{{ $type->id }}"
-                            {{ request('type_service_id') == $type->id ? 'selected' : '' }}>
-                            {{ $type->nom }}
-                        </option>
-                    @endforeach
-                </select>
-
-                {{-- icône chevron --}}
-                <span class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <svg xmlns="http://www.w3.org/2000/svg"
-                         class="w-5 h-5 text-[rgb(233,29,40)]"
-                         viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="2"
-                         stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M6 9l6 6 6-6"/>
                     </svg>
                 </span>
             </div>
@@ -86,6 +58,13 @@
                 Filtrer
             </button>
 
+            @if(request('search'))
+                <a href="{{ route('admin.services.index') }}"
+                   class="text-sm text-gray-500 hover:text-gray-700 underline">
+                    Réinitialiser
+                </a>
+            @endif
+
         </form>
     </div>
 
@@ -97,19 +76,32 @@
                 <thead>
                     <tr>
                         <th class="px-6 py-3 text-left">Nom</th>
-                        <th class="px-6 py-3 text-left">Type</th>
+                        <th class="px-6 py-3 text-left">Slug</th>
+                        <th class="px-6 py-3 text-left">Catégories</th>
                         <th class="px-6 py-3 text-left">Image</th>
                         <th class="px-6 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
 
                 <tbody class="divide-y divide-gray-200">
-                    @foreach($services as $service)
+                    @forelse($services as $service)
                         <tr>
                             <td class="px-6 py-4 font-semibold">{{ $service->nom }}</td>
 
+                            {{-- Le slug identifie le service côté front --}}
+                            <td class="px-6 py-4">
+                                <code class="px-2 py-1 rounded bg-gray-100 text-gray-700 text-sm">
+                                    /{{ $service->slug }}
+                                </code>
+                            </td>
+
                             <td class="px-6 py-4 text-gray-600">
-                                {{ $service->type->nom ?? '-' }}
+                                <a href="{{ route('admin.categories.index', ['service_id' => $service->id]) }}"
+                                   class="inline-flex items-center px-2.5 py-1 rounded-full
+                                          bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100">
+                                    {{ $service->categories_count }}
+                                    {{ \Illuminate\Support\Str::plural('catégorie', $service->categories_count) }}
+                                </a>
                             </td>
 
                             <td class="px-6 py-4">
@@ -172,7 +164,13 @@
                             </td>
 
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="5" class="px-6 py-10 text-center text-gray-400 italic">
+                                Aucun service trouvé.
+                            </td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>

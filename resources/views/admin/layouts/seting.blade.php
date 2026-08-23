@@ -20,8 +20,8 @@
         <!-- Section de Navigation/Actions -->
         <div class="flex flex-col gap-3">
 
-            <!-- Card d'Action Professionnelle (Configurer Type Service) -->
-            <a href="{{ route('admin.type_services.index') }}"
+            <!-- Card d'Action Professionnelle (Configurer les Services) -->
+            <a href="{{ route('admin.services.index') }}"
                 class="group flex items-center p-3 rounded-xl bg-white border border-gray-200
                        shadow-sm hover:shadow-md transition duration-200 ease-in-out
                        hover:border-red-500 hover:bg-red-50/70 cursor-pointer">
@@ -37,8 +37,8 @@
                 </div>
 
                 <!-- 2. Titre (Gras et distinct) -->
-                <span class="text-gray-800 font-medium text-base ml-4 flex-grow truncate">Configurer Types de
-                    Service</span>
+                <span class="text-gray-800 font-medium text-base ml-4 flex-grow truncate">Configurer les
+                    Services</span>
 
                 <!-- 3. Flèche d'Indication (Micro-interaction) -->
                 <svg xmlns="http://www.w3.org/2000/svg"

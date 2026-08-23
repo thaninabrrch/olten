@@ -21,7 +21,7 @@
         </li>
         @foreach($footerCategories as $category)
           <li class="d-flex">
-              <a href="{{ route('categories.show', $category->slug) }}" class="d-flex gap-2">
+              <a href="{{ route('services.show', $category->slug) }}" class="d-flex gap-2">
                 <i class="{{ $category->icon }} category-icon-small"></i> {{ $category->nom }}
             </a>
           </li>
