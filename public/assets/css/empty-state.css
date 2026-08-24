@@ -1,0 +1,130 @@
+/* ==========================================================================
+   ETAT VIDE — composant <x-empty-state />
+   --------------------------------------------------------------------------
+   Design unique pour toute la plateforme : illustration centree, message,
+   et un appel a l'action optionnel.
+
+   Cette feuille est chargee par les trois layouts (public, connecte, admin)
+   pour que l'etat vide soit identique partout. Les variables ont donc un
+   repli : elles n'existent que dans style.css.
+   ========================================================================== */
+.olten-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    padding: 48px 24px 56px;
+    font-family: var(--font-family, "Montserrat", sans-serif);
+}
+
+.olten-empty-illustration {
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    margin: 0 auto 24px;
+    user-select: none;
+    pointer-events: none;
+}
+
+.olten-empty-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--color-black, #111);
+    margin: 0 0 10px;
+    line-height: 1.35;
+}
+
+.olten-empty-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--color-grey-dark, #555);
+    margin: 0 auto;
+    max-width: 460px;
+}
+
+.olten-empty-btn {
+    display: inline-block;
+    margin-top: 22px;
+    background: var(--color-primary, #ff3c00);
+    color: #fff;
+    border: none;
+    border-radius: var(--border-radius-round, 50px);
+    padding: 12px 28px;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, .1);
+    transition: background .3s ease, transform .3s ease;
+}
+
+.olten-empty-btn:hover {
+    background: var(--color-primary-dark, #e13800);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+/* Variante compacte : listes courtes, tableaux d'administration, encarts */
+.olten-empty--compact {
+    padding: 28px 18px 32px;
+}
+
+.olten-empty--compact .olten-empty-illustration {
+    max-width: 180px;
+    margin-bottom: 16px;
+}
+
+.olten-empty--compact .olten-empty-title {
+    font-size: 16px;
+}
+
+.olten-empty--compact .olten-empty-text {
+    font-size: 13px;
+}
+
+/* L'etat vide occupe toute la largeur, meme dans une grille ou un carrousel */
+.olten-empty {
+    grid-column: 1 / -1;
+}
+
+.produits-carousel .olten-empty,
+.carousel-track .olten-empty,
+.annonces-carousel .olten-empty {
+    flex: 1 0 100%;
+}
+
+@media (max-width: 768px) {
+    .olten-empty {
+        padding: 36px 16px 40px;
+    }
+
+    .olten-empty-illustration {
+        max-width: 230px;
+        margin-bottom: 18px;
+    }
+
+    .olten-empty-title {
+        font-size: 17px;
+    }
+
+    .olten-empty-text {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .olten-empty-illustration {
+        max-width: 190px;
+    }
+
+    .olten-empty-title {
+        font-size: 15.5px;
+    }
+
+    .olten-empty-btn {
+        width: 100%;
+        max-width: 280px;
+    }
+}
