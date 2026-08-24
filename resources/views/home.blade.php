@@ -46,11 +46,11 @@
 
         <!-- Boutons d'action -->
         <div class="hero-actions">
-            <a href="{{ route('ads.create') }}" class="hero-btn hero-btn-primary">
+            <a href="{{ route('ads.create') }}" class="hero-btn hero-btn-primary" data-auth-required>
            
                 <span>Déposer une annonce</span>
             </a>
-            <a href="{{ route('categories') }}" class="hero-btn hero-btn-ghost">
+            <a href="{{ route('services.index') }}" class="hero-btn hero-btn-ghost">
              
                 <span>Explorer nos services</span>
             </a>
@@ -72,7 +72,7 @@
                     </h2>
                 </div>
 
-                <a href="{{ route('categories') }}" class="section-link">
+                <a href="{{ route('services.index') }}" class="section-link">
                     Tous les services
                     <i class="fas fa-arrow-right"></i>
                 </a>
@@ -95,7 +95,7 @@
                         </span>
 
                         <span class="service-tile-body">
-                            <span class="service-tile-name">{{ $service->nom }}</span>
+                            <span class="service-tile-name">{{ $service->display_name }}</span>
                             @if(filled($service->short_description))
                                 <span class="service-tile-desc">{{ $service->short_description }}</span>
                             @endif
@@ -107,24 +107,24 @@
         </div>
     </section>
 @else
-    <p class="text-center">
-        Aucun service disponible pour le moment.
-    </p>
+    <x-empty-state compact
+        title="Aucun service disponible pour le moment"
+        text="Les services de la plateforme apparaîtront ici dès qu'ils seront publiés." />
 @endif
 
 <!---------- Plus récent annonce / produit -------------->
-@if($latestItems->isNotEmpty())
+<section class="annonces-section annonces-section--white">
 
-    <section class="annonces-section annonces-section--white">
-
-        <div class="section-header section-header--left">
-            <div class="section-heading">
-                <span class="section-eyebrow section-eyebrow--plain">Opportunités vérifiées</span>
-                <h2 class="section-title">
-                    Les Annonces Populaires du Moment
-                </h2>
-            </div>
+    <div class="section-header section-header--left">
+        <div class="section-heading">
+            <span class="section-eyebrow section-eyebrow--plain">Opportunités vérifiées</span>
+            <h2 class="section-title">
+                Les Annonces Populaires du Moment
+            </h2>
         </div>
+    </div>
+
+    @if($latestItems->isNotEmpty())
 
         <div class="annonces-grid">
             @foreach($latestItems as $latest)
@@ -314,15 +314,17 @@
             @endforeach
         </div>
 
-    </section>
+    @else
 
-@else
+        <x-empty-state
+            :action-url="route('ads.create')"
+            action-label="Publier la première annonce"
+            action-auth
+            text="Soyez le premier à publier un service, une location, un trajet en covoiturage ou un objet à vendre sur la plateforme Olten." />
 
-    <p class="text-center">
-        Aucune annonce ou produit disponible pour le moment.
-    </p>
+    @endif
 
-@endif
+</section>
 
 <!----------À PROPOS D'OLTEN-------------->
 <section  id="about" class="about-section">
@@ -474,7 +476,7 @@
             C'est simple, rapide et sans engagement.
         </p>
     </div>
-    <a href="#" class="cta-btn">
+    <a href="{{ route('ads.create') }}" class="cta-btn" data-auth-required>
         <i class="fas fa-plus"></i>
         Déposer une annonce gratuite
     </a>

@@ -25,11 +25,15 @@
                         <option value="all" {{ request('category_id') == 'all' ? 'selected' : '' }}>
                             Toutes les catégories
                         </option>
-                        @forelse($categories as $category)
-                            <option value="{{ $category->id }}"
-                                {{ request('category_id') == $category->id ? 'selected' : '' }}>
-                                {{ $category->nom }}
-                            </option>
+                        @forelse($categories->groupBy(fn ($c) => $c->service->nom ?? 'Autres') as $serviceName => $group)
+                            <optgroup label="{{ $serviceName }}">
+                                @foreach($group as $category)
+                                    <option value="{{ $category->id }}"
+                                        {{ request('category_id') == $category->id ? 'selected' : '' }}>
+                                        {{ $category->nom }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
                         @empty
                             <option value="">Aucune catégorie disponible</option>
                         @endforelse
@@ -132,7 +136,11 @@
                     </div>
                 </div>
             @empty
-                <p>Aucune annonce disponible.</p>
+                <x-empty-state
+                    title="Aucune annonce publiée"
+                    text="Déposez votre première annonce pour la rendre visible sur la plateforme."
+                    :action-url="route('ads.create')"
+                    action-label="Déposer une annonce" />
             @endforelse
         </div>
 

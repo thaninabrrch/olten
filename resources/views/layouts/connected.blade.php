@@ -14,6 +14,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.ckeditor.com/ckeditor5/41.3.0/classic/ckeditor.js"></script>
     <link rel="icon" type="image/x-icon" href="{{ asset('assets/images/favicon/olten_location.ico') }}">
+    {{-- Etat vide unique de la plateforme (<x-empty-state />) --}}
+    <link rel="stylesheet" href="{{ asset('assets/css/empty-state.css') }}?v={{ @filemtime(public_path('assets/css/empty-state.css')) ?: 1 }}">
 </head>
 
 <body>

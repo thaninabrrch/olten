@@ -117,7 +117,11 @@
             </div>
 
         @empty
-            <p>Aucune réservation effectuée pour le moment.</p>
+            <x-empty-state
+                title="Aucune réservation pour le moment"
+                text="Vos réservations apparaîtront ici dès que vous en aurez effectué une."
+                :action-url="route('home')"
+                action-label="Parcourir les annonces" />
         @endforelse
 
     </div>

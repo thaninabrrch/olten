@@ -25,7 +25,7 @@ const loginIcon = document.querySelector('.header-right .fa-user');
 if (loginIcon && loginIcon.parentElement) {
   // Ouvrir modal sur clic bouton header
   document.querySelector('.header-right .fa-user').parentElement.addEventListener('click', () => {
-      modal.style.display = 'block';
+      window.openAuthModal('login', window.location.href);
   });
 }
 // Fermer modal
@@ -544,27 +544,9 @@ document.addEventListener('click', async function (e) {
 
         const data = await response.json();
 
-        // Utilisateur non connecté
+        // Utilisateur non connecté : on ouvre la popin, sans quitter la page
         if (response.status === 401) {
-            const modal = document.getElementById('authModal');
-
-            if (modal) {
-                modal.style.display = 'block';
-            }
-
-            const loginTab = document.querySelector('.tab-btn[data-tab="login"]');
-            const registerTab = document.querySelector('.tab-btn[data-tab="register"]');
-            const loginContent = document.getElementById('login');
-            const registerContent = document.getElementById('register');
-
-            if (loginTab && registerTab && loginContent && registerContent) {
-                loginTab.classList.add('active');
-                registerTab.classList.remove('active');
-
-                loginContent.style.display = 'block';
-                registerContent.style.display = 'none';
-            }
-
+            window.openAuthModal?.('login', window.location.href);
             return;
         }
 

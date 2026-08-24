@@ -208,10 +208,18 @@
                                     <a href="{{ route('services.show', $service->slug) }}"
                                        class="{{ $isCurrent ? 'is-active' : '' }}"
                                        @if($isCurrent) aria-current="page" @endif>
-                                        {{ $service->nom }}
+                                        {{ $service->display_name }}
                                     </a>
                                 </li>
                             @endforeach
+
+                            <li>
+                                <a href="{{ route('services.index') }}"
+                                   class="{{ request()->routeIs('services.index') ? 'is-active' : '' }}"
+                                   @if(request()->routeIs('services.index')) aria-current="page" @endif>
+                                    Voir tous les services
+                                </a>
+                            </li>
                         </ul>
                     </li>
                 @endif
@@ -223,7 +231,7 @@
             </ul>
 
             <div class="sidebar-cta">
-                <a href="{{ route('ads.create') }}" class="sidebar-cta-btn">Déposer une annonce</a>
+                <a href="{{ route('ads.create') }}" class="sidebar-cta-btn" data-auth-required>Déposer une annonce</a>
                 <span class="sidebar-cta-note">Gratuit et sans engagement</span>
             </div>
 
@@ -255,6 +263,11 @@
         <div class="tab-content" id="login">
             <form id="login-form" method="POST" action="{{ route('login') }}">
                 @csrf
+
+                {{-- Rempli par la popin avec la page que le visiteur voulait
+                     atteindre (ex. « Déposer une annonce »). --}}
+                <input type="hidden" name="redirect" id="login-redirect" value="">
+
                 <div class="input-group">
                     <i class="fa-solid fa-user"></i>
                     <input type="text" name="email" placeholder="Nom d'utilisateur / Email" required>
@@ -344,6 +357,7 @@
     const LOGIN_URL = "{{ route('login') }}";
     const LOGIN_REDIRECT = "{{ route('dashboard') }}";
     const CSRF_TOKEN = "{{ csrf_token() }}";
+    window.IS_AUTHENTICATED = @json(auth()->check());
     window.SHOW_LOGIN_MODAL = @json(session('showLoginModal', false));
     window.PASSWORD_RESET_STATUS = @json(session('status', null));
 </script>

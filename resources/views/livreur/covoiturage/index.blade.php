@@ -196,21 +196,12 @@
                     </div>
                 @empty
                     <!-- État vide -->
-                    <div
-                        class="lg:col-span-2 text-center py-24 bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
-                        <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <svg class="w-10 h-10 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                            </svg>
-                        </div>
-                        <h3 class="text-2xl font-black mb-2">Aucun trajet pour le moment</h3>
-                        <p class="text-slate-400 mb-8 max-w-xs mx-auto">Partagez votre route et commencez à rentabiliser vos
-                            déplacements.</p>
-                        <a href="{{ route('covoiturage.create') }}"
-                            class="inline-flex items-center px-8 py-4 bg-primary-orange text-white rounded-2xl font-bold shadow-xl shadow-orange-100">
-                            Publier une annonce
-                        </a>
-                    </div>
+                    <x-empty-state
+                        class="lg:col-span-2 bg-white rounded-[3rem] border-2 border-dashed border-slate-100"
+                        title="Aucun trajet pour le moment"
+                        text="Partagez votre route et commencez à rentabiliser vos déplacements."
+                        :action-url="route('covoiturage.create')"
+                        action-label="Publier un trajet" />
                 @endforelse
             </div>
         </div>

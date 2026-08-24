@@ -21,5 +21,8 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // Arborescence Service -> Categories (Vente > Vehicules, Immobilier...)
+        $this->call(ServiceCategorySeeder::class);
     }
 }

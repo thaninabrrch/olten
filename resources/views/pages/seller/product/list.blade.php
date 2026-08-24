@@ -88,7 +88,11 @@
                 </div>
             </div>
         @empty
-            <p>Aucun produit disponible.</p>
+            <x-empty-state
+                title="Aucun produit en ligne"
+                text="Ajoutez votre premier produit pour le mettre en vente sur Olten."
+                :action-url="route('seller.produits.create')"
+                action-label="Ajouter un produit" />
         @endforelse
     </div>
 

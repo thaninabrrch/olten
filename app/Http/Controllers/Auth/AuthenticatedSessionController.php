@@ -61,8 +61,43 @@ class AuthenticatedSessionController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'redirect' => route('dashboard'),
+            'redirect' => $this->intendedUrl($request),
         ]);
+    }
+
+    /**
+     * Où renvoyer l'utilisateur après connexion.
+     *
+     * 1. `redirect` : la page que la popin voulait atteindre. Quand un visiteur
+     *    clique sur « Déposer une annonce », la popin s'ouvre sur place et
+     *    transporte cette destination ; il y arrive donc directement.
+     * 2. `url.intended` : l'URL interceptée par le middleware `auth` quand le
+     *    visiteur est arrivé par une adresse protégée saisie à la main.
+     * 3. À défaut, le tableau de bord.
+     *
+     * Seules les URLs du site sont acceptées : une valeur externe ouvrirait
+     * une redirection non maîtrisée vers un autre domaine.
+     */
+    private function intendedUrl(Request $request): string
+    {
+        $candidates = [
+            $request->input('redirect'),
+            $request->session()->pull('url.intended'),
+        ];
+
+        foreach ($candidates as $url) {
+            if (! is_string($url) || $url === '') {
+                continue;
+            }
+
+            $host = parse_url($url, PHP_URL_HOST);
+
+            if ($host === null ? str_starts_with($url, '/') : $host === $request->getHost()) {
+                return $url;
+            }
+        }
+
+        return route('dashboard');
     }
 
     /**

@@ -44,12 +44,19 @@ document.querySelectorAll('.btn-delete').forEach(btn => {
                     favorisList &&
                     favorisList.querySelectorAll('.favori-card').length === 0
                 ) {
+                    // Meme etat vide que le composant <x-empty-state /> :
+                    // les URLs viennent des data-attributs du conteneur.
+                    const emptyImage = favorisList.dataset.emptyImage || '';
+                    const browseUrl = favorisList.dataset.browseUrl || '/';
+
                     favorisList.innerHTML = `
-                        <div class="empty-state" id="emptyState">
-                            <div class="empty-icon">
-                                <i class="fa-solid fa-heart-crack"></i>
-                            </div>
-                            <h3>Aucun favori enregistré</h3>
+                        <div class="olten-empty" id="emptyState">
+                            <img class="olten-empty-illustration" src="${emptyImage}" alt="" aria-hidden="true">
+                            <h3 class="olten-empty-title">Aucun favori enregistré</h3>
+                            <p class="olten-empty-text">
+                                Les annonces et produits que vous ajoutez en favori apparaîtront ici.
+                            </p>
+                            <a href="${browseUrl}" class="olten-empty-btn">Parcourir les annonces</a>
                         </div>
                     `;
                 }

@@ -7,6 +7,8 @@ use App\Models\Category;
 use App\Models\Service;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
 {
@@ -37,23 +39,18 @@ class CategoryController extends Controller
     // Enregistre une nouvelle catégorie
     public function store(Request $request)
     {
-        $request->validate([
-            'nom' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'icon' => 'nullable',
-            'slug' => 'required|string|unique:categories,slug',
-        ]);
+        $this->normalizeSlug($request);
+
+        $request->validate($this->rules($request));
 
         $data = $request->only('nom', 'description', 'service_id', 'icon', 'slug');
 
         if ($request->hasFile('image')) {
-            if(isset($category) && $category->image){
-                Storage::disk('public')->delete($category->image);
-            }
             $data['image'] = $request->file('image')->store('categories', 'public');
         }
 
-        Category::create($data); // pour store
+        Category::create($data);
+
         return redirect()->route('admin.categories.index')->with('success', 'Catégorie ajoutée avec succès.');
     }
 
@@ -67,12 +64,9 @@ class CategoryController extends Controller
 
     public function update(Request $request, Category $category)
     {
-        $request->validate([
-            'nom' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'icon' => 'nullable',
-            'slug' => 'required|string|unique:categories,slug,' . $category->id,
-        ]);
+        $this->normalizeSlug($request);
+
+        $request->validate($this->rules($request, $category));
 
         $data = $request->only('nom', 'description', 'service_id', 'icon', 'slug');
 
@@ -99,5 +93,42 @@ class CategoryController extends Controller
 
         return redirect()->route('admin.categories.index')
                          ->with('success', 'Catégorie supprimée avec succès.');
+    }
+
+    /**
+     * Le nom et le slug d'une categorie sont uniques a l'interieur de son
+     * service, pas sur toute la table : "Beaute & Bien-etre" peut exister
+     * a la fois sous Vente et sous Prestations de services.
+     */
+    private function rules(Request $request, ?Category $category = null): array
+    {
+        $sameService = fn ($query) => $query->where('service_id', $request->input('service_id'));
+
+        return [
+            'nom' => [
+                'required', 'string', 'max:100',
+                Rule::unique('categories', 'nom')->where($sameService)->ignore($category),
+            ],
+            'slug' => [
+                'required', 'string', 'max:255',
+                Rule::unique('categories', 'slug')->where($sameService)->ignore($category),
+            ],
+            'service_id'  => ['required', 'exists:services,id'],
+            'description' => ['nullable', 'string'],
+            'icon'        => ['nullable', 'string', 'max:255'],
+            'image'       => ['nullable', 'image', 'max:4096'],
+        ];
+    }
+
+    /**
+     * Le modele normalise le slug a l'enregistrement : on applique la meme
+     * transformation avant de valider, sinon le controle d'unicite porterait
+     * sur une valeur differente de celle reellement stockee.
+     */
+    private function normalizeSlug(Request $request): void
+    {
+        $request->merge([
+            'slug' => Str::slug($request->input('slug') ?: $request->input('nom')),
+        ]);
     }
 }

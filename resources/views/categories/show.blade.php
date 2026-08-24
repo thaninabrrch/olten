@@ -80,9 +80,8 @@
                             </a>
                         @endif
                     @empty
-                        <p class="text-center">
-                            Aucune annonce disponible pour le moment.
-                        </p>
+                        <x-empty-state compact
+                            text="Aucune annonce n'est disponible dans cette catégorie pour le moment." />
                     @endforelse
                 </div>
             </div>
@@ -95,9 +94,12 @@
         <div class="carousel-dots"></div>
     </section>
 @else
-    <p class="text-center">
-        Aucune annonce disponible pour le moment.
-    </p>
+    <x-empty-state
+        :action-url="route('ads.create')"
+        action-label="Publier la première annonce"
+        action-auth>
+        Aucune annonce n'a encore été publiée dans {{ $category->nom }}.
+    </x-empty-state>
 @endif
 
 {{-- PRODUITS --}}
@@ -153,16 +155,12 @@
 
 <section class="empty-category">
 
-    <i class="bi bi-inbox"></i>
-
-    <h2>
-        Aucun contenu disponible
-    </h2>
-
-    <p>
-        Cette catégorie ne contient encore aucune annonce
-        ni aucun produit.
-    </p>
+    <x-empty-state
+        title="Aucun contenu disponible"
+        text="Cette catégorie ne contient encore aucune annonce ni aucun produit."
+        :action-url="route('ads.create')"
+        action-label="Publier la première annonce"
+        action-auth />
 
 </section>
 

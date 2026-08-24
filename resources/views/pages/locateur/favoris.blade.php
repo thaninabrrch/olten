@@ -16,7 +16,9 @@
         <h2 class="section-title">Annonces enregistrées</h2>
     </div>
 
-    <div class="favoris-list" id="favorisList">
+    <div class="favoris-list" id="favorisList"
+         data-empty-image="{{ asset('assets/images/pasdead.png') }}"
+         data-browse-url="{{ route('home') }}">
 
         @forelse ($favorites as $favorite)
 
@@ -88,12 +90,11 @@
 
         @empty
 
-            <div class="empty-state" id="emptyState">
-                <div class="empty-icon">
-                    <i class="fa-solid fa-heart-crack"></i>
-                </div>
-                <h3>Aucun favori enregistré</h3>
-            </div>
+            <x-empty-state id="emptyState"
+                title="Aucun favori enregistré"
+                text="Les annonces et produits que vous ajoutez en favori apparaîtront ici."
+                :action-url="route('home')"
+                action-label="Parcourir les annonces" />
 
         @endforelse
 

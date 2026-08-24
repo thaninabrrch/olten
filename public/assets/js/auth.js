@@ -1,3 +1,67 @@
+/**
+ * Ouvre la popin de connexion / inscription.
+ *
+ * Exposee sur `window` pour que tout le site puisse l'appeler :
+ * le bouton « Deposer une annonce », les favoris (script.js), etc.
+ *
+ * @param {string} tab      'login' (defaut) ou 'register'
+ * @param {string} redirect page a atteindre une fois connecte
+ */
+window.openAuthModal = function (tab, redirect) {
+    const modal = document.getElementById('authModal');
+
+    if (!modal) {
+        return false;
+    }
+
+    tab = tab === 'register' ? 'register' : 'login';
+
+    modal.style.display = 'block';
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.style.display = content.id === tab ? 'block' : 'none';
+    });
+
+    // La destination voyage avec le formulaire : apres connexion,
+    // l'utilisateur arrive sur la page qu'il avait demandee.
+    const redirectField = document.getElementById('login-redirect');
+
+    if (redirectField) {
+        redirectField.value = redirect || '';
+    }
+
+    modal.querySelector('#' + tab + ' input:not([type=hidden])')?.focus();
+
+    return true;
+};
+
+/**
+ * Liens et boutons reserves aux membres : tant que le visiteur n'est pas
+ * connecte, le clic ouvre la popin au lieu de quitter la page.
+ *
+ * Il suffit d'ajouter `data-auth-required` sur le lien ; son `href` reste
+ * le repli si le JavaScript ne s'execute pas.
+ *
+ * L'ecoute est deleguee : elle couvre aussi le contenu injecte apres coup.
+ */
+document.addEventListener('click', function (event) {
+    const trigger = event.target.closest('[data-auth-required]');
+
+    if (!trigger || window.IS_AUTHENTICATED) {
+        return;
+    }
+
+    const destination = trigger.dataset.authRedirect || trigger.getAttribute('href');
+
+    if (window.openAuthModal(trigger.dataset.authTab, destination)) {
+        event.preventDefault();
+    }
+});
+
 document.addEventListener('DOMContentLoaded', function() {
 
     const registerForm = document.getElementById('registerForm');
@@ -10,13 +74,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function showLoginModalIfNeeded() {
         if (!authModal || !window.SHOW_LOGIN_MODAL) return;
 
-        authModal.style.display = 'block';
-
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelector('[data-tab="login"]').classList.add('active');
-
-        document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
-        document.getElementById('login').style.display = 'block';
+        window.openAuthModal('login');
 
         if (window.PASSWORD_RESET_STATUS) {
             loginErrorsDiv.innerHTML = `<p class="text-success">${window.PASSWORD_RESET_STATUS}</p>`;

@@ -35,12 +35,12 @@
 
             <div class="info-card">
                 <h3>Coordonnées</h3>
-                <p class="info-desc">Retrouvez toutes nos informations directes pour échanger avec notre équipe à tout moment.</p>
+                <p class="info-desc">Retrouvez toutes nos informations directes pour échanger avec notre équipe support.</p>
 
                 <div class="info-row">
                     <span class="icon"><i class="fa-solid fa-envelope"></i></span>
                     <div class="info-content">
-                        <span class="info-label">Email</span>
+                        <span class="info-label">E-Mail direct</span>
                         <a href="mailto:olten-location@outlook.fr">olten-location@outlook.fr</a>
                     </div>
                 </div>
@@ -48,12 +48,15 @@
                 <div class="info-row">
                     <span class="icon"><i class="fa-solid fa-location-dot"></i></span>
                     <div class="info-content">
-                        <span class="info-label">Adresse</span>
+                        <span class="info-label">Adresse du siège</span>
                         <p>L'Horme, 42152, Département de la Loire, Région Auvergne-Rhône-Alpes, France.</p>
                     </div>
                 </div>
 
-                <a href="#" class="report-link">+ Rapport erreur</a>
+                <div class="info-footer">
+                    <span class="info-delay">Disponibilité 24h</span>
+                    <span class="info-status">Support en ligne</span>
+                </div>
             </div>
 
             <form action="{{ route('contact.store') }}" method="POST" class="contact-form">

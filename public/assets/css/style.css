@@ -556,6 +556,10 @@ body {
   position: absolute;
   right: 20px;
   top: 20px;
+  /* Les onglets (.tab-btn) sont aussi positionnes et declares apres la croix
+     dans le DOM : a z-index egal, ils passaient devant et recouvraient les
+     deux tiers bas du bouton, qui ne repondait donc plus au clic. */
+  z-index: 2;
   font-size: 24px;
   color: #999;
   cursor: pointer;
@@ -2651,116 +2655,154 @@ textarea {
 
 /* Carte Coordonnées */
 .info-card {
-  flex: 0 0 320px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.08);
-  padding: 35px 30px;
+  flex: 0 0 360px;
+  /* Blanc, avec une pointe de chaleur vers le bas de la carte */
+  background: linear-gradient(180deg, #fff 55%, #fffaf6 100%);
+  border-radius: 20px;
+  box-shadow: 0 8px 30px rgba(17, 17, 17, 0.07);
+  padding: 34px 30px 26px;
   display: flex;
   flex-direction: column;
 }
 
 .info-card h3 {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 800;
   color: #111;
+  letter-spacing: -0.3px;
   margin-bottom: 10px;
 }
 
 .info-card > p.info-desc {
-  font-size: 14px;
-  color: #888;
-  line-height: 1.6;
-  margin-bottom: 25px;
+  font-size: 13.5px;
+  color: #8e8e8e;
+  line-height: 1.65;
+  margin-bottom: 28px;
 }
 
 .info-row {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 14px;
+  margin-bottom: 22px;
 }
 
+/* Pastille claire a l'icone orange, et non l'inverse */
 .info-row .icon {
   flex-shrink: 0;
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
-  background: var(--color-primary, #ff3b00);
-  color: #fff;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #ffe9dd;
+  color: var(--color-primary, #ff3b00);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
 }
 
 .info-row .icon i {
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .info-row .info-content {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
+  padding-top: 2px;
+  min-width: 0;
 }
 
 .info-row .info-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #999;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: #a6a6a6;
+  letter-spacing: 0;
 }
 
 .info-row p,
 .info-row a {
-  font-size: 14px;
-  color: #000000;
-  font-weight: 600;
+  font-size: 15px;
+  color: #111;
+  font-weight: 700;
   line-height: 1.5;
-  text-decoration: none;
   margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* L'adresse e-mail reste soulignee : c'est le seul element cliquable */
+.info-row a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
 }
 
 .info-row a:hover {
-  text-decoration: underline;
-}
-
-.info-card .report-link {
-  margin-top: auto;
-  text-align: right;
-  font-size: 13px;
-  font-weight: 600;
   color: var(--color-primary, #ff3b00);
-  text-decoration: none;
 }
 
-.info-card .report-link:hover {
-  text-decoration: underline;
+/* Pied de carte : delai de reponse a gauche, etat du support a droite */
+.info-card .info-footer {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid #efefef;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-/* Formulaire */
+.info-card .info-delay {
+  font-size: 12px;
+  color: #b3b3b3;
+  white-space: nowrap;
+}
+
+.info-card .info-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4b4b4b;
+  white-space: nowrap;
+}
+
+.info-card .info-status::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+}
+
+/* Formulaire
+   Ces regles sont limitees a `.contact-form` : les classes `.form-group`,
+   `.form-row` et `.btn-submit` sont aussi utilisees par la page « creer un
+   site », qui les declare plus haut. Sans cette portee, les deux pages se
+   marchaient dessus. */
 .contact-form {
   flex: 1;
   background: transparent;
   padding: 0;
 }
 
-.form-row {
+.contact-form .form-row {
   display: flex;
   gap: 20px;
 }
 
-.form-row .form-group {
+.contact-form .form-row .form-group {
   flex: 1;
 }
 
-.form-group {
+.contact-form .form-group {
   margin-bottom: 20px;
   text-align: left;
 }
 
-.form-group label {
+.contact-form .form-group label {
   display: block;
   margin-bottom: 8px;
   font-weight: 600;
@@ -2768,8 +2810,8 @@ textarea {
   color: #333;
 }
 
-.form-group input,
-.form-group textarea {
+.contact-form .form-group input,
+.contact-form .form-group textarea {
   width: 100%;
   padding: 12px 15px;
   border: 1px solid #e2e2e2;
@@ -2782,19 +2824,24 @@ textarea {
   box-sizing: border-box;
 }
 
-.form-group input:focus,
-.form-group textarea:focus {
+.contact-form .form-group input:focus,
+.contact-form .form-group textarea:focus {
   border-color: #ff3b00;
 }
 
-.form-actions {
+.contact-form .form-actions {
   text-align: right;
 }
 
-.btn-submit {
+/* `width` doit etre remis a plat : la page « creer un site » impose
+   `width: 100%` sur `.btn-submit`, ce qui etirait le bouton Envoyer
+   sur toute la largeur du formulaire. */
+.contact-form .btn-submit {
   display: inline-block;
+  width: auto;
   background: #ff3b00;
   color: #fff;
+  font-size: 15px;
   font-weight: 600;
   padding: 12px 35px;
   border-radius: 30px;
@@ -2803,7 +2850,7 @@ textarea {
   transition: background 0.3s ease;
 }
 
-.btn-submit:hover {
+.contact-form .btn-submit:hover {
   background: #e13200;
 }
 
@@ -2844,7 +2891,7 @@ textarea {
   }
 
 
-  .form-row {
+  .contact-form .form-row {
     flex-direction: column;
     gap: 0;
   }
@@ -4993,6 +5040,381 @@ product-card:hover {
 }
 
 /* ==========================================================================
+   PAGE SERVICE — blocs complementaires
+   (titres de section, filtres, carte Leaflet, pagination, etats vides)
+   ========================================================================== */
+
+/* Titre de section (Categories, Annonces populaires...) */
+.cs-section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.cs-section-title {
+    font-size: var(--font-size-subheading);
+    font-weight: 700;
+    margin: 0;
+}
+
+.cs-section-hint {
+    font-size: 13px;
+    color: var(--color-grey-dark);
+}
+
+
+.cs-categories-block {
+    margin-bottom: 36px;
+}
+
+/* Categorie : texte sur deux lignes (nom + compteur) */
+.cs-cat-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.cs-cat-count {
+    font-size: 11.5px;
+    color: var(--color-grey-dark);
+}
+
+.cs-cat-item.is-active {
+    border-color: var(--color-primary);
+    background: #fff6f2;
+    box-shadow: var(--shadow-light);
+}
+
+.cs-cat-item.is-active .cs-cat-icon {
+    background: var(--color-primary);
+    color: var(--color-white);
+}
+
+.cs-cat-item.is-active .cs-cat-label {
+    color: var(--color-primary);
+}
+
+/* Carte : etat vide et bulles */
+.cs-map-placeholder {
+    border: 1px dashed var(--color-divider);
+    border-radius: var(--cs-radius-md);
+    background: var(--color-grey-light);
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--color-grey-dark);
+}
+
+.cs-map-placeholder i {
+    font-size: 30px;
+    color: var(--color-primary);
+    margin-bottom: 12px;
+}
+
+.cs-map-placeholder-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-black);
+    margin: 0 0 6px;
+}
+
+.cs-map-placeholder-text {
+    font-size: 13px;
+    margin: 0;
+}
+
+.cs-map-canvas {
+    z-index: 0;
+}
+
+.cs-map-popup {
+    display: block;
+    width: 190px;
+    text-decoration: none;
+    color: var(--color-black);
+}
+
+.cs-map-popup img {
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+    border-radius: var(--cs-radius-sm);
+    margin-bottom: 8px;
+}
+
+.cs-map-popup-cat {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.cs-map-popup strong {
+    display: block;
+    font-size: 13.5px;
+    margin: 2px 0 4px;
+}
+
+.cs-map-popup-address {
+    display: block;
+    font-size: 12px;
+    color: var(--color-grey-dark);
+}
+
+.cs-map-popup-price {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-top: 6px;
+}
+
+/* Bloc annonces */
+.cs-listings {
+    margin-bottom: 44px;
+}
+
+/* Filtres */
+.cs-filters {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr .7fr .7fr .9fr auto;
+    align-items: end;
+    gap: 14px;
+    background: var(--color-white);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--cs-radius-lg);
+    padding: 18px;
+    margin-bottom: 24px;
+}
+
+.cs-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.cs-filter-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-grey-dark);
+}
+
+.cs-filters .cs-search-input {
+    width: 100%;
+}
+
+.cs-filters .cs-search-input input {
+    width: 100%;
+    min-width: 0;
+}
+
+.cs-filters .cs-sort-select {
+    width: 100%;
+}
+
+.cs-filter-suffix {
+    font-size: 13px;
+    color: var(--color-grey-dark);
+}
+
+.cs-filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cs-btn-filter {
+    background: var(--color-primary);
+    color: var(--color-white);
+    border: none;
+    border-radius: var(--cs-radius-sm);
+    padding: 11px 18px;
+    font-family: var(--font-family);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--transition-speed) ease;
+}
+
+.cs-btn-filter:hover {
+    background: var(--color-primary-dark);
+}
+
+.cs-btn-reset {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-grey-dark);
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 11px 4px;
+}
+
+.cs-btn-reset:hover {
+    color: var(--color-primary);
+}
+
+/* Carte d'annonce : ligne de statistiques */
+.cs-card-stats {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 11.5px;
+    color: var(--color-grey-dark);
+    margin: 0 0 12px;
+}
+
+.cs-card-stats i {
+    margin-right: 4px;
+}
+
+.cs-card-meta i {
+    margin-right: 5px;
+}
+
+.cs-cards-grid--four {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+/* Pagination */
+.cs-pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.cs-pagination nav {
+    font-size: 13px;
+}
+
+.cs-pagination svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Etat vide */
+.cs-empty {
+    border: 1px dashed var(--color-divider);
+    border-radius: var(--cs-radius-lg);
+    background: var(--color-grey-light);
+    padding: 52px 24px;
+    text-align: center;
+}
+
+.cs-empty--compact {
+    padding: 34px 20px;
+}
+
+.cs-empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    background: var(--color-white);
+    border: 1px solid var(--color-divider);
+    color: var(--color-primary);
+    font-size: 24px;
+    margin-bottom: 16px;
+}
+
+.cs-empty-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0 0 8px;
+}
+
+.cs-empty-text {
+    font-size: 13.5px;
+    color: var(--color-grey-dark);
+    margin: 0 auto 18px;
+    max-width: 420px;
+}
+
+.cs-empty-btn {
+    display: inline-block;
+    background: var(--color-primary);
+    color: var(--color-white);
+    border-radius: var(--border-radius-round);
+    padding: 10px 22px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background var(--transition-speed) ease;
+}
+
+.cs-empty-btn:hover {
+    background: var(--color-primary-dark);
+    color: var(--color-white);
+}
+
+/* Annonces populaires */
+.cs-popular {
+    margin-bottom: 20px;
+}
+
+@media (max-width: 1024px) {
+    .cs-filters {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .cs-filter-actions {
+        grid-column: 1 / -1;
+    }
+
+    .cs-cards-grid--four {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .cs-section-head {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .cs-filters {
+        grid-template-columns: 1fr;
+        padding: 16px;
+    }
+
+    .cs-empty {
+        padding: 38px 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .cs-cards-grid--four {
+        grid-template-columns: 1fr;
+    }
+
+    .cs-cat-count {
+        display: none;
+    }
+
+    .cs-filter-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .cs-btn-filter {
+        width: 100%;
+    }
+
+    .cs-btn-reset {
+        text-align: center;
+    }
+}
+
+/* ==========================================================================
    PAGE LOCATION DE VOITURE (location-voiture.blade.php)
    ========================================================================== */
 .lv-page {
@@ -6016,5 +6438,308 @@ product-card:hover {
 
     .cv-driver-content {
         padding: 22px;
+    }
+}
+
+/* ==========================================================================
+   PAGE « NOS SERVICES » (services/index.blade.php)
+   Vitrine de tous les services, chacun avec ses categories.
+   ========================================================================== */
+.sv-page {
+    --sv-max-width: 1180px;
+    --sv-radius-lg: 16px;
+    --sv-radius-md: 12px;
+    max-width: var(--sv-max-width);
+    margin: 0 auto;
+    padding: 0 20px 64px;
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    color: var(--color-black);
+}
+
+.sv-page * {
+    box-sizing: border-box;
+}
+
+/* En-tete pleine largeur */
+.sv-hero {
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    background: linear-gradient(90deg, #fdece0 0%, #fff9f5 100%);
+    padding: 30px 0 34px;
+    margin-bottom: 34px;
+}
+
+.sv-hero-inner {
+    max-width: var(--sv-max-width);
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.sv-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--color-grey-dark);
+    margin-bottom: 14px;
+}
+
+.sv-breadcrumb-link {
+    color: var(--color-grey-dark);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color var(--transition-speed) ease;
+}
+
+.sv-breadcrumb-link:hover {
+    color: var(--color-primary);
+}
+
+.sv-breadcrumb-sep {
+    font-size: 9px;
+    opacity: .7;
+}
+
+.sv-breadcrumb-current {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.sv-hero-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 10px;
+}
+
+.sv-hero-subtitle {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--color-grey-dark);
+    margin: 0;
+    max-width: 640px;
+}
+
+.sv-hero-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    margin-top: 22px;
+}
+
+.sv-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sv-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-primary);
+    line-height: 1;
+}
+
+.sv-stat-label {
+    font-size: 12px;
+    color: var(--color-grey-dark);
+}
+
+/* Grille de services */
+.sv-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+}
+
+.sv-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-white);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--sv-radius-lg);
+    overflow: hidden;
+    transition: box-shadow var(--transition-speed) ease,
+                transform var(--transition-speed) ease,
+                border-color var(--transition-speed) ease;
+}
+
+.sv-card:hover {
+    box-shadow: 0 14px 28px rgba(16, 24, 40, .14);
+    border-color: var(--color-primary);
+    transform: translateY(-3px);
+}
+
+/* Visuel : image du service si elle existe, sinon degrade teinte */
+.sv-card-visual {
+    display: block;
+    height: 132px;
+    text-decoration: none;
+    /* 1. image du service (back-office), absente -> couche ignoree
+       2. degrade de repli, teinte stable par service */
+    background-image:
+        var(--tile-image, none),
+        linear-gradient(155deg,
+            hsl(var(--tile-hue, 20), 42%, 40%) 0%,
+            hsl(var(--tile-hue, 20), 32%, 22%) 100%);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+
+.sv-card-body {
+    flex: 1 1 auto;
+    padding: 18px 18px 14px;
+}
+
+.sv-card-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 8px;
+}
+
+
+.sv-card-title a {
+    color: var(--color-black);
+    text-decoration: none;
+}
+
+.sv-card-title a:hover {
+    color: var(--color-primary);
+}
+
+.sv-card-desc {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--color-grey-dark);
+    margin: 0 0 14px;
+}
+
+.sv-card-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--color-grey-dark);
+    margin: 0 0 14px;
+}
+
+.sv-card-stats i {
+    color: var(--color-primary);
+    margin-right: 5px;
+}
+
+/* Categories cliquables */
+.sv-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sv-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--color-grey-light);
+    border: 1px solid transparent;
+    border-radius: var(--border-radius-round);
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-black);
+    text-decoration: none;
+    transition: background var(--transition-speed) ease,
+                border-color var(--transition-speed) ease,
+                color var(--transition-speed) ease;
+}
+
+.sv-tag i {
+    font-size: 11px;
+    color: var(--color-primary);
+}
+
+.sv-tag:hover {
+    background: #fff6f2;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.sv-tag--more {
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+/* Pied de carte */
+.sv-card-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-top: 1px solid var(--color-divider);
+    padding: 14px 18px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: background var(--transition-speed) ease, gap var(--transition-speed) ease;
+}
+
+.sv-card-cta:hover {
+    background: #fff6f2;
+    color: var(--color-primary-dark);
+}
+
+.sv-card-cta i {
+    font-size: 12px;
+}
+
+@media (max-width: 1024px) {
+    .sv-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .sv-page {
+        padding: 0 16px 48px;
+    }
+
+    .sv-hero {
+        padding: 22px 0 26px;
+    }
+
+    .sv-hero-inner {
+        padding: 0 16px;
+    }
+
+    .sv-hero-title {
+        font-size: 22px;
+    }
+
+    .sv-hero-subtitle {
+        font-size: 13px;
+    }
+
+    .sv-hero-stats {
+        gap: 20px;
+    }
+
+    .sv-grid {
+        gap: 16px;
+    }
+}
+
+@media (max-width: 560px) {
+    .sv-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sv-card-visual {
+        height: 112px;
     }
 }

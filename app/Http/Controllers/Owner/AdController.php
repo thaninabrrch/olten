@@ -45,7 +45,12 @@ class AdController extends Controller
         };
 
         $ads        = $query->paginate(8)->withQueryString();
-        $categories = Category::all();
+        // Les categories sont des sous-parties d'un service : on les charge
+        // avec leur service pour pouvoir les regrouper dans le selecteur.
+        $categories = Category::with('service')
+                              ->orderBy('service_id')
+                              ->orderBy('id')
+                              ->get();
 
         return view('pages.locateur.mes_annonces', compact('ads', 'categories'));
     }
@@ -90,7 +95,12 @@ class AdController extends Controller
 
     public function create()
     {
-        $categories = Category::all();
+        // Les categories sont des sous-parties d'un service : on les charge
+        // avec leur service pour pouvoir les regrouper dans le selecteur.
+        $categories = Category::with('service')
+                              ->orderBy('service_id')
+                              ->orderBy('id')
+                              ->get();
         return view('pages.locateur.deposer_annonce', compact('categories'));
     }
 
@@ -175,7 +185,12 @@ class AdController extends Controller
     public function edit(Ad $ad)
     {
         $this->authorize('update', $ad);
-        $categories = Category::all();
+        // Les categories sont des sous-parties d'un service : on les charge
+        // avec leur service pour pouvoir les regrouper dans le selecteur.
+        $categories = Category::with('service')
+                              ->orderBy('service_id')
+                              ->orderBy('id')
+                              ->get();
         return view('pages.locateur.edit', compact('ad', 'categories'));
     }
 

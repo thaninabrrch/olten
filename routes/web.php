@@ -39,27 +39,21 @@ use App\Models\User;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\SubscriptionController;
 
-Route::get('/service-standard', function () {
-    return view('services.service-standard');
-});
-Route::get('/location-voiture', function () {
-    return view('services.location-voiture');
-});
-Route::get('/covoiturage-service', function () {
-    return view('services.covoiturage-service');
-});
+/*
+|--------------------------------------------------------------------------
+| Anciennes URLs de maquette des pages service
+|--------------------------------------------------------------------------
+| Elles rendaient une vue sans donnees. Elles pointent desormais vers le
+| vrai service correspondant, qui passe par ServicePageController et donc
+| par le slug (voir la route catch-all `services.show` en bas de fichier).
+*/
+Route::redirect('/service-standard', '/vente');
+Route::redirect('/location-voiture', '/location');
+Route::redirect('/covoiturage-service', '/covoiturage');
 
-Route::get('/service-standard', function () {
-    return view('services.service-standard');
-});
-Route::get('/location-voiture', function () {
-    return view('services.location-voiture');
-});
-Route::get('/covoiturage-service', function () {
-    return view('services.covoiturage-service');
-});
-
-
+// Vitrine « Nos services » : tous les services de la plateforme.
+// A declarer avant la route catch-all `/{slug}` de fin de fichier.
+Route::get('/services', [ServicePageController::class, 'index'])->name('services.index');
 
 Route::prefix('admin')
     ->name('admin.')
@@ -158,7 +152,10 @@ Route::middleware('auth', 'verified', 'subscription', 'approved', 'subscription.
     Route::post('/demandes/{demande}/accept', [AdsLivreurController::class, 'acceptDemande'])->name('delivery.request.accept');
     Route::post('/demandes/{demande}/refuse', [AdsLivreurController::class, 'refuseDemande'])->name('delivery.request.refuse');
     Route::post('/demandes/{demande}/annuler', [AdsLivreurController::class, 'annulerMission'])->name('demande.annuler');
-    Route::get('/covoiturage', [CovoiturageController::class, 'index'])
+    // « Mes trajets » du conducteur. L'URL /covoiturage est reservee a la
+    // page publique du service (voir `services.show`), qui doit rester
+    // accessible aux visiteurs non connectes.
+    Route::get('/mes-trajets', [CovoiturageController::class, 'index'])
         ->name('covoiturage.index');
     Route::get('/covoiturage/create', [CovoiturageController::class, 'create'])
         ->name('covoiturage.create');
@@ -301,5 +298,19 @@ Route::prefix('produits')
         })->name('success');
         Route::post('{product}/acheter', [ProductController::class, 'purchase'])->name('purchase')->middleware('auth');
     });
+/*
+|--------------------------------------------------------------------------
+| Pages service (catch-all : a garder en dernier)
+|--------------------------------------------------------------------------
+| Le slug du service choisit le design :
+|   /covoiturage              -> design covoiturage
+|   /location                 -> design location
+|   /vente, /livraison, ...   -> page service standard
+|
+| Et la categorie du service se lit dans le chemin :
+|   /vente/telephones-tablettes
+*/
 Route::get('/{slug}', [ServicePageController::class, 'show'])->name('services.show');
+Route::get('/{slug}/{category}', [ServicePageController::class, 'show'])->name('services.category');
+
 require __DIR__.'/auth.php';

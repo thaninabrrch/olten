@@ -13,7 +13,7 @@
             ou mettez vos propres affaires en location pour arrondir vos fins de mois.
         </p>
         <div class="hero-buttons">
-            <a href="{{ route('ads.create') }}" class="btn-orange">Déposer une annonce</a>
+            <a href="{{ route('ads.create') }}" class="btn-orange" data-auth-required>Déposer une annonce</a>
         </div>
     </div>
 </section>
@@ -121,9 +121,8 @@
                             </a>
                         @endif
                     @empty
-                        <p class="text-center">
-                            Aucune annonce disponible pour le moment.
-                        </p>
+                        <x-empty-state compact
+                            text="Aucune annonce n'est disponible pour le moment." />
                     @endforelse
                 </div>
             </div>
@@ -136,9 +135,11 @@
         <div class="carousel-dots"></div>
     </section>
 @else
-    <p class="text-center">
-        Aucune annonce disponible pour le moment.
-    </p>
+    <x-empty-state
+        :action-url="route('ads.create')"
+        action-label="Publier la première annonce"
+        action-auth
+        text="Aucune annonce n'a encore été publiée sur la plateforme Olten." />
 @endif
 
 {{-- Produits récents --}}

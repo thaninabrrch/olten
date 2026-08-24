@@ -69,6 +69,17 @@ class Service extends Model
     }
 
     /**
+     * Nom affiché. Les noms saisis en back-office ne sont pas toujours
+     * capitalisés (« covoiturage », « appels d'offres ») : on relève la
+     * première lettre sans toucher au reste — contrairement à ucwords(),
+     * qui donnerait « Appels D'offres ».
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        return Str::ucfirst($this->nom);
+    }
+
+    /**
      * Relation : un Service a plusieurs Catégories (sous-services)
      */
     public function categories()

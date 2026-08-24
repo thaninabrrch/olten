@@ -100,7 +100,9 @@
                 </div>
             </div>
         @empty
-            <p>Aucune commande enregistrée.</p>
+            <x-empty-state
+                title="Aucune commande enregistrée"
+                text="Les commandes passées sur vos produits apparaîtront ici." />
         @endforelse
     </div>
 

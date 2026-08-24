@@ -211,8 +211,10 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-6 text-center text-gray-500">
-                                    Aucune annonce trouvée
+                                <td colspan="5" class="px-6 py-6">
+                                    <x-empty-state compact
+                                        title="Aucune annonce trouvée"
+                                        text="Aucune annonce ne correspond aux filtres sélectionnés." />
                                 </td>
                             </tr>
                         @endforelse

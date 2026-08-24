@@ -122,7 +122,11 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-6 text-center text-gray-500">Aucun trajet trouvé</td>
+                                <td colspan="5" class="px-6 py-6">
+                                    <x-empty-state compact
+                                        title="Aucun trajet trouvé"
+                                        text="Aucun trajet ne correspond aux filtres sélectionnés." />
+                                </td>
                             </tr>
                         @endforelse
                     </tbody>

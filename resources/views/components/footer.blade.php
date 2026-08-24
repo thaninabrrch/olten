@@ -33,10 +33,14 @@
                 @foreach($footerServices as $service)
                     <li>
                         <a href="{{ route('services.show', $service->slug) }}">
-                            {{ $service->nom }}
+                            {{ $service->display_name }}
                         </a>
                     </li>
                 @endforeach
+
+                <li>
+                    <a href="{{ route('services.index') }}">Tous nos services</a>
+                </li>
             </ul>
         </div>
 
