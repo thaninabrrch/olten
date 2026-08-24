@@ -165,7 +165,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const prevBtn = annoncesSection.querySelector('.carousel-btn.prev-btn');
     const nextBtn = annoncesSection.querySelector('.carousel-btn.next-btn');
     const dotsContainer = annoncesSection.querySelector('.carousel-dots');
-    
+
+    // L'accueil affiche desormais les annonces en grille (sans carrousel) :
+    // sans ces elements il n'y a rien a piloter ici.
+    if (!track || !prevBtn || !nextBtn || !dotsContainer) return;
+
     let currentIndex = 0;
     let cardsPerView = 3;
 
@@ -251,6 +255,19 @@ document.addEventListener('DOMContentLoaded', function() {
         goToSlide(0);
     });
 });
+// ========== SIDEBAR : groupe "Nos N services" repliable ==========
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.menu-group-toggle').forEach(function (toggle) {
+        const group = toggle.closest('.menu-group');
+        if (!group) return;
+
+        toggle.addEventListener('click', function () {
+            const isOpen = group.classList.toggle('is-open');
+            toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+    });
+});
+
 //FAQ Toggle 
 document.addEventListener('DOMContentLoaded', function () {
     const faqItems = document.querySelectorAll('.faq-item');

@@ -26,14 +26,14 @@
             </ul>
         </div>
 
-        <!-- Catégories -->
+        <!-- Services -->
         <div class="footer-section categories-section-footer">
-            <h3>Catégories</h3>
+            <h3>Services</h3>
             <ul>
-                @foreach($footerCategories as $category)
+                @foreach($footerServices as $service)
                     <li>
-                        <a href="{{ route('categories.show', $category->slug) }}">
-                            {{ $category->nom }}
+                        <a href="{{ route('services.show', $service->slug) }}">
+                            {{ $service->nom }}
                         </a>
                     </li>
                 @endforeach

@@ -83,6 +83,7 @@ Route::get('/annonce-details', function () {
 })->name('annonces.details');
 Route::view('/categories', 'pages.annonces_pages.categories_annonces')
 ->name('categories');
+Route::get('/categories/{slug}', [HomeController::class, 'show'])->name('categories.show');
 
 Route::get('/compte-en-attente', function () { return view('auth.pending-approval');})->name('account.pending');
 Route::get('/verify-email', function () { return view('auth.verify-email');})->name('account.verify');

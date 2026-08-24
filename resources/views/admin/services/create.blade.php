@@ -72,6 +72,24 @@
             @enderror
         </div>
 
+        {{-- Accroche courte --}}
+        <div class="mb-4">
+            <label for="short_description" class="block text-gray-700 font-medium mb-1">Accroche courte</label>
+
+            <input type="text" name="short_description" id="short_description" maxlength="120"
+                class="w-full border @error('short_description') border-red-500 @else border-gray-300 @enderror
+                       rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+                value="{{ old('short_description') }}" placeholder="ex : Objets & matériel">
+
+            <p class="text-gray-500 text-sm mt-1">
+                Affichée sous le nom du service sur les tuiles de l'accueil. 120 caractères maximum.
+            </p>
+
+            @error('short_description')
+                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
         {{-- Description --}}
         <div class="mb-4">
             <label for="description" class="block text-gray-700 font-medium mb-1">Description</label>

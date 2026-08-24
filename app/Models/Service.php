@@ -14,6 +14,7 @@ class Service extends Model
     protected $fillable = [
         'nom',
         'slug',
+        'short_description',
         'description',
         'image',
     ];
@@ -28,6 +29,43 @@ class Service extends Model
         static::saving(function (Service $service) {
             $service->slug = Str::slug($service->slug ?: $service->nom);
         });
+    }
+
+    /**
+     * Glyphes Font Awesome par famille de service.
+     * La table `services` n'a pas de colonne `icon` : on associe ici un
+     * glyphe à chaque mot-clé de slug, du plus spécifique au plus générique.
+     */
+    private const ICONS = [
+        'covoiturage' => 'fas fa-car-side',
+        'trajet'      => 'fas fa-car-side',
+        'vtc'         => 'fas fa-taxi',
+        'livraison'   => 'fas fa-truck-fast',
+        'colis'       => 'fas fa-box',
+        'location'    => 'fas fa-key',
+        'vente'       => 'fas fa-bag-shopping',
+        'achat'       => 'fas fa-bag-shopping',
+        'appel'       => 'fas fa-file-signature',
+        'offre'       => 'fas fa-file-signature',
+        'prestation'  => 'fas fa-screwdriver-wrench',
+        'service'     => 'fas fa-screwdriver-wrench',
+    ];
+
+    /**
+     * Classe d'icône à afficher pour ce service (accueil, menus...).
+     * Repli générique si aucun mot-clé ne correspond.
+     */
+    public function getIconClassAttribute(): string
+    {
+        $haystack = Str::slug($this->slug ?: $this->nom);
+
+        foreach (self::ICONS as $keyword => $icon) {
+            if (str_contains($haystack, $keyword)) {
+                return $icon;
+            }
+        }
+
+        return 'fas fa-layer-group';
     }
 
     /**

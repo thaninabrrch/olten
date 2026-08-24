@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Service;
 use App\Models\Ad;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -12,6 +13,9 @@ class HomeController extends Controller
     public function home(Request $request)
     {
         $categories = Category::orderBy('id', 'asc')->get();
+
+        // Les "piliers de services" affiches sur l'accueil viennent du modele Service
+        $services = Service::orderBy('id', 'asc')->get();
 
         $query = Ad::with(['images', 'category'])->where('is_approved', true);
 
@@ -31,6 +35,14 @@ class HomeController extends Controller
 
         if ($request->filled('category')) {
             $query->where('category_id', $request->category);
+        }
+
+        // Le selecteur de la barre de recherche porte desormais sur les services :
+        // une annonce correspond si sa categorie appartient au service choisi.
+        if ($request->filled('service')) {
+            $query->whereHas('category', function ($q) use ($request) {
+                $q->where('service_id', $request->input('service'));
+            });
         }
 
         $ads = $query->latest()->get();
@@ -62,6 +74,7 @@ class HomeController extends Controller
 
         return view('home', compact(
                                 'categories',
+                                'services',
                                 'ads',
                                 'products',
                                 'latestItems'

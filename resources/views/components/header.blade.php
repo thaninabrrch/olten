@@ -29,13 +29,13 @@
             <div class="divider"></div>
 
             <div class="search-field">
-                <select name="category" class="category-select">
-                    <option value="">Toutes les catégories</option>
+                <select name="service" class="category-select">
+                    <option value="">Tous les services</option>
 
-                    @foreach ($categories as $category)
-                        <option value="{{ $category->id }}"
-                            {{ request('category') == $category->id ? 'selected' : '' }}>
-                            {{ $category->nom }}
+                    @foreach ($footerServices as $service)
+                        <option value="{{ $service->id }}"
+                            {{ request('service') == $service->id ? 'selected' : '' }}>
+                            {{ $service->nom }}
                         </option>
                     @endforeach
 
@@ -148,13 +148,13 @@
                 </div>
 
                 <div class="search-field">
-                    <select name="category" class="category-select">
-                        <option value="">Toutes les catégories</option>
+                    <select name="service" class="category-select">
+                        <option value="">Tous les services</option>
 
-                        @foreach ($categories as $category)
-                            <option value="{{ $category->id }}"
-                                {{ request('category') == $category->id ? 'selected' : '' }}>
-                                {{ $category->nom }}
+                        @foreach ($footerServices as $service)
+                            <option value="{{ $service->id }}"
+                                {{ request('service') == $service->id ? 'selected' : '' }}>
+                                {{ $service->nom }}
                             </option>
                         @endforeach
 
@@ -172,41 +172,71 @@
 
     <!-- Sidebar -->
     <nav id="sidebar" class="sidebar">
+
         <div class="sidebar-header">
-            <div class="sidebar-logo">
-                <img src="{{ asset('assets/images/logo/olten_location.jpg') }}" alt="Olten Logo">
-            </div>
-            <button class="close-btn" id="closeSidebar">
+            <a href="/" class="sidebar-wordmark">
+                <img src="{{ asset('assets/images/logo/olten_location_white.png') }}"
+                     alt="Olten" class="sidebar-wordmark-icon">
+            </a>
+            <button type="button" class="close-btn" id="closeSidebar" aria-label="Fermer le menu">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
-        <ul class="menu-list">
-            <li class="d-flex">
-            <a class="d-flex gap-2" href="/" >
-                Accueil
-            </a>
-            </li>
-            @foreach($footerCategories as $category)
-            <li class="d-flex">
-                <a href="{{ route('services.show', $category->slug) }}" class="d-flex gap-2">
-                    <i class="{{ $category->icon }} category-icon-small bg-transparent"></i> {{ $category->nom }}
-                </a>
-            </li>
-            @endforeach
-            <li class="d-flex">
-            <a class="d-flex gap-2" href="/contact">
-                Contact
-            </a>
-            </li>
-        </ul>
-        <div class="sidebar-footer">
-            <h3>Contactez-nous</h3>
-            <p>olten-location@outlook.fr</p>
-            <div class="social-icons">
-                <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
-                <a href="#"><i class="fa-brands fa-instagram"></i></a>
-                <a href="#"><i class="fa-brands fa-x-twitter"></i></a>
+
+        <div class="sidebar-body">
+
+            <ul class="menu-list">
+
+                <li class="menu-item">
+                    <a href="/">Accueil</a>
+                </li>
+
+                @if($footerServices->isNotEmpty())
+                    <li class="menu-item menu-group is-open">
+                        <button type="button"
+                                class="menu-group-toggle"
+                                aria-expanded="true"
+                                aria-controls="sidebarServices">
+                            <span>Nos {{ $footerServices->count() }} services</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+
+                        <ul class="menu-sublist" id="sidebarServices">
+                            @foreach($footerServices as $service)
+                                @php $isCurrent = request()->is($service->slug); @endphp
+                                <li>
+                                    <a href="{{ route('services.show', $service->slug) }}"
+                                       class="{{ $isCurrent ? 'is-active' : '' }}"
+                                       @if($isCurrent) aria-current="page" @endif>
+                                        {{ $service->nom }}
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </li>
+                @endif
+
+                <li class="menu-item">
+                    <a href="/contact">Contact</a>
+                </li>
+
+            </ul>
+
+            <div class="sidebar-cta">
+                <a href="{{ route('ads.create') }}" class="sidebar-cta-btn">Déposer une annonce</a>
+                <span class="sidebar-cta-note">Gratuit et sans engagement</span>
             </div>
+
+            <div class="sidebar-footer">
+                <h3>Contactez-nous</h3>
+                <p><a href="mailto:olten-location@outlook.fr">olten-location@outlook.fr</a></p>
+                <div class="social-icons">
+                    <a href="#" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+                    <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                </div>
+            </div>
+
         </div>
     </nav>
 </header>

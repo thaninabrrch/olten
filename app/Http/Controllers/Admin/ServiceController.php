@@ -111,6 +111,7 @@ class ServiceController extends Controller
                 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
                 Rule::unique('services', 'slug')->ignore($service),
             ],
+            'short_description' => 'nullable|string|max:120',
             'description' => 'nullable|string',
             'image'       => 'nullable|image|max:2048',
         ], [
@@ -118,6 +119,6 @@ class ServiceController extends Controller
             'slug.unique' => 'Ce slug est déjà utilisé par un autre service.',
         ]);
 
-        return collect($data)->only(['nom', 'slug', 'description'])->all();
+        return collect($data)->only(['nom', 'slug', 'short_description', 'description'])->all();
     }
 }

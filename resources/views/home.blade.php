@@ -44,213 +44,275 @@
             </div>
         </div>
 
+        <!-- Boutons d'action -->
+        <div class="hero-actions">
+            <a href="{{ route('ads.create') }}" class="hero-btn hero-btn-primary">
+           
+                <span>Déposer une annonce</span>
+            </a>
+            <a href="{{ route('categories') }}" class="hero-btn hero-btn-ghost">
+             
+                <span>Explorer nos services</span>
+            </a>
+        </div>
+
     </div>
 </section>
 
-<!----------Catégories-------------->
-@if($categories->isNotEmpty())
-    <section class="categories-section">
-        <div class="section-header">
-            <h2 class="section-title">
-                Explorez nos <span class="site-name">catégories</span>
-            </h2>
-            <div class="carousel-nav">
-                <button class="carousel-btn prev-btn" aria-label="Précédent">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <button class="carousel-btn next-btn" aria-label="Suivant">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        </div>
+<!----------Piliers de services-------------->
+@if($services->isNotEmpty())
+    <section class="categories-section services-section">
+        <div class="services-inner">
 
-        <div class="carousel-wrapper">
-            <div class="carousel-track">
-                @foreach($categories as $category)
-                    <a href="{{ route('categories.show', $category->slug) }}" class="category-card">
-                        <div class="category-overlay">
-                            <span>Parcourir</span>
-                        </div>
-                        <i class="{{ $category->icon }} category-icon"></i>
-                        <h5>{{ $category->nom }}</h5>
+            <div class="section-header section-header--left">
+                <div class="section-heading">
+                    <span class="section-eyebrow section-eyebrow--plain">Navigation rapide</span>
+                    <h2 class="section-title">
+                        Explorez nos services
+                    </h2>
+                </div>
+
+                <a href="{{ route('categories') }}" class="section-link">
+                    Tous les services
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="services-grid">
+                @foreach($services as $service)
+                    @php
+                        // Teinte de repli, stable pour un service donne, quand
+                        // aucune image n'a ete televersee depuis le back-office.
+                        $tileHue = ($service->id * 47) % 360;
+                    @endphp
+
+                    <a href="{{ route('services.show', $service->slug) }}"
+                       class="service-tile"
+                       style="--tile-hue: {{ $tileHue }};@if($service->image) --tile-image: url('{{ asset('storage/' . $service->image) }}');@endif">
+
+                        <span class="service-tile-arrow" aria-hidden="true">
+                            <i class="fas fa-arrow-right"></i>
+                        </span>
+
+                        <span class="service-tile-body">
+                            <span class="service-tile-name">{{ $service->nom }}</span>
+                            @if(filled($service->short_description))
+                                <span class="service-tile-desc">{{ $service->short_description }}</span>
+                            @endif
+                        </span>
                     </a>
                 @endforeach
             </div>
-        </div>
 
-        <div class="carousel-dots"></div>
+        </div>
     </section>
 @else
     <p class="text-center">
-        Aucune catégorie disponible pour le moment.
+        Aucun service disponible pour le moment.
     </p>
 @endif
 
 <!---------- Plus récent annonce / produit -------------->
 @if($latestItems->isNotEmpty())
 
-    <section class="annonces-section">
+    <section class="annonces-section annonces-section--white">
 
-        <div class="section-header">
-
-            <h2 class="section-title">
-                Les Annonces qui Font Parler d'elles sur
-                <span class="site-name">Olten.fr</span>
-            </h2>
-
-            <div class="carousel-nav">
-
-                <button class="carousel-btn prev-btn" aria-label="Précédent">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-
-                <button class="carousel-btn next-btn" aria-label="Suivant">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-
+        <div class="section-header section-header--left">
+            <div class="section-heading">
+                <span class="section-eyebrow section-eyebrow--plain">Opportunités vérifiées</span>
+                <h2 class="section-title">
+                    Les Annonces Populaires du Moment
+                </h2>
             </div>
         </div>
 
-        <div class="carousel-wrapper">
+        <div class="annonces-grid">
+            @foreach($latestItems as $latest)
+                @if($latest->type === 'ad')
 
-            <div class="carousel-track">
-                @foreach($latestItems as $latest)
-                    @if($latest->type === 'ad')
+                    @php
+                        $ad = $latest->item;
 
-                        @php
-                            $ad = $latest->item;
+                        $isExpired = $ad->expires_at &&
+                            \Carbon\Carbon::parse($ad->expires_at)->toDateString() < now()->toDateString();
 
-                            $isExpired = $ad->expires_at &&
-                                \Carbon\Carbon::parse($ad->expires_at)->toDateString() < now()->toDateString();
-                        @endphp
+                        // La description vient d'un editeur riche : on retire
+                        // les balises et les entites avant de l'afficher.
+                        $excerpt = trim(preg_replace(
+                            '/\s+/u',
+                            ' ',
+                            str_replace("\u{00A0}", ' ', html_entity_decode(
+                                strip_tags((string) ($ad->summary ?: $ad->description)),
+                                ENT_QUOTES | ENT_HTML5,
+                                'UTF-8'
+                            ))
+                        ));
+                    @endphp
 
-                        {{-- ================= ANNONCE ================= --}}
+                    {{-- ================= ANNONCE ================= --}}
 
-                        <a href="{{ route('ads.show', $ad->id) }}"
-                        class="annonce-card {{ $isExpired ? 'expired-card' : '' }}">
+                    <a href="{{ route('ads.show', $ad->id) }}"
+                       class="annonce-card {{ $isExpired ? 'expired-card' : '' }}">
 
-                            <div class="card-image-container">
+                        <div class="card-image-container">
 
-                                <img
-                                    src="{{ $ad->images->first()
-                                        ? asset('storage/' . $ad->images->first()->path)
-                                        : asset('assets/images/no-image.jpg') }}"
-                                    alt="{{ $ad->title }}"
-                                    class="card-image"
-                                >
-                                <span class="category-badge">
-                                    {{ $ad->category->nom ?? 'Catégorie non définie' }}
-                                </span>
+                            <img
+                                src="{{ $ad->images->first()
+                                    ? asset('storage/' . $ad->images->first()->path)
+                                    : asset('assets/images/no-image.jpg') }}"
+                                alt="{{ $ad->title }}"
+                                class="card-image"
+                            >
 
-                                <button
-                                    type="button"
-                                    class="favorite-btn"
-                                    aria-label="Ajouter aux favoris"
-                                    data-type="ad"
-                                    data-id="{{ $ad->id }}"
-                                    data-favorited="{{ auth()->check() && auth()->user()->hasFavorited($ad) ? 'true' : 'false' }}"
-                                >
-                                    <i class="{{ auth()->check() && auth()->user()->hasFavorited($ad) ? 'fas fa-heart' : 'far fa-heart' }}"></i>
-                                </button>
+                            <span class="category-badge">
+                                {{ $ad->category->nom ?? 'Catégorie non définie' }}
+                            </span>
 
-                            </div>
+                            <button
+                                type="button"
+                                class="favorite-btn"
+                                aria-label="Ajouter aux favoris"
+                                data-type="ad"
+                                data-id="{{ $ad->id }}"
+                                data-favorited="{{ auth()->check() && auth()->user()->hasFavorited($ad) ? 'true' : 'false' }}"
+                            >
+                                <i class="{{ auth()->check() && auth()->user()->hasFavorited($ad) ? 'fas fa-heart' : 'far fa-heart' }}"></i>
+                            </button>
 
-                            <div class="card-content">
+                        </div>
 
-                                <div class="d-flex justify-content-between">
+                        <div class="card-content">
 
-                                    <h3 class="card-title">
-                                        {{ $ad->title }}
-                                    </h3>
-
-                                    @if($isExpired)
-                                        <span class="expired">
-                                            Expirée
-                                        </span>
-                                    @endif
-
-                                    @if($ad->delivery_active)
-                                        <span class="mt-auto mb-auto bg-success text-white fs-6 p-1 radius-2">
-                                            Livraison disponible
-                                        </span>
-                                    @endif
-
-                                </div>
-
-                                <p class="card-price">
-                                    Commence à partir de
-                                    {{ number_format($ad->price_per_day, 2) }} € / jour
-                                </p>
-
-                            </div>
-
-                        </a>
-
-                    @else
-
-                        @php
-                            $product = $latest->item;
-                        @endphp
-
-                        {{-- ================= PRODUIT ================= --}}
-
-                        <a href="{{ route('products.show', $product->id) }}"
-                        class="annonce-card">
-
-                            <div class="card-image-container">
-
-                                <img
-                                    src="{{ $product->images->first()
-                                        ? asset('storage/' . $product->images->first()->image)
-                                        : asset('assets/images/no-image.jpg') }}"
-                                    alt="{{ $product->name }}"
-                                    class="card-image"
-                                >
-
-                                <span class="category-badge">
-                                    {{ $product->category->nom ?? 'Catégorie non définie' }}
-                                </span>
-
-                                <button
-                                    type="button"
-                                    class="favorite-btn"
-                                    aria-label="Ajouter aux favoris"
-                                    data-type="product"
-                                    data-id="{{ $product->id }}"
-                                    data-favorited="{{ auth()->check() && auth()->user()->hasFavoritedProduct($product) ? 'true' : 'false' }}"
-                                >
-                                    <i class="{{ auth()->check() && auth()->user()->hasFavoritedProduct($product) ? 'fas fa-heart' : 'far fa-heart' }}"></i>
-                                </button>
-
-                                @if($product->delivery_available)
-                                    <span class="mt-auto mb-auto bg-success text-white fs-6 p-1 radius-2">
-                                        Livraison disponible
+                            <div class="card-meta">
+                                @if(filled($ad->address))
+                                    <span class="card-location">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        {{ $ad->address }}
                                     </span>
                                 @endif
 
+                                @if($isExpired)
+                                    <span class="expired">Expirée</span>
+                                @elseif($ad->delivery_active)
+                                    <span class="card-delivery">
+                                        <i class="fas fa-truck"></i>
+                                        Livraison dispo
+                                    </span>
+                                @endif
                             </div>
 
-                            <div class="card-content">
+                            <h3 class="card-title">{{ $ad->title }}</h3>
 
-                                <h3 class="card-title">
-                                    {{ $product->name }}
-                                </h3>
+                            @if(filled($excerpt))
+                                <p class="card-desc">{{ \Illuminate\Support\Str::limit($excerpt, 160) }}</p>
+                            @endif
 
-                                <p class="card-price">
-                                    {{ number_format($product->price, 2) }} €
-                                </p>
+                            <div class="card-footer">
+                                <span class="card-price-block">
+                                    <span class="card-price-label">à partir de</span>
+                                    <span class="card-price">
+                                        {{ number_format($ad->price_per_day, 2) }} €<small>/ jour</small>
+                                    </span>
+                                </span>
 
+                                <span class="card-cta">Voir détails</span>
                             </div>
 
-                        </a>
+                        </div>
 
-                    @endif
-                @endforeach
-            </div>
+                    </a>
 
+                @else
+
+                    @php
+                        $product = $latest->item;
+
+                        // La description vient d'un editeur riche : on retire
+                        // les balises et les entites avant de l'afficher.
+                        $excerpt = trim(preg_replace(
+                            '/\s+/u',
+                            ' ',
+                            str_replace("\u{00A0}", ' ', html_entity_decode(
+                                strip_tags((string) $product->description),
+                                ENT_QUOTES | ENT_HTML5,
+                                'UTF-8'
+                            ))
+                        ));
+                    @endphp
+
+                    {{-- ================= PRODUIT ================= --}}
+
+                    <a href="{{ route('products.show', $product->id) }}" class="annonce-card">
+
+                        <div class="card-image-container">
+
+                            <img
+                                src="{{ $product->images->first()
+                                    ? asset('storage/' . $product->images->first()->image)
+                                    : asset('assets/images/no-image.jpg') }}"
+                                alt="{{ $product->name }}"
+                                class="card-image"
+                            >
+
+                            <span class="category-badge">
+                                {{ $product->category->nom ?? 'Catégorie non définie' }}
+                            </span>
+
+                            <button
+                                type="button"
+                                class="favorite-btn"
+                                aria-label="Ajouter aux favoris"
+                                data-type="product"
+                                data-id="{{ $product->id }}"
+                                data-favorited="{{ auth()->check() && auth()->user()->hasFavoritedProduct($product) ? 'true' : 'false' }}"
+                            >
+                                <i class="{{ auth()->check() && auth()->user()->hasFavoritedProduct($product) ? 'fas fa-heart' : 'far fa-heart' }}"></i>
+                            </button>
+
+                        </div>
+
+                        <div class="card-content">
+
+                            <div class="card-meta">
+                                @if(filled($product->address))
+                                    <span class="card-location">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        {{ $product->address }}
+                                    </span>
+                                @endif
+
+                                @if($product->delivery_available)
+                                    <span class="card-delivery">
+                                        <i class="fas fa-truck"></i>
+                                        Livraison dispo
+                                    </span>
+                                @endif
+                            </div>
+
+                            <h3 class="card-title">{{ $product->name }}</h3>
+
+                            @if(filled($excerpt))
+                                <p class="card-desc">{{ \Illuminate\Support\Str::limit($excerpt, 160) }}</p>
+                            @endif
+
+                            <div class="card-footer">
+                                <span class="card-price-block">
+                                    <span class="card-price-label">à partir de</span>
+                                    <span class="card-price">
+                                        {{ number_format($product->price, 2) }} €
+                                    </span>
+                                </span>
+
+                                <span class="card-cta">Voir détails</span>
+                            </div>
+
+                        </div>
+
+                    </a>
+
+                @endif
+            @endforeach
         </div>
-
-        <div class="carousel-dots"></div>
 
     </section>
 
@@ -266,7 +328,7 @@
 <section  id="about" class="about-section">
     <div class="about-container">
         <div class="about-text">
-            <span class="section-eyebrow">À propos d'Olten</span>
+            <span class="section-eyebrow section-eyebrow--plain">À propos d'Olten</span>
             <h2>Qu'est-ce qu'Olten ?<br>L'abréviation de vos échanges de confiance.</h2>
             <p>
                 Louez, vendez, achetez, faites livrer vos colis, trouvez un trajet
@@ -276,12 +338,36 @@
                 petites annonces classique : c'est un véritable écosystème unifié en France.
             </p>
             <ul class="about-checklist">
-                <li><i class="fas fa-check"></i> Une plateforme 100% française et sécurisée</li>
-                <li><i class="fas fa-check"></i> Des milliers de membres actifs chaque jour</li>
+                <li>
+                    <i class="fas fa-check"></i>
+                    <div class="about-checklist-text">
+                        <strong>Une seule plateforme polyvalente</strong>
+                        <span>Plus besoin de multiplier les applications : louer une voiture, covoiturer ou vendre un objet se fait sur le même espace.</span>
+                    </div>
+                </li>
+                <li>
+                    <i class="fas fa-check"></i>
+                    <div class="about-checklist-text">
+                        <strong>Proximité &amp; Économie Circulaire</strong>
+                        <span>Encouragez les circuits courts, donnez une seconde vie aux objets et réalisez des économies avec vos voisins.</span>
+                    </div>
+                </li>
             </ul>
         </div>
         <div class="about-image">
-            <img src="{{ asset('assets/images/about-us.avif') }}" alt="À propos d'Olten">
+            <div class="about-image-frame">
+                <img src="{{ asset('assets/images/about-us.avif') }}" alt="À propos d'Olten">
+
+                <div class="about-image-caption">
+                    <span class="about-caption-icon">
+                        <i class="fas fa-handshake"></i>
+                    </span>
+                    <span class="about-caption-text">
+                        <strong>L'esprit Olten</strong>
+                        <span>« Connecter les gens pour faciliter chaque moment du quotidien. »</span>
+                    </span>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -289,7 +375,7 @@
 <!----------L'ÉCOSYSTÈME OLTEN-------------->
 <section class="ecosystem-section">
     <div class="ecosystem-header">
-        <span class="section-eyebrow">L'écosystème Olten</span>
+        <span class="section-eyebrow section-eyebrow--plain">L'écosystème Olten</span>
         <h2>Pourquoi notre plateforme transforme vos habitudes</h2>
         <p class="ecosystem-subtitle">Un modèle pensé pour la liberté, la sécurité et la synergie entre les citoyens et les professionnels.</p>
     </div>
