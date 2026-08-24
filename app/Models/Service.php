@@ -88,6 +88,14 @@ class Service extends Model
     }
 
     /**
+     * Relation : les trajets rattachés au service (covoiturage)
+     */
+    public function covoiturages()
+    {
+        return $this->hasMany(Covoiturage::class);
+    }
+
+    /**
      * Relation : toutes les annonces du service, via ses catégories
      */
     public function ads()

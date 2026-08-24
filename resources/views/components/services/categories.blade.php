@@ -15,7 +15,7 @@
     <section class="cs-categories-block">
         <div class="cs-section-head">
             <h2 class="cs-section-title">Catégories</h2>
-            <span class="cs-section-hint">Choisissez une catégorie pour affiner les annonces</span>
+            <span class="cs-section-hint">Choisissez une catégorie pour affiner les annonces et les produits</span>
         </div>
 
         <div class="cs-categories">
@@ -24,7 +24,9 @@
                 <span class="cs-cat-icon"><i class="fa-solid fa-border-all"></i></span>
                 <span class="cs-cat-text">
                     <span class="cs-cat-label">Toutes les catégories</span>
-                    <span class="cs-cat-count">{{ $categories->sum('ads_count') }} annonce(s)</span>
+                    <span class="cs-cat-count">
+                        {{ $categories->sum('ads_count') + $categories->sum('products_count') }} offre(s)
+                    </span>
                 </span>
             </a>
 
@@ -37,7 +39,9 @@
                     </span>
                     <span class="cs-cat-text">
                         <span class="cs-cat-label">{{ $category->nom }}</span>
-                        <span class="cs-cat-count">{{ $category->ads_count ?? 0 }} annonce(s)</span>
+                        <span class="cs-cat-count">
+                            {{ ($category->ads_count ?? 0) + ($category->products_count ?? 0) }} offre(s)
+                        </span>
                     </span>
                 </a>
             @endforeach

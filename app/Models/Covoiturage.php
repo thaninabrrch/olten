@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Str;
 
 class Covoiturage extends Model
 {
@@ -16,6 +17,7 @@ class Covoiturage extends Model
 
     protected $fillable = [
         'conducteur_id',
+        'service_id',
         'depart',
         'destination',
         'date_depart',
@@ -58,9 +60,53 @@ class Covoiturage extends Model
         'return_itinerary' => 'array',
     ];
 
+    /**
+     * Slug du service auquel tout trajet appartient.
+     */
+    public const SERVICE_SLUG = 'covoiturage';
+
+    /**
+     * Un trajet est toujours rattache au service « covoiturage ». Le lien est
+     * pose ici plutot que dans le controleur pour couvrir tous les chemins de
+     * creation (publication, duplication, seeds, back-office).
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (Covoiturage $covoiturage) {
+            $covoiturage->service_id ??= Service::where('slug', self::SERVICE_SLUG)->value('id');
+        });
+    }
+
+    public function service()
+    {
+        return $this->belongsTo(Service::class);
+    }
+
     public function conducteur()
     {
         return $this->belongsTo(User::class, 'conducteur_id');
+    }
+
+    /**
+     * Les champs `depart` et `destination` contiennent l'adresse geocodee
+     * complete (« Lyon, Metropole de Lyon, Rhone, ... »), utile pour la carte
+     * mais illisible sur une vignette : on n'en garde que la ville.
+     */
+    public function departVille(): Attribute
+    {
+        return Attribute::get(fn () => self::villeCourte($this->depart));
+    }
+
+    public function destinationVille(): Attribute
+    {
+        return Attribute::get(fn () => self::villeCourte($this->destination));
+    }
+
+    public static function villeCourte(?string $adresse): string
+    {
+        $adresse = trim((string) $adresse);
+
+        return trim(Str::before($adresse, ',')) ?: $adresse;
     }
 
     public function photoConducteur(): Attribute

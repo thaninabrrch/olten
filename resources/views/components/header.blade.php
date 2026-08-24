@@ -54,70 +54,7 @@
         </button>
 
         @if (Auth::check())
-            <div class="user-menu">
-                @php
-                    $name = Auth::user()->name;
-                    $initial = strtoupper(substr($name, 0, 1));
-                @endphp
-                <div class="user-avatar">{{ $initial }}</div>
-                <i class="fa-solid fa-chevron-down"></i>
-                <!-- DROPDOWN MENU -->
-                <ul class="user-dropdown">
-                    <li>
-                        <a href="{{ url('/dashboard') }}">
-                            <i class="fa-solid fa-table-columns"></i>
-                            Tableau de bord
-                        </a>
-                    </li>
-                    @if(auth()->user()->hasRole('locateur'))
-                    <li class="{{ Route::is('bookings.receivedBookings') ? 'active' : '' }}">
-                        <a href="{{ url('/mes-reservations-recues') }}">
-                            <i class="fa-solid fa-calendar-check"></i>
-                            <span>Mes réservations reçues</span>
-                        </a>
-                    </li>
-                    @endif
-                    <li class="{{ Route::is('bookings.myBookings') ? 'active' : '' }}">
-                        <a href="{{ url('/mes-reservations') }}">
-                            <i class="fa-solid fa-calendar-check"></i>
-                            <span>Mes réservations</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('ads.index') }}">
-                            <i class="fa-solid fa-list"></i>
-                            Mes annonces
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('favoris') }}">
-                            <i class="fa-solid fa-heart"></i>
-                            Favoris
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('messages') }}">
-                            <i class="fa-solid fa-envelope"></i>
-                            Messages
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('profile') }}">
-                            <i class="fa-solid fa-user"></i>
-                            Mon profil
-                        </a>
-                    </li>
-                    <li>
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <a href="{{ route('logout') }}"
-                                onclick="event.preventDefault(); this.closest('form').submit();">
-                                <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
-                            </a>
-                        </form>
-                    </li>
-                </ul>
-            </div>
+            <x-user-dropdown />
         @else
             <button class="icon-btn">
                 <i class="far fa-user"></i>

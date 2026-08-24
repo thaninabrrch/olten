@@ -33,9 +33,23 @@ class ProductController extends Controller
 
     public function create()
     {
-        $categories = Category::all();
+        return view('pages.seller.product.create', [
+            'categories' => $this->categories(),
+        ]);
+    }
 
-        return view('pages.seller.product.create', compact('categories'));
+    /**
+     * Les categories sont des sous-parties d'un service : on les charge avec
+     * leur service et dans cet ordre pour pouvoir les regrouper dans le
+     * selecteur (Vente > Vehicules, Location > Outillage...), comme le fait
+     * le formulaire de depot d'annonce.
+     */
+    private function categories()
+    {
+        return Category::with('service')
+                       ->orderBy('service_id')
+                       ->orderBy('id')
+                       ->get();
     }
 
     public function store(Request $request)
@@ -86,11 +100,9 @@ class ProductController extends Controller
             abort(403);
         }
 
-        $categories = Category::all();
-
         return view('pages.seller.product.edit', [
-            'product' => $produit,
-            'categories' => $categories
+            'product'    => $produit,
+            'categories' => $this->categories(),
         ]);
     }
 

@@ -55,6 +55,12 @@ Route::redirect('/covoiturage-service', '/covoiturage');
 // A declarer avant la route catch-all `/{slug}` de fin de fichier.
 Route::get('/services', [ServicePageController::class, 'index'])->name('services.index');
 
+// Liste des trajets d'une liaison (/covoiturage/trajets?from=Paris&to=Lyon).
+// A declarer avant la route catch-all `/{slug}/{category}` de fin de fichier,
+// qui prendrait sinon « trajets » pour une categorie du service covoiturage.
+Route::get('/covoiturage/trajets', [ServicePageController::class, 'trips'])->name('covoiturage.trips');
+Route::get('/covoiturage/trajet/{covoiturage}', [ServicePageController::class, 'trip'])->name('covoiturage.trip');
+
 Route::prefix('admin')
     ->name('admin.')
    
@@ -157,9 +163,14 @@ Route::middleware('auth', 'verified', 'subscription', 'approved', 'subscription.
     // accessible aux visiteurs non connectes.
     Route::get('/mes-trajets', [CovoiturageController::class, 'index'])
         ->name('covoiturage.index');
+    // Publier un trajet exige une carte VTC validee par l'administrateur :
+    // sans validation, le formulaire est remplace par une page d'attente et
+    // l'endpoint de publication est refuse.
     Route::get('/covoiturage/create', [CovoiturageController::class, 'create'])
+        ->middleware('vtc.approved')
         ->name('covoiturage.create');
-    Route::post('/covoiturage/publish', [CovoiturageController::class, 'publish'])->middleware('auth');
+    Route::post('/covoiturage/publish', [CovoiturageController::class, 'publish'])
+        ->middleware('auth', 'vtc.approved');
     Route::get('/trajet/{covoiturage}', [CovoiturageController::class, 'show'])
         ->name('trajet.show');
     Route::delete('/covoiturage/{id}', [CovoiturageController::class, 'destroy'])

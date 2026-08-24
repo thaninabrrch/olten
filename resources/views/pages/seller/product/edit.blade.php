@@ -48,12 +48,20 @@
                     Catégorie <span class="required">*</span>
                 </label>
                 <select name="category_id" class="form-select" required>
-                    @foreach($categories as $category)
-                        <option value="{{ $category->id }}"
-                            @selected($category->id == old('category_id', $product->category_id))>
-                            {{ $category->nom }}
-                        </option>
-                    @endforeach
+                    <option value="">Choisir Catégorie</option>
+                    {{-- Les categories sont regroupees par service : Vente > Vehicules, ... --}}
+                    @forelse($categories->groupBy(fn ($c) => $c->service->display_name ?? 'Autres') as $serviceName => $group)
+                        <optgroup label="{{ $serviceName }}">
+                            @foreach($group as $category)
+                                <option value="{{ $category->id }}"
+                                    @selected($category->id == old('category_id', $product->category_id))>
+                                    {{ $category->nom }}
+                                </option>
+                            @endforeach
+                        </optgroup>
+                    @empty
+                        <option value="" disabled>Aucune catégorie trouvée</option>
+                    @endforelse
                 </select>
             </div>
         </div>

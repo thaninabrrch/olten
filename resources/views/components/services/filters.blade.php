@@ -12,7 +12,7 @@
 
 @php
     $cities     = collect($cities);
-    $filterKeys = ['search', 'location', 'min_price', 'max_price', 'sort'];
+    $filterKeys = ['search', 'location', 'type', 'min_price', 'max_price', 'sort'];
     $hasFilters = collect($filterKeys)->contains(fn ($key) => request()->filled($key));
 @endphp
 
@@ -41,6 +41,16 @@
                 @endforeach
             </datalist>
         @endif
+    </div>
+
+    {{-- Annonces et produits partagent la grille : ce filtre isole l'un ou l'autre --}}
+    <div class="cs-filter-field">
+        <label class="cs-filter-label" for="cs-type">Type</label>
+        <select id="cs-type" name="type" class="cs-sort-select">
+            <option value="">Tout</option>
+            <option value="annonce" @selected(request('type') === 'annonce')>Annonces uniquement</option>
+            <option value="produit" @selected(request('type') === 'produit')>Produits uniquement</option>
+        </select>
     </div>
 
     <div class="cs-filter-field">

@@ -5,7 +5,7 @@
     qui decide (voir ServicePageController::DESIGNS). Son contenu est
     entierement dynamique :
 
-        SERVICE  ->  ses categories  ->  ses annonces filtrees
+        SERVICE  ->  ses categories  ->  ses annonces ET ses produits filtres
 --}}
 @extends('layouts.main')
 
@@ -19,7 +19,7 @@
         ? route('services.category', [$service->slug, $selectedCategory->slug])
         : route('services.show', $service->slug);
 
-    $hasFilters = collect(['search', 'location', 'min_price', 'max_price', 'sort'])
+    $hasFilters = collect(['search', 'location', 'type', 'min_price', 'max_price', 'sort'])
         ->contains(fn ($key) => request()->filled($key));
 @endphp
 
@@ -70,21 +70,26 @@
         <div class="cs-listings-header">
             <div>
                 <h2 class="cs-listings-title">
-                    {{ $selectedCategory ? $selectedCategory->nom : 'Toutes les annonces' }}
+                    {{ $selectedCategory ? $selectedCategory->nom : 'Toutes les offres' }}
                 </h2>
-                <span class="cs-listings-count">{{ $ads->total() }} résultat(s)</span>
+                <span class="cs-listings-count">
+                    {{ $counts['total'] }} résultat(s)
+                    @if($counts['annonce'] && $counts['produit'])
+                        — {{ $counts['annonce'] }} annonce(s), {{ $counts['produit'] }} produit(s)
+                    @endif
+                </span>
             </div>
         </div>
 
-        @if($ads->isNotEmpty())
+        @if($listings->isNotEmpty())
             <div class="cs-cards-grid">
-                @foreach($ads as $ad)
-                    <x-services.listing-card :ad="$ad" :badge="$service->display_name" />
+                @foreach($listings as $listing)
+                    <x-services.listing-card :listing="$listing" :badge="$service->display_name" />
                 @endforeach
             </div>
 
             <div class="cs-pagination">
-                {{ $ads->links() }}
+                {{ $listings->links() }}
             </div>
         @else
             {{-- Etat vide de la grille --}}
@@ -97,8 +102,8 @@
                                 : 'Publier la première annonce'"
                 :action-auth="! $selectedCategory && ! $hasFilters"
                 :text="$selectedCategory
-                        ? 'Il n\'y a actuellement aucune annonce dans la catégorie ' . $selectedCategory->nom . '.'
-                        : 'Soyez le premier à publier une annonce dans ' . $service->display_name . ' sur la plateforme Olten.'" />
+                        ? 'Il n\'y a actuellement aucune annonce ni produit dans la catégorie ' . $selectedCategory->nom . '.'
+                        : 'Soyez le premier à publier dans ' . $service->display_name . ' sur la plateforme Olten.'" />
         @endif
 
     </section>
@@ -106,21 +111,21 @@
     {{-- Bloc 5 : annonces populaires du service --}}
     <section class="cs-popular">
         <div class="cs-section-head">
-            <h2 class="cs-section-title">Annonces populaires</h2>
-            <span class="cs-section-hint">Les annonces les plus consultées de {{ $service->display_name }}</span>
+            <h2 class="cs-section-title">Les plus consultées</h2>
+            <span class="cs-section-hint">Annonces et produits les plus vus de {{ $service->display_name }}</span>
         </div>
 
-        @if($popularAds->isNotEmpty())
+        @if($popular->isNotEmpty())
             <div class="cs-cards-grid cs-cards-grid--four">
-                @foreach($popularAds as $ad)
-                    <x-services.listing-card :ad="$ad" badge="Populaire" />
+                @foreach($popular as $listing)
+                    <x-services.listing-card :listing="$listing" badge="Populaire" />
                 @endforeach
             </div>
         @else
             <x-empty-state
                 compact
-                title="Aucune annonce populaire"
-                text="Les annonces populaires apparaîtront ici lorsqu'elles seront disponibles." />
+                title="Aucune offre populaire"
+                text="Les annonces et produits les plus consultés apparaîtront ici." />
         @endif
     </section>
 

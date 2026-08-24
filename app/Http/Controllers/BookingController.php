@@ -121,6 +121,25 @@ class BookingController extends Controller
                                                             ]);
     }
 
+    /**
+     * Convertit un montant saisi ou formate en flottant.
+     * Gere « 2200.00 », « 2,200.00 € » (milliers a l'anglaise) et
+     * « 2 200,00 € » (ecriture francaise).
+     */
+    private function montant($valeur): float
+    {
+        $brut = preg_replace('/[^0-9.,]/', '', (string) $valeur);
+
+        if (str_contains($brut, ',') && str_contains($brut, '.')) {
+            // Les deux presents : la virgule ne peut etre que le separateur de milliers
+            $brut = str_replace(',', '', $brut);
+        } else {
+            $brut = str_replace(',', '.', $brut);
+        }
+
+        return (float) $brut;
+    }
+
     public function pay(Request $request)
     {
         $user = Auth::user();
@@ -133,7 +152,10 @@ class BookingController extends Controller
         $end_date = $request->end_date;
 
         $days = \Carbon\Carbon::parse($start_date)->diffInDays($end_date) + 1;
-        $total = (float) $request->finalPrice;
+        // Le montant arrive du formulaire : selon le chemin emprunte il peut
+        // porter un symbole et un separateur de milliers (« 2,200.00 € »), que
+        // le cast direct tronquerait a 2. On le normalise avant conversion.
+        $total = $this->montant($request->finalPrice);
         $intent = PaymentIntent::create([
             'amount' => (int) round($total * 100),
             'currency' => 'eur',

@@ -204,134 +204,423 @@ body {
     font-size: 13px;
 }
 
+/* ════════════════════════════════════════
+   DROPDOWN USER-MENU (header public + connecté)
+════════════════════════════════════════ */
+
 .user-menu {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 5px 15px 5px 5px;
-    border-radius: 25px;
-    border: 1px solid var(--color-border);
-    cursor: pointer;
-    transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 14px 5px 5px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
 }
 
 .user-menu:hover {
-    background: var(--color-bg-body);
+  border-color: #d7dbe0;
+  box-shadow: 0 4px 14px rgba(17, 17, 17, .07);
 }
 
+.user-menu.open {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(255, 60, 0, .12);
+}
+
+/* ---- Avatar déclencheur ---- */
 .user-avatar {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--color-primary), #66a6ff);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 600;
+  position: relative;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 50%;
+  background: #2b2f36;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .02em;
+  overflow: visible;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(255, 60, 0, .55);
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* pastille d'état (compte non validé) */
+.user-avatar.is-pending::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #f5a524;
+  border: 2px solid #fff;
 }
 
 .username {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2328;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.user-menu>i {
-    font-size: 10px;
-    color: var(--color-text-muted);
+.user-menu > .fa-chevron-down {
+  font-size: 10px;
+  color: #9aa0a6;
+  transition: transform .25s ease;
 }
 
-/* Conteneur */
-.user-menu {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    user-select: none;
+.user-menu.open > .fa-chevron-down {
+  transform: rotate(180deg);
 }
 
-/* Dropdown — caché par défaut */
+/* ════════ Panneau ════════ */
 .user-dropdown {
-    display: block;
-    visibility: hidden;
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(8px);
-    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+  display: block;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px) scale(.98);
+  transition: opacity .18s ease, transform .18s ease, visibility 0s linear .18s;
 
-    position: absolute;
-    top: calc(100% + 10px);
-    right: 0;
-    min-width: 220px;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-    padding: 6px 0;
-    list-style: none;
-    margin: 0;
-    z-index: 9999;
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 290px;
+  background: #fff;
+  border: 1px solid #ebedf0;
+  border-radius: 18px;
+  box-shadow: 0 20px 45px rgba(17, 17, 17, .14), 0 2px 6px rgba(17, 17, 17, .05);
+  padding: 8px;
+  list-style: none;
+  margin: 0;
+  z-index: 9999;
+  cursor: default;
 }
 
-/* Dropdown — visible quand .open */
 .user-menu.open .user-dropdown {
-    visibility: visible;
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
-    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0s;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  transition: opacity .18s ease, transform .18s ease, visibility 0s linear 0s;
 }
 
-/* Rotation chevron */
-.user-menu .fa-chevron-down {
-    transition: transform 0.2s ease;
+/* ---- En-tête identité ---- */
+.user-dropdown .ud-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 14px 12px 16px;
+  border-bottom: 1px solid #f1f3f5;
+  margin-bottom: 6px;
+  cursor: default;
 }
 
-.user-menu.open .fa-chevron-down {
-    transform: rotate(180deg);
+.user-dropdown .ud-head:hover {
+  background: transparent;
 }
 
-/* Items */
+.ud-head-avatar {
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #2b2f36;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.ud-head-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ud-head-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ud-head-info strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2328;
+  line-height: 1.3;
+}
+
+.ud-head-info .ud-mail {
+  font-size: 12.5px;
+  color: #8a9099;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 190px;
+}
+
+.ud-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  margin-top: 7px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  text-decoration: none;
+}
+
+.ud-badge i {
+  font-size: 10px;
+}
+
+.ud-badge.is-ok {
+  background: rgba(255, 60, 0, .09);
+  color: var(--color-primary);
+}
+
+.ud-badge.is-wait {
+  background: rgba(245, 165, 36, .16);
+  color: #a35f00;
+}
+
+.ud-badge.is-wait:hover {
+  background: rgba(245, 165, 36, .26);
+  color: #8a5000;
+}
+
+/* ---- Libellés de section ---- */
+.user-dropdown .ud-label {
+  padding: 12px 12px 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: #a2a8b0;
+  cursor: default;
+}
+
+.user-dropdown .ud-label:hover {
+  background: transparent;
+}
+
+/* ---- Séparateur ---- */
+.user-dropdown .ud-sep {
+  height: 1px;
+  padding: 0;
+  margin: 8px 12px;
+  background: #f1f3f5;
+  cursor: default;
+}
+
+.user-dropdown .ud-sep:hover {
+  background: #f1f3f5;
+}
+
+/* ---- Items ---- */
 .user-dropdown li {
-    padding: 10px 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-    color: var(--color-text);
-    font-size: 14px;
-    transition: background 0.2s;
+  display: block;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  font-size: 14px;
+  color: #374151;
+  border-radius: 11px;
+  transition: background .15s ease;
 }
 
-.user-dropdown li a {
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    color: var(--color-text);
-    font-size: 14px;
-    gap: 10px;
-    transition: background 0.2s;
+.user-dropdown li a,
+.user-dropdown li button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  border-radius: 11px;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+
+.user-dropdown li a > span,
+.user-dropdown li button > span {
+  flex: 1;
+  min-width: 0;
 }
 
 .user-dropdown li i {
-    font-size: 14px;
-    color: var(--color-primary);
-    width: 18px;
+  font-size: 15px;
+  width: 20px;
+  text-align: center;
+  color: #8a9099;
+  transition: color .15s ease;
 }
 
-.user-dropdown li:hover {
-    background: var(--color-bg-body);
+.user-dropdown li a:hover,
+.user-dropdown li button:hover {
+  background: #f6f7f9;
+  color: #111;
 }
 
+.user-dropdown li a:hover i,
+.user-dropdown li button:hover i {
+  color: var(--color-primary);
+}
 
-/* Séparateur avant déconnexion */
-.user-dropdown li:last-child {
-    border-top: 1px solid #f3f4f6;
-    margin-top: 4px;
+/* ---- Item actif ---- */
+.user-dropdown li.active > a {
+  background: rgba(255, 60, 0, .08);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.user-dropdown li.active > a i {
+  color: var(--color-primary);
+}
+
+/* ---- Compteurs ---- */
+.ud-count {
+  flex: 0 0 auto;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #eef0f3;
+  color: #6b7280;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-style: normal;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ud-count.is-alert {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(255, 60, 0, .35);
+}
+
+/* ---- Déconnexion ---- */
+.user-dropdown .ud-logout form {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.user-dropdown .ud-logout button {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.user-dropdown .ud-logout button i {
+  color: var(--color-primary);
+}
+
+.user-dropdown .ud-logout button:hover {
+  background: rgba(255, 60, 0, .08);
+  color: var(--color-primary-dark, #e13800);
+}
+
+/* ---- Responsive ----
+   Ancre au declencheur, le panneau deborde de l'ecran des que le header se
+   resserre : sous 992px il est pose sur le viewport, sous le header, avec
+   une hauteur bornee et un defilement interne. */
+@media (max-width: 991.98px) {
+  .user-dropdown {
+    position: fixed;
+    top: 78px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: 360px;
+    margin-left: auto;
+    max-height: calc(100vh - 94px);
+    max-height: calc(100dvh - 94px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .user-menu {
+    padding: 4px;
+    gap: 6px;
+    border-radius: 999px;
+  }
+
+  .user-menu .username,
+  .user-menu > .fa-chevron-down {
+    display: none;
+  }
+
+  .user-dropdown {
+    left: 10px;
+    right: 10px;
+    max-width: none;
+    border-radius: 16px;
+  }
+
+  /* Cibles tactiles plus genereuses */
+  .user-dropdown li a,
+  .user-dropdown li button {
+    padding: 13px 12px;
+    font-size: 14.5px;
+  }
+
+  .user-dropdown .ud-head {
+    padding: 14px 12px 15px;
+  }
+
+  .user-dropdown .ud-label {
+    padding: 12px 12px 5px;
+  }
+
+  .ud-head-info .ud-mail {
+    max-width: 60vw;
+  }
+}
+
+/* Ecrans courts (paysage telephone) : le menu defile au lieu de deborder */
+@media (max-height: 520px) {
+  .user-dropdown {
+    max-height: calc(100vh - 84px);
+    max-height: calc(100dvh - 84px);
+    overflow-y: auto;
+  }
 }
 
 .dashboard-content {

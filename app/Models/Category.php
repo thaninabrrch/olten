@@ -56,4 +56,21 @@ class Category extends Model
     {
         return $this->ads()->where('is_approved', true);
     }
+
+    /**
+     * Une categorie porte aussi des produits a la vente : ils appartiennent
+     * au meme service qu'elle et s'affichent dans la meme grille.
+     */
+    public function products()
+    {
+        return $this->hasMany(Product::class, 'category_id');
+    }
+
+    /**
+     * Produits en ligne (visibles par les visiteurs).
+     */
+    public function activeProducts()
+    {
+        return $this->products()->where('is_active', true);
+    }
 }
