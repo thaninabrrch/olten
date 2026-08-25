@@ -57,7 +57,7 @@
         <a href="{{ route('admin.vtc_cards.index') }}"
             class="sidebar-link flex items-center p-3 rounded-xl text-sm font-medium hover:text-primary-accent hover:bg-gray-100">
             <i class="bi bi-card-checklist mr-3 w-5 h-5"></i>
-            Cartes VTC
+            Documents requis
         </a>
         <a href="{{ route('admin.admin.ads.index') }}"
             class="sidebar-link flex items-center p-3 rounded-xl text-sm font-medium">
@@ -70,11 +70,14 @@
             Trajets
         </a>
         {{-- Paramètres --}}
-        <a href="{{ route('admin.settings.index') }}"
-            class="sidebar-link flex items-center p-3 rounded-xl text-sm font-medium hover:text-primary-accent hover:bg-gray-100">
-            <i class="bi bi-gear-fill mr-3 w-5 h-5"></i>
-            Paramètres
-        </a>
+ {{-- 
+<a href="{{ route('admin.settings.index') }}"
+    class="sidebar-link flex items-center p-3 rounded-xl text-sm font-medium hover:text-primary-accent hover:bg-gray-100">
+    <i class="bi bi-gear-fill mr-3 w-5 h-5"></i>
+    Paramètres
+</a>
+--}}
+
     </nav>
 
     <!-- Déconnexion -->

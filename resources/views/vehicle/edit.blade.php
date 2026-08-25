@@ -25,7 +25,7 @@
     <nav class="sp-crumbs" aria-label="Fil d'ariane">
         <a href="{{ url('/') }}">Accueil</a>
         <i class="fa-solid fa-chevron-right"></i>
-        <a href="{{ route('livreur.carte.vtc') }}">Carte VTC</a>
+        <a href="{{ route('livreur.carte.vtc') }}">Documents requis</a>
         <i class="fa-solid fa-chevron-right"></i>
         <span class="is-current">Mon véhicule</span>
     </nav>

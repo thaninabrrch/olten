@@ -1,16 +1,53 @@
-// Sidebar
-const menuToggle = document.getElementById('menuToggle');
-const sidebar = document.getElementById('sidebar');
-const closeSidebar = document.getElementById('closeSidebar');
-menuToggle.onclick = () => sidebar.classList.add('active');
-closeSidebar.onclick = () => sidebar.classList.remove('active');
+// ════════════════════════════════════════
+// HEADER PUBLIC — ☰ sidebar, loupe (recherche mobile), menu utilisateur
+//
+// Ces trois boutons sont cables ici, et ici seulement. Les gabarits les
+// recablaient de leur cote : la loupe recevait alors deux bascules pour un
+// seul appui — le panneau s'ouvrait puis se refermait dans la foulee, et
+// l'appui semblait sans effet. Les pages autonomes (categories, creer_site)
+// n'avaient de leur cote aucun cablage pour le menu utilisateur.
+// ════════════════════════════════════════
+(function initPublicHeader() {
+    const sidebar = document.getElementById('sidebar');
+    const menuToggle = document.getElementById('menuToggle');
+    const closeSidebarBtn = document.getElementById('closeSidebar');
+    const searchToggle = document.getElementById('searchToggle');
+    const mobileSearch = document.getElementById('mobileSearch');
+    const userMenus = document.querySelectorAll('.user-menu');
 
-// Mobile search
-const searchToggle = document.getElementById('searchToggle');
-const mobileSearch = document.getElementById('mobileSearch');
-searchToggle.onclick = () => {
-    mobileSearch.classList.toggle('active');
-};
+    // Le panneau de recherche se glisse sous le header : la sidebar le
+    // recouvrirait, on le referme avant d'ouvrir le menu.
+    menuToggle?.addEventListener('click', () => {
+        mobileSearch?.classList.remove('active');
+        sidebar?.classList.add('active');
+    });
+
+    closeSidebarBtn?.addEventListener('click', () => sidebar?.classList.remove('active'));
+
+    searchToggle?.addEventListener('click', () => mobileSearch?.classList.toggle('active'));
+
+    // Menu utilisateur : la pastille ouvre le panneau ; un clic sur un lien
+    // ou sur « Deconnexion » doit le traverser sans etre intercepte.
+    userMenus.forEach(menu => {
+        menu.addEventListener('click', function(e) {
+            if (e.target.closest('a') || e.target.closest('button[type="submit"]')) return;
+            menu.classList.toggle('open');
+        });
+    });
+
+    document.addEventListener('click', function(e) {
+        userMenus.forEach(menu => {
+            if (!menu.contains(e.target)) menu.classList.remove('open');
+        });
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        userMenus.forEach(menu => menu.classList.remove('open'));
+        sidebar?.classList.remove('active');
+        mobileSearch?.classList.remove('active');
+    });
+})();
 
 //Signup and login
 // Sélection des éléments
@@ -20,11 +57,14 @@ const registerTab = document.querySelector('.tab-btn[data-tab="register"]');
 const loginContent = document.getElementById('login');
 const registerContent = document.getElementById('register');
 const closeModal = document.getElementById('closeModal');
-const loginIcon = document.querySelector('.header-right .fa-user');
+// Le bouton « compte » du header, visiteur non connecte. Le selecteur vise
+// la pastille elle-meme : « .header-right .fa-user » attrapait aussi l'icone
+// « Mon compte » du menu utilisateur, et ouvrir la modale de connexion sur un
+// visiteur deja connecte n'a pas de sens.
+const loginIcon = document.querySelector('.header-right > .icon-btn .fa-user');
 
 if (loginIcon && loginIcon.parentElement) {
-  // Ouvrir modal sur clic bouton header
-  document.querySelector('.header-right .fa-user').parentElement.addEventListener('click', () => {
+  loginIcon.parentElement.addEventListener('click', () => {
       window.openAuthModal('login', window.location.href);
   });
 }

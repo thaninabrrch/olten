@@ -1,11 +1,42 @@
 @extends('layouts.connected')
 
-@section('title', 'Carte VTC en attente de validation | ' . config('app.name'))
+@section('title', 'Documents en attente de validation | ' . config('app.name'))
 
 @php
-    $status = $document->status ?? null;   // null = aucune carte transmise
-    $rejected = $status === 'rejected';
-    $pending  = $status === 'pending';
+    /*
+     | Page servie par EnsureDocumentsApproved quand une piece manque pour
+     | ouvrir une activite. Elle sert deux contextes, qui ne different que par
+     | les variables transmises par le middleware :
+     |
+     |   publier un trajet    -> permis + carte VTC
+     |   accepter des livraisons -> permis
+     |
+     | $documents : collection indexee par nom de piece (une piece jamais
+     |              transmise n'y figure pas)
+     | $requis    : noms des pieces exigees par ce contexte
+     | $action    : « publier un trajet », « accepter des livraisons »
+     | $dossier   : « dossier conducteur », « dossier livreur »
+     | $retour    : [route, libelle, icone] du bouton secondaire
+     */
+    use App\Models\UserDocument;
+
+    $requis = collect($requis)->map(fn ($name) => [
+        'name'  => $name,
+        'label' => UserDocument::label($name),
+        'icon'  => UserDocument::icon($name),
+        'doc'   => $documents[$name] ?? null,
+    ]);
+
+    // Etat global : un refus prime sur tout, puis une piece jamais transmise,
+    // sinon tout est parti et l'on attend l'administrateur.
+    $rejected = $requis->contains(fn ($r) => optional($r['doc'])->status === 'rejected');
+    $absent   = $requis->contains(fn ($r) => $r['doc'] === null);
+    $pending  = ! $rejected && ! $absent;
+
+    $bloquants = $requis->reject(fn ($r) => optional($r['doc'])->status === 'approved')->values();
+    $pluriel   = $bloquants->count() > 1;
+    $motifs    = $requis->filter(fn ($r) => optional($r['doc'])->status === 'rejected'
+                                            && $r['doc']->rejection_reason);
 @endphp
 
 @section('content')
@@ -84,7 +115,17 @@
         margin-bottom: 26px;
     }
 
-    /* ---- Carte document ---- */
+    /* ---- Cartes documents ----
+       Plusieurs pieces sont exigees : elles s'empilent au lieu d'occuper
+       chacune la marge basse de 24px de l'ancienne carte unique. */
+    .vtcw-docs {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 24px;
+        max-width: 520px;
+    }
+
     .vtcw-doc {
         display: flex;
         align-items: center;
@@ -94,8 +135,12 @@
         border-radius: 16px;
         padding: 16px 18px;
         box-shadow: 0 8px 22px rgba(17, 17, 17, .05);
-        margin-bottom: 24px;
-        max-width: 520px;
+    }
+
+    /* Une piece deja validee n'est plus ce qui bloque : elle s'efface */
+    .vtcw-doc.is-ok .vtcw-doc-icon {
+        background: rgba(47, 158, 95, .12);
+        color: #2f9e5f;
     }
 
     .vtcw-doc-icon {
@@ -140,6 +185,11 @@
     .vtcw-chip.is-none {
         background: #f1f3f5;
         color: #6b7280;
+    }
+
+    .vtcw-chip.is-ok {
+        background: rgba(47, 158, 95, .12);
+        color: #1f7a48;
     }
 
     /* ---- Motif de refus ---- */
@@ -357,91 +407,109 @@
                     <span class="vtcw-eyebrow">
                         <span class="dot"></span>
                         @if ($rejected)
-                            Carte refusée
+                            {{ $pluriel ? 'Pièces refusées' : 'Pièce refusée' }}
                         @elseif ($pending)
                             Vérification en cours
                         @else
-                            Document manquant
+                            {{ $pluriel ? 'Pièces manquantes' : 'Pièce manquante' }}
                         @endif
                     </span>
 
                     <h1 class="vtcw-title">
                         @if ($rejected)
-                            Votre carte VTC a été <em>refusée</em>
+                            Votre {{ $dossier }} a été <em>refusé</em>
                         @elseif ($pending)
-                            Votre carte VTC est en <em>cours de validation</em>
+                            Votre {{ $dossier }} est en <em>cours de validation</em>
                         @else
-                            Transmettez votre <em>carte VTC</em> pour publier
+                            Complétez votre <em>{{ $dossier }}</em> pour continuer
                         @endif
                     </h1>
 
                     <p class="vtcw-lead">
                         @if ($rejected)
-                            Le document transmis n'a pas pu être validé par notre équipe.
-                            Corrigez-le puis renvoyez-le : la publication de trajets sera
-                            débloquée dès sa validation.
+                            Une pièce transmise n'a pas pu être validée par notre équipe.
+                            Corrigez-la puis renvoyez-la : vous pourrez {{ $action }}
+                            dès sa validation.
                         @elseif ($pending)
-                            La publication de trajets est réservée aux conducteurs dont la
-                            carte professionnelle a été validée par notre équipe. Votre
-                            document a bien été reçu et sera examiné sous peu.
+                            {{ ucfirst($action) }} suppose que
+                            {{ $requis->count() > 1 ? 'ces pièces aient' : 'cette pièce ait' }}
+                            été {{ $requis->count() > 1 ? 'validées' : 'validée' }} par notre équipe.
+                            {{ $requis->count() > 1 ? 'Vos documents ont bien été reçus et seront examinés' : 'Votre document a bien été reçu et sera examiné' }}
+                            sous peu.
                         @else
-                            La publication de trajets est réservée aux conducteurs disposant
-                            d'une carte professionnelle VTC validée. Transmettez la vôtre pour
-                            démarrer la vérification.
+                            {{ ucfirst($action) }} suppose
+                            {{ $requis->count() > 1 ? 'des pièces validées' : 'une pièce validée' }}
+                            par notre équipe.
+                            {{ $requis->count() > 1 ? 'Transmettez-les' : 'Transmettez-la' }}
+                            pour démarrer la vérification.
                         @endif
                     </p>
 
-                    {{-- État du document --}}
-                    <div class="vtcw-doc">
-                        <span class="vtcw-doc-icon">
-                            <i class="fa-solid {{ $rejected ? 'fa-triangle-exclamation' : ($pending ? 'fa-hourglass-half' : 'fa-id-card') }}"></i>
-                        </span>
-                        <span class="vtcw-doc-body">
-                            <strong>Carte professionnelle VTC</strong>
-                            <span>
-                                @if ($document?->identifier)
-                                    Référence {{ $document->identifier }} ·
-                                @endif
-                                @if ($document)
-                                    Transmise le {{ $document->updated_at?->format('d/m/Y à H\hi') }}
-                                @else
-                                    Aucun document transmis pour le moment
-                                @endif
-                            </span>
-                        </span>
-                        <span class="vtcw-chip {{ $document ? '' : 'is-none' }}">
-                            {{ $rejected ? 'Refusée' : ($pending ? 'En attente' : 'Manquante') }}
-                        </span>
+                    {{-- État de chaque pièce requise --}}
+                    <div class="vtcw-docs">
+                        @foreach ($requis as $r)
+                            @php
+                                $doc   = $r['doc'];
+                                $etat  = $doc->status ?? null;
+                                $chip  = ['approved' => 'Validée', 'rejected' => 'Refusée', 'pending' => 'En attente'][$etat] ?? 'Manquante';
+                                $glyph = ['approved' => 'fa-circle-check', 'rejected' => 'fa-triangle-exclamation', 'pending' => 'fa-hourglass-half'][$etat] ?? $r['icon'];
+                            @endphp
+
+                            <div class="vtcw-doc {{ $etat === 'approved' ? 'is-ok' : '' }}">
+                                <span class="vtcw-doc-icon">
+                                    <i class="fa-solid {{ $glyph }}"></i>
+                                </span>
+                                <span class="vtcw-doc-body">
+                                    <strong>{{ $r['label'] }}</strong>
+                                    <span>
+                                        @if ($doc?->identifier)
+                                            Référence {{ $doc->identifier }} ·
+                                        @endif
+                                        @if ($doc)
+                                            Transmise le {{ $doc->updated_at?->format('d/m/Y à H\hi') }}
+                                        @else
+                                            Aucun document transmis pour le moment
+                                        @endif
+                                    </span>
+                                </span>
+                                <span class="vtcw-chip {{ $doc ? '' : 'is-none' }} {{ $etat === 'approved' ? 'is-ok' : '' }}">
+                                    {{ $chip }}
+                                </span>
+                            </div>
+                        @endforeach
                     </div>
 
-                    @if ($rejected && $document?->rejection_reason)
+                    @foreach ($motifs as $r)
                         <div class="vtcw-reason">
                             <i class="fa-solid fa-circle-exclamation"></i>
-                            <span><strong>Motif du refus :</strong> {{ $document->rejection_reason }}</span>
+                            <span>
+                                <strong>{{ $r['label'] }} — motif du refus :</strong>
+                                {{ $r['doc']->rejection_reason }}
+                            </span>
                         </div>
-                    @endif
+                    @endforeach
 
                     {{-- Étapes --}}
                     <ul class="vtcw-steps">
-                        <li class="{{ $document ? 'is-done' : 'is-current' }}">
+                        <li class="{{ $absent ? 'is-current' : 'is-done' }}">
                             <span class="step-icon">
-                                <i class="fa-solid {{ $document ? 'fa-check' : 'fa-arrow-up-from-bracket' }}"></i>
+                                <i class="fa-solid {{ $absent ? 'fa-arrow-up-from-bracket' : 'fa-check' }}"></i>
                             </span>
                             <span class="step-text">
-                                <strong>Envoi de la carte professionnelle</strong>
-                                <span>{{ $document ? 'Document bien reçu par nos services.' : 'Depuis votre espace « Carte VTC ».' }}</span>
+                                <strong>Envoi des pièces du dossier</strong>
+                                <span>{{ $absent ? 'Depuis votre espace « Documents requis ».' : 'Documents bien reçus par nos services.' }}</span>
                             </span>
                         </li>
 
-                        <li class="{{ $document ? 'is-current' : 'is-todo' }}">
+                        <li class="{{ $absent ? 'is-todo' : 'is-current' }}">
                             <span class="step-icon"><i class="fa-solid fa-shield-halved"></i></span>
                             <span class="step-text">
                                 <strong>Vérification par l'administrateur</strong>
                                 <span>
                                     @if ($rejected)
-                                        Document refusé : un nouvel envoi relancera la vérification.
+                                        Pièce refusée : un nouvel envoi relancera la vérification.
                                     @else
-                                        Contrôle de la validité et de la lisibilité du document.
+                                        Contrôle de la validité et de la lisibilité de chaque pièce.
                                     @endif
                                 </span>
                             </span>
@@ -450,8 +518,8 @@
                         <li class="is-todo">
                             <span class="step-icon"><i class="fa-solid fa-route"></i></span>
                             <span class="step-text">
-                                <strong>Publication de trajets débloquée</strong>
-                                <span>Vous pourrez créer et publier vos trajets de covoiturage.</span>
+                                <strong>Accès débloqué</strong>
+                                <span>Vous pourrez {{ $action }} sans restriction.</span>
                             </span>
                         </li>
                     </ul>
@@ -459,13 +527,22 @@
                     {{-- Actions --}}
                     <div class="vtcw-actions">
                         <a href="{{ route('livreur.carte.vtc') }}" class="btn-vtcw">
-                            <i class="fa-solid {{ $document ? 'fa-id-card' : 'fa-arrow-up-from-bracket' }}"></i>
-                            {{ $rejected ? 'Renvoyer ma carte VTC' : ($document ? 'Voir mes documents' : 'Transmettre ma carte VTC') }}
+                            <i class="fa-solid {{ $absent ? 'fa-arrow-up-from-bracket' : 'fa-id-card' }}"></i>
+                            @if ($rejected)
+                                Renvoyer {{ $pluriel ? 'mes pièces' : 'ma pièce' }}
+                            @elseif ($absent)
+                                Transmettre mes documents
+                            @else
+                                Voir mes documents
+                            @endif
                         </a>
 
-                        <a href="{{ route('covoiturage.index') }}" class="btn-vtcw-ghost">
-                            <i class="fa-solid fa-list"></i>
-                            Mes trajets
+                        {{-- Sortie de secours : le livreur revient a son
+                             tableau de bord, le conducteur a ses trajets. --}}
+                        @php [$retourRoute, $retourLabel, $retourIcone] = $retour; @endphp
+                        <a href="{{ route($retourRoute) }}" class="btn-vtcw-ghost">
+                            <i class="fa-solid {{ $retourIcone }}"></i>
+                            {{ $retourLabel }}
                         </a>
                     </div>
 
@@ -481,7 +558,7 @@
             <div class="col-lg-6">
                 <div class="vtcw-illu">
                     <svg viewBox="0 0 480 420" fill="none" xmlns="http://www.w3.org/2000/svg"
-                         role="img" aria-label="Illustration : carte professionnelle VTC en cours de vérification">
+                         role="img" aria-label="Illustration : carte VTC en cours de vérification">
 
                         <circle cx="240" cy="206" r="168" fill="var(--vtcw-accent)" fill-opacity="0.10"/>
                         <circle cx="240" cy="206" r="126" fill="var(--vtcw-accent)" fill-opacity="0.08"/>

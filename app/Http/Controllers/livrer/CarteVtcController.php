@@ -14,17 +14,19 @@ class CarteVtcController extends Controller
 
     public function store(Request $request)
     {
+        // Les types acceptes viennent du modele : ajouter une piece a
+        // UserDocument::TYPES suffit a l'autoriser ici.
         $request->validate([
-            'document_type' => 'required|in:identity_card,vtc_card',
-            'file'          => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120', 
+            'document_type' => 'required|in:' . implode(',', UserDocument::types()),
+            'file'          => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
         $path = $request->file('file')->store('documents', 'public');
         $document = auth()->user()->documents->where('name', $request->document_type)->first();
 
         $identifier = $document && $document->identifier ? $document->identifier : null;
-        if ($request->document_type === 'vtc_card' && !$identifier) {
-            $identifier = 'OLT-' . strtoupper(Str::random(8)); 
+        if (in_array($request->document_type, UserDocument::IDENTIFIED_TYPES, true) && !$identifier) {
+            $identifier = 'OLT-' . strtoupper(Str::random(8));
         }
 
         UserDocument::updateOrCreate(

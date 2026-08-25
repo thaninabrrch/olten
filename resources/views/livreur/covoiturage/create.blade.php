@@ -1,6 +1,6 @@
 @extends('layouts.connected')
 
-@section('title', 'Carte VTC | ' . config('app.name'))
+@section('title', 'Documents requis | ' . config('app.name'))
 
 <!-- Leaflet & Tailwind (Note: En production, mettez-les dans votre layout ou via Vite) -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />

@@ -46,19 +46,25 @@ body {
     background: var(--color-bg-body);
 }
 
+/* Colonne en trois zones : le logo reste en haut, le menu defile entre les
+   deux. La colonne entiere defilait auparavant, logo compris : il disparaissait
+   des que le menu depassait. */
 .connected-sidebar {
     width: 260px;
     background: var(--color-bg-sidebar);
     border-right: 1px solid var(--color-border);
-    padding: 0 0 24px;
+    padding: 0;
     position: fixed;
     height: 100vh;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     z-index: 1000;
     transition: transform 0.3s ease;
 }
 
 .sidebar-logo {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     height: 70px;
@@ -80,8 +86,16 @@ body {
     object-position: left center;
 }
 
+/* Zone defilante de la colonne. position: relative sert de repere a
+   offsetTop, dont le script se sert pour ramener une section ouverte dans
+   la partie visible. */
 .sidebar-menu {
-    padding: 0;
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 0 24px;
 }
 
 .menu-section {
@@ -187,8 +201,11 @@ body {
 /* ---------- Sections repliables ----------
    Bati sur <details> : le titre de section est le <summary>, il s'ouvre sans
    JavaScript. Le menu tient ainsi en neuf lignes au lieu de vingt. */
+/* Le retrait de 14px est porte par le <summary> et par la liste, plus par le
+   <details> : la liste devient une zone de defilement, et son rognage doit
+   laisser passer le repere de l'entree active, pose a -14px du lien. */
 .menu-group {
-    padding: 0 14px;
+    padding: 0;
     margin-bottom: 2px;
 }
 
@@ -196,6 +213,7 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
+    margin: 0 14px;
     padding: 10px 14px;
     border-radius: 10px;
     color: #4b5257;
@@ -255,23 +273,27 @@ body {
 }
 
 /* Liens de la section : rentres, relies par un filet vertical qui montre
-   d'un coup d'oeil ou commence et ou finit la section ouverte. */
+   d'un coup d'oeil ou commence et ou finit la section ouverte.
+   Le filet est un fond, pas un pseudo-element : un fond reste fixe quand la
+   liste defile, la ou un ::before absolu serait parti avec le contenu. */
 .menu-group > ul {
     position: relative;
-    padding: 2px 0 6px;
+    padding: 2px 14px 6px;
     margin: 0;
     list-style: none;
     animation: menu-group-open .18s ease;
+    background-image: linear-gradient(#e9ebee, #e9ebee);
+    background-repeat: no-repeat;
+    background-position: 37px 2px;
+    background-size: 1px calc(100% - 10px);
 }
 
-.menu-group > ul::before {
-    content: '';
-    position: absolute;
-    left: 23px;
-    top: 2px;
-    bottom: 8px;
-    width: 1px;
-    background: #e9ebee;
+/* Une section longue defile chez elle plutot que de repousser les titres
+   suivants hors de l'ecran : les autres sections restent atteignables. */
+.menu-group[open] > ul {
+    max-height: min(46vh, 320px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .menu-group > ul li a {
@@ -1329,21 +1351,48 @@ body {
     }
 }
 
-.connected-sidebar::-webkit-scrollbar {
+/* Le defilement a quitte .connected-sidebar pour .sidebar-menu (le logo reste
+   en place) : les ascenseurs suivent. */
+.sidebar-menu::-webkit-scrollbar {
     width: 6px;
 }
 
-.connected-sidebar::-webkit-scrollbar-track {
-    background: #f1f1f1;
+.sidebar-menu::-webkit-scrollbar-track {
+    background: transparent;
 }
 
-.connected-sidebar::-webkit-scrollbar-thumb {
-    background: #ccc;
+.sidebar-menu::-webkit-scrollbar-thumb {
+    background: #d8dbdf;
     border-radius: 3px;
 }
 
-.connected-sidebar::-webkit-scrollbar-thumb:hover {
-    background: #aaa;
+.sidebar-menu::-webkit-scrollbar-thumb:hover {
+    background: #b9bec4;
+}
+
+/* Ascenseur d'une section ouverte : plus discret, il vit a l'interieur du menu */
+.menu-group[open] > ul::-webkit-scrollbar {
+    width: 4px;
+}
+
+.menu-group[open] > ul::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.menu-group[open] > ul::-webkit-scrollbar-thumb {
+    background: #dfe2e6;
+    border-radius: 2px;
+}
+
+.menu-group[open] > ul::-webkit-scrollbar-thumb:hover {
+    background: #c4c9cf;
+}
+
+/* Firefox */
+.sidebar-menu,
+.menu-group[open] > ul {
+    scrollbar-width: thin;
+    scrollbar-color: #d8dbdf transparent;
 }
 
 .pagination {
@@ -7540,6 +7589,26 @@ span.expired {
     margin: 0;
 }
 
+/* Marque les pieces sans lesquelles la publication d'un trajet reste
+   bloquee : sobre, car c'est une precision, pas une alerte. */
+.sp-page .sp-doc-req {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #fff1ec;
+    color: #b8360a;
+    font-size: 12px;
+    font-weight: 600;
+    margin: 0;
+    align-self: flex-start;
+}
+
+.sp-page .sp-doc-req i {
+    font-size: 11px;
+}
+
 .sp-page .sp-doc-ref {
     display: flex;
     align-items: center;
@@ -7688,6 +7757,225 @@ span.expired {
 .sp-choice input:focus-visible + span {
     outline: 2px solid #ff3c00;
     outline-offset: 2px;
+}
+
+/* ---------- Champ fichier de la fenetre d'envoi ----------
+   La fenetre est posee hors de .sp-page : les regles de champ, toutes
+   prefixees par .sp-page, ne l'atteignaient pas. Le champ restait celui du
+   navigateur — « Parcourir... / Aucun fichier selectionne » en pleine ligne,
+   colle au texte d'aide. Le libelle et l'aide sont donc redits ici, et le
+   champ lui-meme devient une zone de depot. */
+.sp-modal .sp-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sp-modal .sp-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #16191d;
+}
+
+.sp-modal .sp-req {
+    color: #ff3c00;
+}
+
+.sp-modal .sp-help {
+    font-size: 12.5px;
+    color: #868e96;
+}
+
+/* Zone de depot. Le cadre entier est le declencheur : c'est un <label>, le
+   champ natif n'est plus qu'un rectangle transparent dessous. */
+.sp-drop {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border: 1.5px dashed #ced4da;
+    border-radius: 14px;
+    background: #fbfbfc;
+    cursor: pointer;
+    transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+/* Le champ garde la taille du cadre plutot que d'etre reduit a un point :
+   c'est sur lui que le navigateur ancre le message « veuillez selectionner
+   un fichier », et un champ sans surface n'a nulle part ou l'afficher.
+   Les clics le traversent, c'est le <label> qui ouvre le selecteur. */
+.sp-drop input[type="file"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.sp-drop:hover {
+    border-color: #ff3c00;
+    background: #fff;
+}
+
+/* Le champ est masque : sans cela le clavier passerait sur la zone sans que
+   rien ne l'indique. */
+.sp-drop:focus-within {
+    border-color: #ff3c00;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(255, 60, 0, .12);
+}
+
+/* Survol d'un fichier glisse au-dessus */
+.sp-drop.is-over {
+    border-color: #ff3c00;
+    border-style: solid;
+    background: #fff1ec;
+}
+
+.sp-drop-icon {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: #eef0f2;
+    color: #6c757d;
+    font-size: 17px;
+    transition: background .2s ease, color .2s ease;
+}
+
+.sp-drop:hover .sp-drop-icon,
+.sp-drop.is-over .sp-drop-icon {
+    background: #ffe3d9;
+    color: #ff3c00;
+}
+
+.sp-drop-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+/* Le nom du fichier remplace le libelle une fois la piece choisie : il peut
+   etre long, il se tronque plutot que de pousser le bouton hors du cadre. */
+.sp-drop-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #16191d;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-drop-note {
+    font-size: 12.5px;
+    color: #868e96;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-drop-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    padding: 9px 16px;
+    border-radius: 999px;
+    background: #16191d;
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background .2s ease;
+}
+
+.sp-drop:hover .sp-drop-btn {
+    background: #ff3c00;
+}
+
+/* ---- Fichier choisi ----
+   Le cadre reste en place au lieu de ceder la main a un encart : un champ
+   « required » cache par display:none bloque l'envoi sans rien afficher,
+   le navigateur ne pouvant pas y amener le curseur. */
+.sp-drop.is-filled {
+    border-style: solid;
+    border-color: #ff3c00;
+    background: #fff1ec;
+}
+
+.sp-drop.is-filled .sp-drop-icon {
+    background: #ff3c00;
+    color: #fff;
+}
+
+.sp-drop.is-filled .sp-drop-btn {
+    background: #fff;
+    border: 1px solid #ffc7b4;
+    color: #16191d;
+}
+
+.sp-drop-clear {
+    flex-shrink: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid #ffc7b4;
+    border-radius: 50%;
+    background: #fff;
+    color: #6c757d;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+
+.sp-drop.is-filled .sp-drop-clear {
+    display: inline-flex;
+}
+
+.sp-drop-clear:hover {
+    background: #ff3c00;
+    border-color: #ff3c00;
+    color: #fff;
+}
+
+/* Refus cote navigateur (poids, extension) : dit sur place, avant l'envoi */
+.sp-drop-error {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #d92d20;
+}
+
+.sp-drop-error[hidden] {
+    display: none;
+}
+
+@media (max-width: 560px) {
+    .sp-drop {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .sp-drop-text {
+        flex: 1 0 calc(100% - 56px);
+    }
+
+    .sp-drop-btn {
+        flex: 1;
+        justify-content: center;
+    }
 }
 
 @media (max-width: 768px) {

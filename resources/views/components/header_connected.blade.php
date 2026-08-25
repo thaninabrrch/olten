@@ -41,7 +41,7 @@
         'livreur.demandes'          => ['Missions en attente', 'Livreur'],
         'livreur.livraisons'        => ['Missions en cours', 'Livreur'],
         'liv_termine'               => ['Livraisons terminées', 'Livreur'],
-        'livreur.carte.vtc'         => ['Carte VTC', 'Chauffeur VTC'],
+        'livreur.carte.vtc'         => ['Documents requis', 'Chauffeur VTC'],
         'covoiturage.index'         => ['Mes trajets', 'Chauffeur VTC'],
         'covoiturage.create'        => ['Ajouter un trajet', 'Chauffeur VTC'],
     ];

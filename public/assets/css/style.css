@@ -30,6 +30,11 @@ body {
   padding-top: var(--header-height);
 }
 
+/* ════════════════════════════════════════
+   HEADER PUBLIC
+   Un filet net remplace l'ombre floutee : celle-ci bavait sur le contenu et
+   datait la barre. Le blanc est tenu par la bordure, pas par le flou.
+════════════════════════════════════════ */
 .header {
   position: fixed;
   top: 0;
@@ -37,54 +42,151 @@ body {
   width: 100%;
   height: var(--header-height);
   background: var(--color-white);
-  box-shadow: var(--shadow-light);
+  border-bottom: 1px solid #ebedf0;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .03);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 25px;
+  gap: 24px;
+  padding: 0 28px;
   z-index: 1000;
 }
 
 .logo img {
   height: 45px;
+  display: block;
 }
 
+/* ---------- Barre de recherche ----------
+   .search-bar ne porte plus que la largeur. Elle etait aussi posee sur le
+   <form> qu'elle contient : le fond gris se dessinait deux fois, l'un dans
+   l'autre, et le bouton orange flottait dans une gouttiere plate.
+
+   La capsule est desormais blanche sur bordure, comme un champ : elle se
+   detache du header au lieu de s'y fondre, et reagit au survol comme au
+   focus — l'ancienne barre ne donnait aucun retour. */
 .search-bar {
   display: flex;
   align-items: center;
-  background: var(--color-grey-light);
-  border-radius: var(--border-radius-round);
-  padding: 6px 15px;
-  width: 70%;
+  flex: 1;
+  min-width: 0;
+  max-width: 780px;
 }
 
+.search-form {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 5px 5px 5px 6px;
+  background: var(--color-white);
+  border: 1px solid #e4e7ea;
+  border-radius: var(--border-radius-round);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.search-form:hover {
+  border-color: #d3d8dd;
+  box-shadow: 0 4px 14px rgba(16, 24, 40, .07);
+}
+
+/* Le focus se voit sur toute la capsule, pas seulement sur le champ actif :
+   c'est la barre entiere qui devient active. */
+.search-form:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(255, 60, 0, .1);
+}
+
+/* Chaque segment s'eclaire au survol : on voit ou l'on va cliquer */
 .search-field {
   display: flex;
   align-items: center;
+  gap: 10px;
   flex: 1;
+  min-width: 0;
+  padding: 9px 16px;
+  border-radius: var(--border-radius-round);
+  transition: background .18s ease;
 }
+
+.search-form .search-field:hover {
+  background: #f6f7f8;
+}
+
+/* Le champ libre est le plus utilise : il prend plus de large que les deux
+   filtres qui le suivent. */
+.search-form .search-field:first-child { flex: 1.6; }
 
 .search-field i {
-  color: #777;
-  margin-right: 8px;
-  font-size: 15px;
+  flex-shrink: 0;
+  width: 15px;
+  margin-right: 0;
+  color: #9aa1a8;
+  font-size: 14px;
+  text-align: center;
+  transition: color .18s ease;
 }
 
-.search-bar input,
-.search-bar select {
+.search-form .search-field:focus-within i {
+  color: var(--color-primary);
+}
+
+/* padding/border/display sont remis a plat : .search-input et .location-input,
+   definis plus bas pour les filtres de page, retombaient sur ces champs et y
+   injectaient une bordure et 12px de padding. */
+.search-form input,
+.search-form select {
+  display: block;
   border: none;
+  border-radius: 0;
   background: none;
   outline: none;
-  color: var(--color-grey-dark);
+  padding: 0;
+  color: #1f2328;
+  font-family: inherit;
   font-size: var(--font-size-base);
+  font-weight: 500;
   width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.search-form input::placeholder {
+  color: #9aa1a8;
+  font-weight: 400;
+}
+
+/* Le select portait le chevron natif du systeme : il jurait avec le reste.
+   Celui-ci est dessine, aligne sur la couleur des icones. */
+.search-form select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 20px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath fill='none' stroke='%239aa1a8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 5 5.5 9 1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right center;
 }
 
 .divider {
+  flex-shrink: 0;
   width: 1px;
-  height: 25px;
-  background: var(--color-divider);
-  margin: 0 10px;
+  height: 22px;
+  background: #e8eaed;
+  margin: 0 2px;
+}
+
+.search-form .search-btn {
+  flex-shrink: 0;
+  height: 42px;
+  margin-left: 6px;
+  padding: 0 24px;
+  font-size: 14px;
+  box-shadow: 0 1px 2px rgba(255, 60, 0, .22);
+}
+
+.search-form .search-btn:hover {
+  box-shadow: 0 4px 12px rgba(255, 60, 0, .28);
 }
 
 .search-btn,
@@ -109,9 +211,11 @@ body {
   gap: 10px;
 }
 
+/* Meme grammaire que la capsule de recherche et que la pilule du compte :
+   blanc sur filet, pas une pastille grise. */
 .icon-btn {
-  background: var(--color-grey-light);
-  border: none;
+  background: var(--color-white);
+  border: 1px solid #e4e7ea;
   width: 42px;
   height: 42px;
   border-radius: 50%;
@@ -119,16 +223,22 @@ body {
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  transition: background var(--transition-speed);
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
 }
 
 .icon-btn i {
-  font-size: 18px;
-  color: var(--color-black);
+  font-size: 17px;
+  color: #3f4650;
+  transition: color .2s ease;
 }
 
 .icon-btn:hover {
-  background: #ddd;
+  background: #f6f7f8;
+  border-color: #d3d8dd;
+}
+
+.icon-btn:hover i {
+  color: var(--color-primary);
 }
 
 .profile-img {
@@ -422,8 +532,9 @@ body {
   left: 0;
   width: 100%;
   background: var(--color-white);
-  padding: 20px 15px;
-  box-shadow: var(--shadow-strong);
+  padding: 18px 16px 20px;
+  border-bottom: 1px solid #ebedf0;
+  box-shadow: 0 10px 24px rgba(16, 24, 40, .07);
   display: none;
   z-index: 999;
 }
@@ -433,49 +544,95 @@ body {
   animation: fadeIn var(--transition-speed) ease;
 }
 
+/* Meme langage que la capsule du bureau : champs blancs sur filet, plutot
+   qu'un empilement de pilules blanches posees sur un bloc gris. */
 .mobile-search-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  background: var(--color-grey-light);
-  border-radius: 25px;
-  padding: 15px;
+  gap: 10px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+
+.mobile-search-content form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .mobile-search .search-field {
   display: flex;
   align-items: center;
+  gap: 10px;
   background: var(--color-white);
-  border-radius: var(--border-radius-round);
-  padding: 8px 15px;
+  border: 1px solid #e4e7ea;
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.mobile-search .search-field:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(255, 60, 0, .1);
 }
 
 .mobile-search .search-field i {
-  color: #777;
-  margin-right: 10px;
-  font-size: 15px;
+  flex-shrink: 0;
+  width: 15px;
+  margin-right: 0;
+  color: #9aa1a8;
+  font-size: 14px;
+  text-align: center;
+  transition: color .18s ease;
+}
+
+.mobile-search .search-field:focus-within i {
+  color: var(--color-primary);
 }
 
 .mobile-search input,
 .mobile-search select {
+  display: block;
   border: none;
+  border-radius: 0;
   outline: none;
   background: none;
+  padding: 0;
+  font-family: inherit;
   font-size: var(--font-size-base);
-  color: var(--color-grey-dark);
+  font-weight: 500;
+  color: #1f2328;
   width: 100%;
+  min-width: 0;
+}
+
+.mobile-search input::placeholder {
+  color: #9aa1a8;
+  font-weight: 400;
+}
+
+.mobile-search select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 20px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath fill='none' stroke='%239aa1a8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 5 5.5 9 1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right center;
 }
 
 .mobile-search .search-btn {
   background: var(--color-primary);
   color: var(--color-white);
   border: none;
-  border-radius: 30px;
-  padding: 10px;
+  border-radius: 12px;
+  padding: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background var(--transition-speed);
-  margin-top: 5px;
+  margin-top: 2px;
 }
 
 .mobile-search .search-btn:hover {
@@ -491,6 +648,27 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Entre 992 et 1200px la capsule est a l'etroit : on resserre les marges
+   plutot que de laisser les libelles se tronquer. */
+@media (min-width: 992px) and (max-width: 1200px) {
+  .header {
+    gap: 16px;
+    padding: 0 18px;
+  }
+
+  .logo img {
+    height: 38px;
+  }
+
+  .search-field {
+    padding: 9px 12px;
+  }
+
+  .search-form .search-btn {
+    padding: 0 18px;
   }
 }
 

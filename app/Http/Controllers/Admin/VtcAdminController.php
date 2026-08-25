@@ -10,8 +10,10 @@ class VtcAdminController extends Controller
 {
     public function index(Request $request)
     {
+        // Toutes les pieces du chauffeur, y compris le permis de conduire :
+        // la liste vient du modele pour ne pas oublier les futures.
         $query = UserDocument::with('user')
-            ->whereIn('name', ['vtc_card', 'identity_card'])
+            ->whereIn('name', UserDocument::types())
             ->orderBy('created_at', 'desc');
 
 
@@ -33,7 +35,12 @@ class VtcAdminController extends Controller
             'rejection_reason' => null,
         ]);
 
-        return redirect()->back()->with('success', 'Carte VTC validée avec succès.');
+        // Le libelle suit la piece : le message annoncait « Carte VTC » y
+        // compris en validant une piece d'identite ou un permis.
+        return redirect()->back()->with(
+            'success',
+            UserDocument::label($document->name) . ' validé(e) avec succès.'
+        );
     }
     public function reject(Request $request, UserDocument $document)
     {
@@ -46,6 +53,9 @@ class VtcAdminController extends Controller
             'rejection_reason' => $request->rejection_reason,
         ]);
 
-        return redirect()->back()->with('error', 'Carte VTC rejetée.');
+        return redirect()->back()->with(
+            'error',
+            UserDocument::label($document->name) . ' rejeté(e).'
+        );
     }
 }

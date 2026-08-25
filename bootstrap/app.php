@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'approved' => \App\Http\Middleware\EnsureUserIsApproved::class,
             'subscription' => \App\Http\Middleware\CheckSubscription::class,
             'subscription.level' => \App\Http\Middleware\SubscriptionLevel::class,
-            'vtc.approved' => \App\Http\Middleware\EnsureVtcCardApproved::class,
+            'documents.approved' => \App\Http\Middleware\EnsureDocumentsApproved::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

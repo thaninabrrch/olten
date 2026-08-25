@@ -1,11 +1,11 @@
 @extends('admin.layouts.app')
-@section('title', 'Validation des cartes VTC')
-@section('page_title', 'Validation des cartes VTC')
+@section('title', 'Validation des documents conducteurs')
+@section('page_title', 'Validation des documents conducteurs')
 
 @section('content')
 
     <div class="flex flex-col md:flex-row justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-800">Cartes VTC à valider</h1>
+        <h1 class="text-3xl font-bold text-gray-800">Documents conducteurs à valider</h1>
     </div>
 
     {{-- Recherche --}}
@@ -42,9 +42,11 @@
                         <tr>
                             <td class="px-6 py-4 font-semibold">{{ $doc->user->name }}</td>
 
-                            {{-- Type --}}
+                            {{-- Type : libelle porte par le modele, pour ne pas
+                                 avoir a etendre une cascade de ternaires a
+                                 chaque nouvelle piece. --}}
                             <td class="px-6 py-4 font-medium">
-                                {{ $doc->name === 'vtc_card' ? 'Carte VTC' : ($doc->name === 'identity_card' ? 'Pièce d\'identité' : $doc->name) }}
+                                {{ \App\Models\UserDocument::label($doc->name) }}
                             </td>
 
                             {{-- Document --}}

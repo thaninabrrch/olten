@@ -8,9 +8,13 @@
         </div>
     </div>
 
-    <!-- Barre de recherche (PC uniquement) -->
+    {{-- Barre de recherche (PC uniquement).
+         .search-bar ne porte plus que la largeur ; la capsule visuelle est le
+         <form>. Les deux portaient la meme classe, ce qui dessinait un fond
+         gris dans un fond gris et ecrasait le relief. Les champs, eux, sont
+         inchanges. --}}
     <div class="search-bar">
-        <form method="GET" action="{{ route('home') }}" class="search-bar w-100">
+        <form method="GET" action="{{ route('home') }}" class="search-form w-100">
 
             <div class="search-field">
                 <i class="fa-solid fa-magnifying-glass"></i>

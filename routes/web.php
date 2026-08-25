@@ -116,7 +116,14 @@ Route::middleware('auth', 'verified', 'approved', 'subscription', 'role:locateur
     Route::get('/statistiques', function () {return view('pages.locateur.statistiques');})->name('statistiques');
 });
 
-Route::middleware('auth', 'verified', 'approved', 'subscription', 'role:livreur', 'subscription.level:standard,premium,vip')->group(function () {
+// Espace livraison du livreur. « documents.approved:deliver » exige un permis
+// de conduire valide par l'administrateur : sans lui, tout le groupe est
+// remplace par une page d'attente.
+//
+// La page « Demandes de livraison » (/demandes-de-livraison, plus bas) n'est
+// PAS dans ce groupe : elle appartient au proprietaire qui recrute un livreur
+// pour ses biens, pas au livreur. Elle reste donc ouverte sans permis.
+Route::middleware('auth', 'verified', 'approved', 'subscription', 'role:livreur', 'subscription.level:standard,premium,vip', 'documents.approved:deliver')->group(function () {
     Route::get('/espace-livraison/missions', [DeliveryAdController::class, 'missions'])->name('livreur.missions');
     Route::get('/espace-livraison/demandes', [DeliveryAdController::class, 'demandes'])->name('livreur.demandes');
     Route::get('/espace-livraison/livraisons-en-cours', [DeliveryAdController::class, 'livraisons'])->name('livreur.livraisons');
@@ -167,10 +174,10 @@ Route::middleware('auth', 'verified', 'subscription', 'approved', 'subscription.
     // sans validation, le formulaire est remplace par une page d'attente et
     // l'endpoint de publication est refuse.
     Route::get('/covoiturage/create', [CovoiturageController::class, 'create'])
-        ->middleware('vtc.approved')
+        ->middleware('documents.approved:publish')
         ->name('covoiturage.create');
     Route::post('/covoiturage/publish', [CovoiturageController::class, 'publish'])
-        ->middleware('auth', 'vtc.approved');
+        ->middleware('auth', 'documents.approved:publish');
     Route::get('/trajet/{covoiturage}', [CovoiturageController::class, 'show'])
         ->name('trajet.show');
     Route::delete('/covoiturage/{id}', [CovoiturageController::class, 'destroy'])
