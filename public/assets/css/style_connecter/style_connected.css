@@ -90,12 +90,9 @@ body {
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.09em;
-    padding: 0 26px;
-    margin: 22px 0 8px;
-}
-
-.menu-section:first-of-type {
-    margin-top: 0;
+    padding: 14px 12px 0;
+    margin: 10px 14px 8px;
+    border-top: 1px solid var(--color-border);
 }
 
 .sidebar-menu ul {
@@ -110,8 +107,7 @@ body {
 
 /* La surbrillance est portee par le lien : elle epouse donc son arrondi,
    ce qui n'etait pas le cas quand elle etait posee sur le <li>. */
-.sidebar-menu li a,
-.sidebar-menu li.sidebar-logout button {
+.sidebar-menu li a {
     position: relative;
     display: flex;
     align-items: center;
@@ -131,8 +127,7 @@ body {
     transition: background .18s ease, color .18s ease;
 }
 
-.sidebar-menu li a:hover,
-.sidebar-menu li.sidebar-logout button:hover {
+.sidebar-menu li a:hover {
     background: #f4f5f7;
     color: var(--color-text);
 }
@@ -189,30 +184,104 @@ body {
     cursor: not-allowed;
 }
 
-/* Deconnexion */
-.sidebar-menu li.sidebar-logout {
-    margin-top: 4px;
+/* ---------- Sections repliables ----------
+   Bati sur <details> : le titre de section est le <summary>, il s'ouvre sans
+   JavaScript. Le menu tient ainsi en neuf lignes au lieu de vingt. */
+.menu-group {
+    padding: 0 14px;
+    margin-bottom: 2px;
 }
 
-.sidebar-menu li.sidebar-logout form {
+.menu-group > summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    color: #4b5257;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    transition: background .18s ease, color .18s ease;
+}
+
+/* Retire le triangle natif du <summary> */
+.menu-group > summary::-webkit-details-marker { display: none; }
+.menu-group > summary::marker { content: ''; }
+
+.menu-group > summary:hover {
+    background: #f4f5f7;
+    color: var(--color-text);
+}
+
+.menu-group > summary > i:first-child {
+    width: 20px;
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 15px;
+    color: #9aa1a8;
+    transition: color .18s ease;
+}
+
+.menu-group > summary:hover > i:first-child {
+    color: #6c757d;
+}
+
+.menu-group > summary > span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.menu-caret {
+    font-size: 10px;
+    color: #b3b9bf;
+    transition: transform .25s ease;
+}
+
+.menu-group[open] > summary .menu-caret {
+    transform: rotate(180deg);
+}
+
+/* Section contenant la page courante : son titre reste lisible sans voler
+   la surbrillance a l'entree active elle-meme. */
+.menu-group[open] > summary {
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+/* Liens de la section : rentres, relies par un filet vertical qui montre
+   d'un coup d'oeil ou commence et ou finit la section ouverte. */
+.menu-group > ul {
+    position: relative;
+    padding: 2px 0 6px;
     margin: 0;
+    list-style: none;
+    animation: menu-group-open .18s ease;
 }
 
-.sidebar-menu li.sidebar-logout button {
-    color: #a8434a;
+.menu-group > ul::before {
+    content: '';
+    position: absolute;
+    left: 23px;
+    top: 2px;
+    bottom: 8px;
+    width: 1px;
+    background: #e9ebee;
 }
 
-.sidebar-menu li.sidebar-logout button:hover {
-    background: #fdeceb;
-    color: #a52d20;
+.menu-group > ul li a {
+    padding-left: 34px;
+    font-size: 13.5px;
 }
 
-.sidebar-menu li.sidebar-logout button i {
-    color: #c98d90;
-}
-
-.sidebar-menu li.sidebar-logout button:hover i {
-    color: #a52d20;
+@keyframes menu-group-open {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .connected-header {
@@ -261,15 +330,27 @@ body {
     margin-left: auto;
 }
 
-.header-divider {
-    width: 1px;
-    height: 26px;
-    background: var(--color-border);
-    flex-shrink: 0;
-}
-
+/* Rien a gauche sur grand ecran : la barre laterale porte le logo, et le
+   titre contextuel occupe la place. Le bloc n'apparait qu'une fois la barre
+   laterale masquee (voir le responsive). */
 .header-left {
     display: none;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Logo de repli, affiche seulement quand la barre laterale est masquee */
+.header-brand {
+    display: block;
+    width: 96px;
+    height: 34px;
+}
+
+.header-brand img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: left center;
 }
 
 .btn-toggle-sidebar {
@@ -294,143 +375,121 @@ body {
     color: var(--color-primary);
 }
 
-.btn-add-annonce {
+/* ════════════════════════════════════════
+   PASTILLE DE PUBLICATION (bas de viewport)
+   Remplace l'ancien bouton « Publier » du header, qui disparaissait sous
+   1024px : sur tablette et telephone, plus rien ne permettait de publier.
+   Bati sur <details>, comme les autres menus de l'espace connecte.
+════════════════════════════════════════ */
+.publish-fab {
+    position: fixed;
+    right: 28px;
+    bottom: 28px;
+    z-index: 900;
+}
+
+.publish-fab > summary {
+    display: grid;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
     background: var(--color-primary);
     color: #fff;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 999px;
-    font-size: 13.5px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    white-space: nowrap;
-    text-decoration: none;
-    box-shadow: 0 4px 12px rgba(255, 60, 0, .25);
-    transition: filter .2s ease, transform .2s ease, box-shadow .2s ease;
-}
-
-.btn-add-annonce:hover {
-    color: #fff;
-    filter: brightness(1.06);
-    transform: translateY(-1px);
-    box-shadow: 0 8px 18px rgba(255, 60, 0, .3);
-}
-
-.btn-add-annonce i {
-    font-size: 12px;
-}
-
-.btn-add-annonce.is-locked {
-    opacity: .45;
-    pointer-events: none;
-    cursor: not-allowed;
-    box-shadow: none;
-}
-
-/* ---------- Menu « Publier » du header ----------
-   Bati sur <details> : le bouton est le <summary>, le panneau son frere.
-   Aucun JS n'est necessaire pour l'ouvrir. */
-.header-publish {
-    position: relative;
-}
-
-.header-publish > summary {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    border-radius: 999px;
-    background: var(--color-primary);
-    color: #fff;
-    font-size: 13.5px;
-    font-weight: 600;
-    white-space: nowrap;
+    font-size: 20px;
     cursor: pointer;
     list-style: none;
-    box-shadow: 0 4px 12px rgba(255, 60, 0, .25);
-    transition: filter .2s ease, transform .2s ease, box-shadow .2s ease;
+    box-shadow: 0 10px 26px rgba(255, 60, 0, .34), 0 2px 6px rgba(16, 24, 40, .12);
+    transition: transform .22s ease, box-shadow .22s ease;
 }
 
 /* Retire le triangle natif du <summary> */
-.header-publish > summary::-webkit-details-marker { display: none; }
-.header-publish > summary::marker { content: ''; }
+.publish-fab > summary::-webkit-details-marker { display: none; }
+.publish-fab > summary::marker { content: ''; }
 
-.header-publish > summary:hover {
-    filter: brightness(1.06);
-    transform: translateY(-1px);
-    box-shadow: 0 8px 18px rgba(255, 60, 0, .3);
+.publish-fab > summary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px rgba(255, 60, 0, .4), 0 3px 8px rgba(16, 24, 40, .14);
 }
 
-.header-publish > summary i {
-    font-size: 12px;
-    transition: transform .25s ease;
+.publish-fab > summary:focus-visible {
+    outline: 3px solid rgba(255, 60, 0, .35);
+    outline-offset: 3px;
 }
 
-.header-publish[open] > summary i {
-    transform: rotate(45deg);
+/* Le « + » devient une croix : le meme bouton ouvre et referme */
+.publish-fab > summary i {
+    transition: transform .28s cubic-bezier(.2, .8, .3, 1);
 }
 
-.header-publish.is-locked {
-    opacity: .45;
+.publish-fab[open] > summary i {
+    transform: rotate(135deg);
+}
+
+.publish-fab.is-locked {
+    opacity: .5;
     pointer-events: none;
 }
 
-.header-publish-menu {
+/* ---------- Actions deployees ----------
+   Alignees a 6px du bord droit : les pastilles de 46px se centrent ainsi
+   sur celle de 58px qui les ouvre. */
+.publish-fab-menu {
     position: absolute;
-    top: calc(100% + 10px);
-    right: 0;
-    z-index: 200;
-    width: 290px;
-    padding: 8px;
-    background: #fff;
-    border: 1px solid var(--color-border);
-    border-radius: 14px;
-    box-shadow: 0 16px 40px rgba(16, 24, 40, .16);
-}
-
-.header-publish-menu a {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 11px 12px;
-    border-radius: 10px;
-    color: var(--color-text);
-    text-decoration: none;
-    transition: background .18s ease;
-}
-
-.header-publish-menu a:hover {
-    background: #f4f5f7;
-}
-
-.header-publish-menu a i {
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-    display: grid;
-    place-items: center;
-    border-radius: 10px;
-    background: #fff1ec;
-    color: var(--color-primary);
-    font-size: 13px;
-}
-
-.header-publish-menu a span {
+    right: 6px;
+    bottom: calc(100% + 16px);
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    font-size: 12px;
-    color: var(--color-text-light);
-    line-height: 1.4;
+    align-items: flex-end;
+    gap: 12px;
 }
 
-.header-publish-menu a strong {
-    font-size: 13.5px;
+.publish-fab-menu a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    animation: fab-rise .22s cubic-bezier(.2, .8, .3, 1) backwards;
+}
+
+/* Les deux entrees montent l'une apres l'autre, celle du bas en premier */
+.publish-fab-menu a:nth-child(1) { animation-delay: .07s; }
+.publish-fab-menu a:nth-child(2) { animation-delay: .02s; }
+
+.publish-fab-menu a span {
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: #1f242b;
+    color: #fff;
+    font-size: 13px;
     font-weight: 600;
-    color: var(--color-text);
+    white-space: nowrap;
+    box-shadow: 0 6px 16px rgba(16, 24, 40, .2);
+}
+
+.publish-fab-menu a i {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: #fff;
+    color: var(--color-primary);
+    font-size: 15px;
+    box-shadow: 0 6px 18px rgba(16, 24, 40, .16);
+    transition: background .18s ease, color .18s ease, transform .18s ease;
+}
+
+.publish-fab-menu a:hover i {
+    background: var(--color-primary);
+    color: #fff;
+    transform: scale(1.06);
+}
+
+@keyframes fab-rise {
+    from { opacity: 0; transform: translateY(12px) scale(.92); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* ════════════════════════════════════════
@@ -542,6 +601,16 @@ body {
   margin: 0;
   z-index: 9999;
   cursor: default;
+}
+
+/* Mode compact (header connecte) : le menu ne porte plus que l'identite, le
+   compte et la deconnexion — la barre laterale s'occupe de la navigation.
+   Il n'a donc plus besoin de la largeur du menu public. Borne au-dessus de
+   992px : en dessous, le panneau est pose sur le viewport (voir plus bas). */
+@media (min-width: 992px) {
+  .user-menu.is-compact .user-dropdown {
+    width: 262px;
+  }
 }
 
 .user-menu.open .user-dropdown {
@@ -764,6 +833,26 @@ body {
 }
 
 /* ---- Déconnexion ---- */
+/* « Retour a la plateforme » : c'est une sortie de l'espace connecte, pas une
+   destination de plus. La fleche glisse au survol pour le dire. */
+.user-dropdown .ud-back a {
+  color: var(--color-text-light);
+  font-weight: 500;
+}
+
+.user-dropdown .ud-back a:hover {
+  color: var(--color-primary);
+}
+
+.user-dropdown .ud-back i {
+  transition: transform .2s ease, color .18s ease;
+}
+
+.user-dropdown .ud-back a:hover i {
+  color: var(--color-primary);
+  transform: translateX(-3px);
+}
+
 .user-dropdown .ud-logout form {
   width: 100%;
   margin: 0;
@@ -852,8 +941,10 @@ body {
   }
 }
 
+/* La marge basse tient compte de la pastille de publication : sans elle, la
+   derniere ligne d'un tableau ou la pagination finissaient dessous. */
 .dashboard-content {
-    padding: 40px;
+    padding: 40px 40px 118px;
 }
 
 .breadcrumb {
@@ -1152,9 +1243,9 @@ body {
    RESPONSIVE
    ================================ */
 @media (max-width: 1024px) {
+    /* La barre laterale se cache : le header reprend le logo et le bouton menu */
     .header-left {
         display: flex;
-        align-items: center;
     }
 
     .connected-sidebar {
@@ -1170,15 +1261,6 @@ body {
         margin-left: 0;
     }
 
-    .btn-add-annonce,
-    .header-publish {
-        display: none;
-    }
-
-    /* Le separateur n'a plus rien a separer une fois le bouton masque */
-    .header-divider {
-        display: none;
-    }
 }
 
 @media (max-width: 1200px) {
@@ -1197,7 +1279,18 @@ body {
     }
 
     .dashboard-content {
-        padding: 20px;
+        padding: 20px 20px 100px;
+    }
+
+    .publish-fab {
+        right: 18px;
+        bottom: 18px;
+    }
+
+    .publish-fab > summary {
+        width: 54px;
+        height: 54px;
+        font-size: 19px;
     }
 
     .stats-cards {
@@ -1215,6 +1308,11 @@ body {
 
     .username {
         display: none;
+    }
+
+    .header-brand {
+        width: 82px;
+        height: 30px;
     }
 
     /* Le titre reste, la surtitre passe a la trappe faute de place */

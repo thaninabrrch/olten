@@ -2,19 +2,97 @@
     /*
      | Barre laterale de l'espace connecte.
      |
-     | Chaque entree porte une icone qui lui est propre : avant, plusieurs
-     | liens partageaient l'icone du tableau de bord, ce qui rendait le menu
-     | illisible. L'etat actif est calcule comme avant, a une exception pres :
-     | « Mes commandes » testait request()->is('/mes-commandes*'), avec un
-     | slash initial que Laravel ne fait jamais correspondre — le lien n'etait
-     | donc jamais marque actif.
+     | Le menu etait une liste plate de dix-huit a vingt-trois entrees : il
+     | fallait faire defiler la colonne pour atteindre le bas. Les entrees sont
+     | desormais regroupees dans des sections repliables (<details>), ce qui
+     | ramene la barre a neuf lignes au repos. Aucun lien n'a disparu et aucune
+     | destination n'a change : seul le regroupement est nouveau.
      |
-     | Toutes les entrees sont visibles par tout le monde : seules les sections
-     | « Chauffeur VTC » et « Livreur » restent conditionnees, car elles n'ont
-     | aucun sens sans le role correspondant. Les routes, elles, gardent leurs
-     | middlewares : un lien peut donc mener a un refus d'acces.
+     | Une section s'ouvre d'elle-meme quand elle contient la page courante, et
+     | cette ouverture est calculee cote serveur : pas de clignotement au
+     | chargement. Le reste de l'etat (sections ouvertes a la main) est conserve
+     | d'une page a l'autre par le script en bas de fichier.
+     |
+     | « Mon compte » et « Se deconnecter » ne sont plus ici : ils vivent dans
+     | le menu utilisateur du header, visible depuis toutes les pages. Les
+     | garder aux deux endroits etait une redondance pure.
      */
-    $user = auth()->user();
+    $user     = auth()->user();
+    $approved = (bool) $user->is_approved;
+
+    /* Liens de premier niveau : les trois destinations les plus frequentes
+       restent accessibles en un clic, sans avoir a deplier quoi que ce soit. */
+    $raccourcis = [
+        ['Tableau de bord', 'fa-gauge-high',   url('/dashboard'),    request()->is('dashboard')],
+        ['Messages',        'fa-comment-dots', route('messages'),    request()->routeIs('messages*')],
+        ['Portefeuille',    'fa-wallet',       url('/portefeuille'), request()->routeIs('walt.index')],
+    ];
+
+    /* Sections repliables. Chaque entree : [libelle, icone, url, actif, verrouille] */
+    $sections = [];
+
+    $sections[] = [
+        'label' => 'Annonces',
+        'icon'  => 'fa-bullhorn',
+        'items' => [
+            ['Mes annonces',        'fa-list',        route('ads.index'),                   request()->routeIs('ads.index') || request()->routeIs('ads.edit'), false],
+            ['Déposer une annonce', 'fa-circle-plus', $approved ? route('ads.create') : '#', request()->routeIs('ads.create'), ! $approved],
+            ['Statistiques',        'fa-chart-line',  route('statistiques'),                request()->is('statistiques'), false],
+        ],
+    ];
+
+    $sections[] = [
+        'label' => 'Locations',
+        'icon'  => 'fa-calendar-check',
+        'items' => [
+            ['Réservations reçues', 'fa-calendar-plus',  url('/mes-reservations-recues'), request()->routeIs('bookings.receivedBookings'), false],
+            ['Mes réservations',    'fa-calendar-check', url('/mes-reservations'),        request()->routeIs('bookings.myBookings'), false],
+        ],
+    ];
+
+    $sections[] = [
+        'label' => 'Ma boutique',
+        'icon'  => 'fa-store',
+        'items' => [
+            ['Mes produits',      'fa-box',     route('seller.produits.index'), request()->is('vendeur/produits*'), false],
+            ['Mes ventes',        'fa-receipt', route('seller.sales'),          request()->is('vendeur/ventes*'), false],
+            ['Commandes clients', 'fa-inbox',   route('seller.clientOrders'),   request()->is('vendeur/commandes-clients*'), false],
+        ],
+    ];
+
+    $sections[] = [
+        'label' => 'Mes achats',
+        'icon'  => 'fa-bag-shopping',
+        'items' => [
+            ['Mes commandes', 'fa-bag-shopping', route('orders'),  request()->is('mes-commandes*'), false],
+            ['Favoris',       'fa-heart',        route('favoris'), request()->is('favoris'), false],
+        ],
+    ];
+
+    /* Livraison : tout le monde peut demander une livraison, seuls les livreurs
+       voient les missions. Les deux tenaient auparavant deux sections. */
+    $livraison = [
+        ['Demandes de livraison', 'fa-truck-ramp-box', $approved ? route('livreur.ads.index') : '#', request()->routeIs('livreur.ads.index'), ! $approved],
+    ];
+
+    if ($user->hasRole('livreur')) {
+        $livraison[] = ['Missions de livraison', 'fa-route',           route('livreur.missions'), request()->routeIs('livreur.missions') || request()->routeIs('livreur.demandes') || request()->routeIs('livreur.livraisons'), false];
+        $livraison[] = ['Livraisons terminées',  'fa-clipboard-check', route('liv_termine'),      request()->routeIs('liv_termine'), false];
+    }
+
+    $sections[] = ['label' => 'Livraison', 'icon' => 'fa-truck', 'items' => $livraison];
+
+    if ($user->is_vtc_driver) {
+        $sections[] = [
+            'label' => 'Chauffeur VTC',
+            'icon'  => 'fa-car-side',
+            'items' => [
+                ['Carte VTC',         'fa-id-card',          route('livreur.carte.vtc'),  request()->routeIs('livreur.carte.vtc'), false],
+                ['Mes trajets',       'fa-map-location-dot', route('covoiturage.index'),  request()->routeIs('covoiturage.index'), false],
+                ['Ajouter un trajet', 'fa-circle-plus',      route('covoiturage.create'), request()->routeIs('covoiturage.create'), false],
+            ],
+        ];
+    }
 @endphp
 
 <aside class="connected-sidebar">
@@ -28,195 +106,80 @@
 
     <nav class="sidebar-menu" aria-label="Navigation principale">
 
-        {{-- ══ Principal ══ --}}
-        <p class="menu-section">Principal</p>
-
-        <ul>
-            <li class="{{ request()->is('dashboard') ? 'active' : '' }}">
-                <a href="{{ url('/dashboard') }}">
-                    <i class="fa-solid fa-gauge-high"></i>
-                    <span>Tableau de bord</span>
-                </a>
-            </li>
-
-            <li class="{{ request()->is('mes-commandes*') ? 'active' : '' }}">
-                <a href="{{ route('orders') }}">
-                    <i class="fa-solid fa-bag-shopping"></i>
-                    <span>Mes commandes</span>
-                </a>
-            </li>
-
-            <li class="{{ Route::is('bookings.receivedBookings') ? 'active' : '' }}">
-                <a href="{{ url('/mes-reservations-recues') }}">
-                    <i class="fa-solid fa-calendar-plus"></i>
-                    <span>Réservations reçues</span>
-                </a>
-            </li>
-
-            <li class="{{ Route::is('bookings.myBookings') ? 'active' : '' }}">
-                <a href="{{ url('/mes-reservations') }}">
-                    <i class="fa-solid fa-calendar-check"></i>
-                    <span>Mes réservations</span>
-                </a>
-            </li>
-
-            <li class="{{ request()->routeIs('messages*') ? 'active' : '' }}">
-                <a href="{{ route('messages') }}">
-                    <i class="fa-solid fa-comment-dots"></i>
-                    <span>Messages</span>
-                </a>
-            </li>
-
-            <li class="{{ Route::is('walt.index') ? 'active' : '' }}">
-                <a href="{{ url('/portefeuille') }}">
-                    <i class="fa-solid fa-wallet"></i>
-                    <span>Portefeuille</span>
-                </a>
-            </li>
-        </ul>
-
-        {{-- ══ Ma boutique ══ --}}
-        <p class="menu-section">Ma boutique</p>
-
-        <ul>
-            <li class="{{ request()->is('vendeur/produits*') ? 'active' : '' }}">
-                <a href="{{ route('seller.produits.index') }}">
-                    <i class="fa-solid fa-box"></i>
-                    <span>Mes produits</span>
-                </a>
-            </li>
-
-            <li class="{{ request()->is('vendeur/ventes*') ? 'active' : '' }}">
-                <a href="{{ route('seller.sales') }}">
-                    <i class="fa-solid fa-receipt"></i>
-                    <span>Mes ventes</span>
-                </a>
-            </li>
-
-            <li class="{{ request()->is('vendeur/commandes-clients*') ? 'active' : '' }}">
-                <a href="{{ route('seller.clientOrders') }}">
-                    <i class="fa-solid fa-inbox"></i>
-                    <span>Commandes clients</span>
-                </a>
-            </li>
-        </ul>
-
-        {{-- ══ Annonces ══ --}}
-        <p class="menu-section">Annonces</p>
-
-        <ul>
-            <li class="{{ Route::is('ads.create') ? 'active' : '' }}">
-                <a href="{{ $user->is_approved ? route('ads.create') : '#' }}"
-                   class="{{ $user->is_approved ? '' : 'is-locked' }}">
-                    <i class="fa-solid fa-circle-plus"></i>
-                    <span>Déposer une annonce</span>
-                </a>
-            </li>
-
-            <li class="{{ Route::is('ads.index') || Route::is('ads.edit') ? 'active' : '' }}">
-                <a href="{{ route('ads.index') }}">
-                    <i class="fa-solid fa-bullhorn"></i>
-                    <span>Mes annonces</span>
-                </a>
-            </li>
-
-            <li class="{{ request()->is('statistiques') ? 'active' : '' }}">
-                <a href="{{ route('statistiques') }}">
-                    <i class="fa-solid fa-chart-line"></i>
-                    <span>Statistiques</span>
-                </a>
-            </li>
-        </ul>
-
-        {{-- ══ Mes envies ══ --}}
-        <p class="menu-section">Mes envies</p>
-
-        <ul>
-            <li class="{{ request()->is('favoris') ? 'active' : '' }}">
-                <a href="{{ route('favoris') }}">
-                    <i class="fa-solid fa-heart"></i>
-                    <span>Favoris</span>
-                </a>
-            </li>
-
-            <li class="{{ request()->routeIs('livreur.ads.index') ? 'active' : '' }}">
-                <a href="{{ $user->is_approved ? route('livreur.ads.index') : '#' }}"
-                   class="{{ $user->is_approved ? '' : 'is-locked' }}">
-                    <i class="fa-solid fa-truck-ramp-box"></i>
-                    <span>Demandes de livraison</span>
-                </a>
-            </li>
-        </ul>
-
-        {{-- ══ Chauffeur VTC ══ --}}
-        @if($user->is_vtc_driver)
-            <p class="menu-section">Chauffeur VTC</p>
-
-            <ul>
-                <li class="{{ request()->routeIs('livreur.carte.vtc') ? 'active' : '' }}">
-                    <a href="{{ route('livreur.carte.vtc') }}">
-                        <i class="fa-solid fa-id-card"></i>
-                        <span>Carte VTC</span>
+        {{-- Acces directs --}}
+        <ul class="menu-shortcuts">
+            @foreach ($raccourcis as [$label, $icon, $url, $active])
+                <li class="{{ $active ? 'active' : '' }}">
+                    <a href="{{ $url }}">
+                        <i class="fa-solid {{ $icon }}"></i>
+                        <span>{{ $label }}</span>
                     </a>
                 </li>
-
-                <li class="{{ request()->routeIs('covoiturage.index') ? 'active' : '' }}">
-                    <a href="{{ route('covoiturage.index') }}">
-                        <i class="fa-solid fa-car-side"></i>
-                        <span>Mes trajets</span>
-                    </a>
-                </li>
-
-                <li class="{{ request()->routeIs('covoiturage.create') ? 'active' : '' }}">
-                    <a href="{{ route('covoiturage.create') }}">
-                        <i class="fa-solid fa-map-location-dot"></i>
-                        <span>Ajouter un trajet</span>
-                    </a>
-                </li>
-            </ul>
-        @endif
-
-        {{-- ══ Livreur ══ --}}
-        @if($user->hasRole('livreur'))
-            <p class="menu-section">Livreur</p>
-
-            <ul>
-                <li class="{{ request()->routeIs('livreur.missions') || request()->routeIs('livreur.demandes') || request()->routeIs('livreur.livraisons') ? 'active' : '' }}">
-                    <a href="{{ route('livreur.missions') }}">
-                        <i class="fa-solid fa-route"></i>
-                        <span>Missions de livraison</span>
-                    </a>
-                </li>
-
-                <li class="{{ request()->routeIs('liv_termine') ? 'active' : '' }}">
-                    <a href="{{ route('liv_termine') }}">
-                        <i class="fa-solid fa-clipboard-check"></i>
-                        <span>Livraisons terminées</span>
-                    </a>
-                </li>
-            </ul>
-        @endif
-
-        {{-- ══ Compte ══ --}}
-        <p class="menu-section">Compte</p>
-
-        <ul>
-            <li class="{{ request()->is('profile') ? 'active' : '' }}">
-                <a href="{{ route('profile') }}">
-                    <i class="fa-solid fa-circle-user"></i>
-                    <span>Mon compte</span>
-                </a>
-            </li>
-
-            <li class="sidebar-logout">
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                        <span>Se déconnecter</span>
-                    </button>
-                </form>
-            </li>
+            @endforeach
         </ul>
+
+        <p class="menu-section">Mon activité</p>
+
+        {{-- Sections repliables --}}
+        @foreach ($sections as $section)
+            @php
+                $open = collect($section['items'])->contains(fn ($i) => $i[3]);
+                $key  = \Illuminate\Support\Str::slug($section['label']);
+            @endphp
+
+            <details class="menu-group" data-group="{{ $key }}" @if($open) open @endif>
+                <summary>
+                    <i class="fa-solid {{ $section['icon'] }}"></i>
+                    <span>{{ $section['label'] }}</span>
+                    <i class="fa-solid fa-chevron-down menu-caret" aria-hidden="true"></i>
+                </summary>
+
+                <ul>
+                    @foreach ($section['items'] as [$label, $icon, $url, $active, $locked])
+                        <li class="{{ $active ? 'active' : '' }}">
+                            <a href="{{ $url }}" class="{{ $locked ? 'is-locked' : '' }}"
+                               @if($locked) aria-disabled="true" tabindex="-1" @endif>
+                                <i class="fa-solid {{ $icon }}"></i>
+                                <span>{{ $label }}</span>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            </details>
+        @endforeach
     </nav>
 </aside>
+
+<script>
+    // Memorise les sections ouvertes d'une page a l'autre. La section qui
+    // contient la page courante est ouverte par le serveur : on ne la referme
+    // jamais, meme si l'utilisateur l'avait repliee ailleurs.
+    (function () {
+        var CLE    = 'olten.sidebar.groups';
+        var groups = document.querySelectorAll('.connected-sidebar .menu-group');
+        if (!groups.length) return;
+
+        var ouverts;
+        try { ouverts = JSON.parse(localStorage.getItem(CLE)) || []; } catch (e) { ouverts = []; }
+
+        groups.forEach(function (g) {
+            var cle = g.dataset.group;
+
+            // Ouverture imposee par le serveur (section de la page courante)
+            if (!g.hasAttribute('open') && ouverts.indexOf(cle) !== -1) {
+                g.setAttribute('open', '');
+            }
+
+            g.addEventListener('toggle', function () {
+                var liste;
+                try { liste = JSON.parse(localStorage.getItem(CLE)) || []; } catch (e) { liste = []; }
+
+                var i = liste.indexOf(cle);
+                if (g.open && i === -1) liste.push(cle);
+                if (!g.open && i !== -1) liste.splice(i, 1);
+
+                try { localStorage.setItem(CLE, JSON.stringify(liste)); } catch (e) {}
+            });
+        });
+    })();
+</script>

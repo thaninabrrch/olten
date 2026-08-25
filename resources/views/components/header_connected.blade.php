@@ -6,15 +6,15 @@
      | toujours ou l'on se trouve, sans qu'aucune page ait a le lui passer.
      | Les pages non listees retombent sur « Mon espace ».
      |
-     | x-user-dropdown est un composant partage avec le header public : il est
-     | inclus tel quel, sans modification, pour ne pas impacter le site.
+     | x-user-dropdown est partage avec le header public. Il est appele ici en
+     | mode « compact » : la barre laterale couvre deja la navigation, le menu
+     | ne garde donc que ce qui lui est propre (identite, retour au site
+     | public, compte, deconnexion).
      |
-     | Les actions de publication ne sont plus filtrees par role : elles sont
-     | regroupees dans un menu « Publier » ouvert a tous, que is_approved
-     | verrouille tant que le compte n'est pas valide.
+     | Les actions de publication ont quitte le header : elles vivent dans la
+     | pastille flottante (<x-publish-fab />, appelee par le layout), qui reste
+     | atteignable quelle que soit la largeur d'ecran.
      */
-    $user = auth()->user();
-
     $pages = [
         'dashboard'                 => ['Tableau de bord', 'Vue d\'ensemble'],
         'seller.produits.index'     => ['Mes produits', 'Vendeur'],
@@ -63,54 +63,6 @@
     </div>
 
     <div class="header-right">
-        {{-- Un seul bouton porte les deux actions de publication : le header
-             reste lisible, et les deux restent joignables depuis n'importe
-             quelle page. <details> gere l'ouverture, aucun JS n'est requis
-             pour cela — le script ne sert qu'a refermer le menu. --}}
-        <details class="header-publish {{ $user->is_approved ? '' : 'is-locked' }}">
-            <summary>
-                <i class="fa-solid fa-plus"></i>
-                <span>Publier</span>
-            </summary>
-
-            <div class="header-publish-menu">
-                <a href="{{ route('ads.create') }}">
-                    <i class="fa-solid fa-bullhorn"></i>
-                    <span>
-                        <strong>Déposer une annonce</strong>
-                        Mettre un bien en location
-                    </span>
-                </a>
-
-                <a href="{{ route('seller.produits.create') }}">
-                    <i class="fa-solid fa-box"></i>
-                    <span>
-                        <strong>Ajouter un produit</strong>
-                        Mettre un article en vente
-                    </span>
-                </a>
-            </div>
-        </details>
-
-        <span class="header-divider" aria-hidden="true"></span>
-
-        <x-user-dropdown />
+        <x-user-dropdown compact />
     </div>
 </header>
-
-<script>
-    // Le menu « Publier » s'ouvre tout seul (<details>) ; ce script ne gere
-    // que sa fermeture, au clic a l'exterieur ou sur Echap.
-    (function () {
-        const menu = document.querySelector('.header-publish');
-        if (!menu) return;
-
-        document.addEventListener('click', function (e) {
-            if (!menu.contains(e.target)) menu.removeAttribute('open');
-        });
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') menu.removeAttribute('open');
-        });
-    })();
-</script>
