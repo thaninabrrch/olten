@@ -1,181 +1,448 @@
 @extends('layouts.connected')
 @section('title', 'Tableau de bord | ' . config('app.name'))
 
+@php
+    /*
+     | Toutes les valeurs viennent du controleur, calculees sur la base :
+     |   - revenusMensuels : six mois glissants, trois sources de revenus
+     |   - repartition     : total par source sur cette meme periode
+     |   - septJours       : encaissements des sept derniers jours
+     |
+     | Un indicateur a zero signifie « aucune activite de ce type » : c'est une
+     | information juste. Les anciennes pastilles de tendance (« +12% »,
+     | « ★ 4.9 ») etaient ecrites en dur et ne mesuraient rien : elles ont ete
+     | retirees plutot que d'afficher un chiffre invente.
+     */
+    $prenom = trim(explode(' ', trim($user->name ?? ''))[0] ?? '') ?: 'bienvenue';
+    $roles  = $user->roles->pluck('display_name')->filter()->values();
+    $note   = is_numeric($noteClient ?? null) ? round((float) $noteClient, 1) : null;
+
+    $mensuel   = $revenusMensuels ?? ['labels' => [], 'locations' => [], 'ventes' => [], 'livraisons' => []];
+    $sources   = collect($repartition ?? []);
+    $periode   = (float) ($revenusPeriode ?? 0);
+    $semaine   = collect($septJours ?? []);
+    $maxJour   = (float) ($semaine->max() ?: 0);
+    $totalSem  = (float) $semaine->sum();
+    $aDesRevenus = $periode > 0;
+
+    $jours = ['Mon' => 'Lun', 'Tue' => 'Mar', 'Wed' => 'Mer', 'Thu' => 'Jeu',
+              'Fri' => 'Ven', 'Sat' => 'Sam', 'Sun' => 'Dim'];
+
+    $raccourcis = [
+        ['Mes annonces',     route('ads.index'),             'fa-bullhorn'],
+        ['Mes produits',     route('seller.produits.index'), 'fa-box'],
+        ['Mes réservations', url('/mes-reservations'),       'fa-calendar-check'],
+        ['Mes commandes',    route('orders'),                'fa-bag-shopping'],
+        ['Messages',         route('messages'),              'fa-comment-dots'],
+        ['Portefeuille',     url('/portefeuille'),           'fa-wallet'],
+    ];
+
+    $teintes = ['Locations' => '#1d6ad4', 'Ventes' => '#ff3c00', 'Livraisons' => '#1a8245'];
+@endphp
+
 @section('content')
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+<div class="sp-page">
 
-        <header class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-            <div class="space-y-2">
-                <div class="breadcrumb">
-                    <a href="#">Accueil</a>
-                    <span>></span>
-                    <span>Tableau de bord</span>
-                </div>
-                <h1 class="text-5xl font-black text-slate-900 tracking-tighter">
-                    Hello, <span class="text-[#ff3c00]">{{ explode(' ', $user->name)[0] }}</span>.
-                </h1>
+    {{-- Fil d'ariane --}}
+    <nav class="sp-crumbs" aria-label="Fil d'ariane">
+        <a href="{{ url('/') }}">Accueil</a>
+        <i class="fa-solid fa-chevron-right"></i>
+        <span class="is-current">Tableau de bord</span>
+    </nav>
+
+    {{-- En-tete --}}
+    <header class="sp-head">
+        <div>
+            <h1 class="sp-title">Bonjour {{ $prenom }}</h1>
+            <p class="sp-subtitle">Voici l'essentiel de votre activité sur Olten.</p>
+        </div>
+
+        @if($roles->count())
+            <div class="sp-role-badges">
+                @foreach($roles as $role)
+                    <span class="sp-status is-confirmed">{{ $role }}</span>
+                @endforeach
             </div>
+        @endif
+    </header>
 
-            <div
-                class="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm self-start lg:self-auto">
-                @if ($user->hasRole('livreur'))
-                    <div
-                        class="flex items-center gap-2 px-4 py-2 bg-orange-50 text-[#ff3c00] rounded-xl text-[10px] font-black uppercase border border-orange-100">
-                        <i class="fa-solid fa-bicycle"></i> Livreur
-                    </div>
-                @endif
-                <div
-                    class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase shadow-lg shadow-blue-200">
-                    <i class="fa-solid fa-key"></i> {{ Auth::user()->roles->pluck('name')->reject(fn($role) => $role === 'livreur')->first() }}
+    {{-- ══ Synthese des six derniers mois ══ --}}
+    <div class="sp-balance">
+        <div>
+            <span class="sp-balance-label">Encaissé sur 6 mois</span>
+            <span class="sp-balance-value">{{ number_format($periode, 2, ',', ' ') }} €</span>
+            <span class="sp-balance-note">
+                Paiements confirmés sur vos locations, vos ventes et vos livraisons,
+                de {{ $mensuel['labels'][0] ?? '—' }} à {{ end($mensuel['labels']) ?: '—' }}.
+            </span>
+        </div>
+
+        <div class="sp-balance-split">
+            @foreach($sources as $nom => $montant)
+                <div>
+                    <span class="sp-split-dot" style="background: {{ $teintes[$nom] ?? '#fff' }}"></span>
+                    <span class="sp-split-value">{{ number_format((float) $montant, 0, ',', ' ') }} €</span>
+                    <span class="sp-split-label">{{ $nom }}</span>
                 </div>
-            </div>
-        </header>
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-            <!-- Left Column -->
-            <div class="lg:col-span-8 space-y-6">
-
-                <!-- Mini Stats -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-                    @if ($user->hasRole('livreur'))
-                        <x-stat-mini title="Revenus" :value="number_format($revenusTotal, 0) . '€'" trend="+12%" color="orange" icon="fa-wallet" />
-                        <x-stat-mini title="Courses" :value="$totalCourses" trend="Top" color="orange" icon="fa-truck-fast" />
-                    @endif
-                    @if ($user->hasRole('locateur'))
-                    <x-stat-mini title="Annonces" :value="$activeAds" trend="Live" color="blue" icon="fa-layer-group" />
-                    <x-stat-mini title="Vues" :value="$totalViews" trend="+5.2%" color="blue" icon="fa-chart-line" />
-                    @endif
-                    @if ($user->hasRole('vendeur'))
-                    <x-stat-mini title="Commandes" :value="$totalCommandes" trend="Live" color="blue" icon="fa-layer-group" />
-                    <x-stat-mini title="Ventes" :value="$ventesTotal" trend="+5.2%" color="blue" icon="fa-chart-line" />
-                    @endif
-                    <x-stat-mini title="Note" :value="$noteClient ?? '5.0'" trend="★ 4.9" color="yellow" icon="fa-star" />
-                    <x-stat-mini title="Favoris" :value="$favoritesCount ?? '0'" trend="New" color="pink" icon="fa-heart" />
-                </div>
-
-                <!-- Weekly Performance Graph -->
-                <div class="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-[0_4px_25px_rgba(0,0,0,0.02)]">
-                    <div class="flex items-center justify-between mb-12">
-                        <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest italic">
-                            Performance Hebdomadaire
-                        </h3>
-                        <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300">
-                            <i class="fa-solid fa-chart-line"></i>
-                        </div>
-                    </div>
-
-
-                    <div class="h-64 flex items-end justify-between gap-3 px-4">
-                        @foreach ($graphData as $day => $total)
-                            @php $isToday = $day === \Carbon\Carbon::today()->format('Y-m-d'); @endphp
-                            <div class="flex-1 flex flex-col items-center group h-full justify-end">
-                                <div class="w-full relative rounded-t-xl transition-all duration-700 {{ $isToday ? 'bg-[#ff3c00] shadow-[0_10px_20px_rgba(255,60,0,0.2)]' : 'bg-slate-50 group-hover:bg-slate-100' }}"
-                                    style="height: {{ max(($total / 200) * 100, 10) }}%">
-                                    <div
-                                        class="absolute -top-10 left-1/2 -translate-x-1/2 scale-0 group-hover:scale-100 transition-all bg-slate-900 text-white text-[9px] px-2 py-1 rounded font-bold z-10">
-                                        {{ $total }}€
-                                    </div>
-                                </div>
-                                <span
-                                    class="text-[9px] font-black text-slate-400 mt-4 uppercase">{{ substr($day, -2) }}</span>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- Right Column -->
-            <div class="lg:col-span-4 flex flex-col gap-6">
-
-                <!-- Activity Feed -->
-                <div
-                    class="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-[0_10px_40px_rgba(0,0,0,0.02)] flex flex-col flex-1 overflow-hidden">
-                    <div class="flex items-center justify-between mb-10 shrink-0">
-                        <div class="flex flex-col">
-                            <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Flux d'activité</h3>
-                            <span class="text-[9px] font-bold text-[#ff3c00] animate-pulse uppercase tracking-tighter">Live
-                                Updates</span>
-                        </div>
-                        <div class="relative">
-                            <div
-                                class="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 cursor-default">
-                                <i class="fa-solid fa-bell text-slate-400 text-xs"></i>
-                            </div>
-                            <span class="absolute -top-1 -right-1 flex h-3 w-3">
-                                <span
-                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span
-                                    class="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-white"></span>
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="flex-grow overflow-y-auto pr-2 custom-scrollbar space-y-8 relative">
-                        @forelse($recentActivities ?? [] as $activity)
-                            <div class="relative flex gap-5 items-center">
-                                <div class="shrink-0 relative z-10">
-                                    <div
-                                        class="w-11 h-11 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center">
-                                        @php
-                                            $isMoney =
-                                                str_contains(strtolower($activity['description']), '€') ||
-                                                str_contains(strtolower($activity['description']), 'revenu');
-                                            $icon = $isMoney ? 'fa-wallet text-green-500' : 'fa-bolt text-orange-500';
-                                        @endphp
-                                        <i class="fa-solid {{ $icon }} text-[12px]"></i>
-                                    </div>
-                                </div>
-                                <div class="min-w-0 flex-1 border-b border-slate-50 pb-4 last:border-none">
-                                    <p class="text-[12px] font-bold text-slate-800 leading-tight truncate">
-                                        {{ $activity['description'] }}
-                                    </p>
-                                    <p
-                                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 opacity-70">
-                                        {{ $activity['time'] }}
-                                    </p>
-                                </div>
-                            </div>
-                        @empty
-                            <div class="h-full flex flex-col items-center justify-center text-center py-20">
-                                <div class="relative mb-6">
-                                    <div
-                                        class="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center border border-dashed border-slate-200">
-                                        <i class="fa-solid fa-bell-slash text-slate-300 text-3xl"></i>
-                                    </div>
-                                </div>
-                                <h4 class="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">Aucune notification
-                                </h4>
-                                <p class="text-[10px] text-slate-300 mt-2 font-medium italic">Il n’y a pas d’activité
-                                    récente à afficher.</p>
-                            </div>
-                        @endforelse
-                    </div>
-                </div>
-
-                <!-- Last Mission -->
-                @if ($user->hasRole('livreur') && $derniereMission)
-                    <div class="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden">
-                        <div class="absolute top-0 right-0 p-4 opacity-10">
-                            <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 24 24">
-                                <path
-                                    d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z" />
-                            </svg>
-                        </div>
-                        <h3 class="text-orange-500 font-bold text-xs uppercase tracking-widest mb-4">Dernière course</h3>
-                        <p class="text-2xl font-bold mb-1">{{ number_format($derniereMission->prix_total_affiche, 2) }} €
-                        </p>
-                        <p class="text-slate-400 text-sm mb-6">
-                            {{ $derniereMission->restaurant_nom ?? 'Livraison effectuée' }}</p>
-                        <button
-                            class="w-full py-4 bg-orange-600 hover:bg-[#ff3c00] rounded-2xl font-bold text-sm transition-all">Détails
-                            de la mission</button>
-                    </div>
-                @endif
-
-            </div>
-
+            @endforeach
         </div>
     </div>
+
+    {{-- ══ Audience ══ --}}
+    <p class="sp-section-title">Mon audience</p>
+
+    <div class="sp-stats">
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-brand"><i class="fa-solid fa-bullhorn"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ $activeAds }}</span>
+                <span class="sp-stat-label">Annonce{{ $activeAds > 1 ? 's' : '' }} publiée{{ $activeAds > 1 ? 's' : '' }}</span>
+            </div>
+        </div>
+
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-blue"><i class="fa-regular fa-eye"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ $totalViews }}</span>
+                <span class="sp-stat-label">Vue{{ $totalViews > 1 ? 's' : '' }} cumulées</span>
+            </div>
+        </div>
+
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-red"><i class="fa-solid fa-heart"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ $favoritesCount }}</span>
+                <span class="sp-stat-label">Favori{{ $favoritesCount > 1 ? 's' : '' }} enregistré{{ $favoritesCount > 1 ? 's' : '' }}</span>
+            </div>
+        </div>
+
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-green"><i class="fa-solid fa-star"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ $note !== null ? $note : '—' }}</span>
+                <span class="sp-stat-label">
+                    Note moyenne
+                    <small>sur 5</small>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    {{-- ══ Commerce ══ --}}
+    <p class="sp-section-title">Mon activité commerciale</p>
+
+    <div class="sp-stats">
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-green"><i class="fa-solid fa-euro-sign"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ number_format((float) $ventesTotal, 2, ',', ' ') }} €</span>
+                <span class="sp-stat-label">Chiffre d'affaires produits</span>
+            </div>
+        </div>
+
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-brand"><i class="fa-solid fa-bag-shopping"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ $totalCommandes }}</span>
+                <span class="sp-stat-label">Commande{{ $totalCommandes > 1 ? 's' : '' }} reçue{{ $totalCommandes > 1 ? 's' : '' }}</span>
+            </div>
+        </div>
+
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-blue"><i class="fa-solid fa-truck-fast"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ $totalCourses }}</span>
+                <span class="sp-stat-label">Course{{ $totalCourses > 1 ? 's' : '' }} de livraison</span>
+            </div>
+        </div>
+
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-red"><i class="fa-solid fa-wallet"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ number_format((float) $revenusTotal, 2, ',', ' ') }} €</span>
+                <span class="sp-stat-label">Revenus de livraison</span>
+            </div>
+        </div>
+    </div>
+
+    {{-- ══ Graphiques ══ --}}
+    <div class="sp-dash">
+
+        <div class="sp-dash-main">
+
+            {{-- Courbe des revenus --}}
+            <section class="sp-panel">
+                <div class="sp-toolbar">
+                    <div>
+                        <h2 class="sp-toolbar-title">Évolution des revenus</h2>
+                        <span class="sp-count">Six derniers mois, par source</span>
+                    </div>
+                </div>
+
+                @if($aDesRevenus)
+                    <div class="sp-chart is-tall">
+                        <canvas id="chartRevenus"></canvas>
+                    </div>
+                @else
+                    <p class="sp-feed-empty">
+                        Aucun encaissement sur les six derniers mois : la courbe apparaîtra dès votre premier paiement.
+                    </p>
+                @endif
+            </section>
+
+            {{-- Semaine --}}
+            <section class="sp-panel">
+                <div class="sp-toolbar">
+                    <div>
+                        <h2 class="sp-toolbar-title">Cette semaine</h2>
+                        <span class="sp-count">
+                            {{ number_format($totalSem, 2, ',', ' ') }} € sur les 7 derniers jours
+                        </span>
+                    </div>
+                </div>
+
+                <div class="sp-bars">
+                    @foreach($semaine as $jour => $montant)
+                        @php
+                            $date    = \Carbon\Carbon::parse($jour);
+                            $isToday = $date->isToday();
+                            // Hauteur relative au meilleur jour, pas a un palier fixe
+                            $hauteur = $maxJour > 0 ? max(($montant / $maxJour) * 100, 3) : 3;
+                        @endphp
+
+                        <div class="sp-bar {{ $isToday ? 'is-today' : '' }}">
+                            <span class="sp-bar-value">{{ number_format((float) $montant, 0, ',', ' ') }} €</span>
+                            <span class="sp-bar-fill" style="height: {{ $hauteur }}%"></span>
+                            <span class="sp-bar-day">{{ $jours[$date->format('D')] ?? $date->format('d') }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+
+            {{-- Raccourcis --}}
+            <section class="sp-panel">
+                <div class="sp-toolbar">
+                    <div>
+                        <h2 class="sp-toolbar-title">Accès rapides</h2>
+                        <span class="sp-count">Les pages que vous ouvrez le plus souvent</span>
+                    </div>
+                </div>
+
+                <div class="sp-shortcuts">
+                    @foreach($raccourcis as [$libelle, $url, $icone])
+                        <a href="{{ $url }}" class="sp-shortcut">
+                            <i class="fa-solid {{ $icone }}"></i>
+                            <span>{{ $libelle }}</span>
+                        </a>
+                    @endforeach
+                </div>
+            </section>
+        </div>
+
+        <div class="sp-dash-side">
+
+            {{-- Repartition --}}
+            <section class="sp-panel">
+                <div class="sp-toolbar">
+                    <div>
+                        <h2 class="sp-toolbar-title">Répartition</h2>
+                        <span class="sp-count">D'où viennent vos revenus</span>
+                    </div>
+                </div>
+
+                @if($aDesRevenus)
+                    <div class="sp-donut">
+                        <canvas id="chartRepartition"></canvas>
+                    </div>
+
+                    <ul class="sp-legend">
+                        @foreach($sources as $nom => $montant)
+                            @php $part = $periode > 0 ? round(($montant / $periode) * 100) : 0; @endphp
+                            <li>
+                                <span class="sp-legend-dot" style="background: {{ $teintes[$nom] ?? '#adb5bd' }}"></span>
+                                <span class="sp-legend-name">{{ $nom }}</span>
+                                <span class="sp-legend-value">{{ number_format((float) $montant, 2, ',', ' ') }} €</span>
+                                <span class="sp-legend-part">{{ $part }} %</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                @else
+                    <p class="sp-feed-empty">Rien à répartir pour l'instant.</p>
+                @endif
+            </section>
+
+            {{-- Activité --}}
+            <section class="sp-panel">
+                <div class="sp-toolbar">
+                    <div>
+                        <h2 class="sp-toolbar-title">Activité récente</h2>
+                        <span class="sp-count">{{ count($recentActivities ?? []) }} événement{{ count($recentActivities ?? []) > 1 ? 's' : '' }}</span>
+                    </div>
+                </div>
+
+                @if(count($recentActivities ?? []))
+                    <ul class="sp-feed">
+                        @foreach($recentActivities as $activity)
+                            <li>
+                                <span class="sp-feed-dot"></span>
+                                <div>
+                                    <strong>{{ $activity['description'] }}</strong>
+                                    <span>{{ $activity['time'] }}</span>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                @else
+                    <p class="sp-feed-empty">Aucune activité récente à afficher.</p>
+                @endif
+            </section>
+
+            {{-- Dernière course --}}
+            @if($derniereMission)
+                <section class="sp-panel sp-last">
+                    <span class="sp-last-label">Dernière course</span>
+
+                    <span class="sp-last-value">
+                        {{ number_format((float) $derniereMission->total_price, 2, ',', ' ') }} €
+                    </span>
+
+                    <span class="sp-last-route">
+                        {{ $derniereMission->pickup_address ?: 'Départ non précisé' }}
+                        →
+                        {{ $derniereMission->delivery_address ?: 'Arrivée non précisée' }}
+                    </span>
+
+                    <a href="{{ route('liv_termine') }}" class="sp-last-link">Voir mes livraisons</a>
+                </section>
+            @endif
+        </div>
+    </div>
+</div>
+
+@if($aDesRevenus)
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof Chart === 'undefined') return;
+
+            const donnees = @json($mensuel);
+            const sources = @json($sources);
+            const teintes = @json($teintes);
+
+            const euros = (v) => new Intl.NumberFormat('fr-FR', {
+                style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
+            }).format(v);
+
+            // ── Courbe des revenus par source ──
+            const zone = document.getElementById('chartRevenus');
+
+            if (zone) {
+                const ctx = zone.getContext('2d');
+
+                const degrade = (couleur) => {
+                    const g = ctx.createLinearGradient(0, 0, 0, 300);
+                    g.addColorStop(0, couleur + '38');
+                    g.addColorStop(1, couleur + '00');
+                    return g;
+                };
+
+                const series = [
+                    ['Locations', donnees.locations, teintes.Locations],
+                    ['Ventes', donnees.ventes, teintes.Ventes],
+                    ['Livraisons', donnees.livraisons, teintes.Livraisons],
+                ].filter(([, valeurs]) => (valeurs || []).some(v => Number(v) > 0));
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: donnees.labels,
+                        datasets: series.map(([nom, valeurs, couleur]) => ({
+                            label: nom,
+                            data: valeurs,
+                            borderColor: couleur,
+                            backgroundColor: degrade(couleur),
+                            pointBackgroundColor: couleur,
+                            pointRadius: 3,
+                            pointHoverRadius: 6,
+                            borderWidth: 2,
+                            tension: .35,
+                            fill: true,
+                        })),
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                align: 'end',
+                                labels: {
+                                    usePointStyle: true, pointStyle: 'circle',
+                                    boxWidth: 8, padding: 18,
+                                    color: '#6c757d', font: { size: 12, weight: '500' },
+                                },
+                            },
+                            tooltip: {
+                                backgroundColor: '#16191d',
+                                padding: 12, cornerRadius: 10, usePointStyle: true,
+                                callbacks: {
+                                    label: (c) => ' ' + c.dataset.label + ' : ' + euros(c.parsed.y),
+                                },
+                            },
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                border: { display: false },
+                                ticks: { color: '#adb5bd', font: { size: 11 } },
+                            },
+                            y: {
+                                beginAtZero: true,
+                                border: { display: false },
+                                grid: { color: '#f0f1f3' },
+                                ticks: {
+                                    color: '#adb5bd', font: { size: 11 },
+                                    callback: (v) => euros(v),
+                                },
+                            },
+                        },
+                    },
+                });
+            }
+
+            // ── Répartition par source ──
+            const part = document.getElementById('chartRepartition');
+
+            if (part) {
+                const noms = Object.keys(sources);
+
+                new Chart(part.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: noms,
+                        datasets: [{
+                            data: noms.map(n => sources[n]),
+                            backgroundColor: noms.map(n => teintes[n] || '#adb5bd'),
+                            borderWidth: 0,
+                            hoverOffset: 6,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '68%',
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#16191d',
+                                padding: 12, cornerRadius: 10,
+                                callbacks: { label: (c) => ' ' + c.label + ' : ' + euros(c.parsed) },
+                            },
+                        },
+                    },
+                });
+            }
+        });
+    </script>
+@endif
 @endsection

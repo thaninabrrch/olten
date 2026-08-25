@@ -1,229 +1,240 @@
 @extends('layouts.connected')
 @section('title', 'Modifier une annonce - Olten')
 
-@section('content')
-
-<div class="breadcrumb">
-    <a href="index.html">Accueil</a>
-    <span>></span>
-    <span>Modifier une annonce</span>
-</div>
 @php
-    use Carbon\Carbon;
+    $today = now()->format('Y-m-d');
+
+    $availableFrom  = optional($ad->available_from)->format('Y-m-d');
+    $availableUntil = optional($ad->available_until)->format('Y-m-d');
+
+    // Une annonce deja commencee garde sa date de debut comme minimum
+    $minFrom = ($availableFrom && $availableFrom < $today) ? $availableFrom : $today;
 @endphp
-<h1>Modifier une annonce</h1>
 
-<form action="{{ route('ads.update', $ad) }}" method="POST" enctype="multipart/form-data" id="annonceForm">
-    @csrf
-    @method('PUT')
-    @if ($errors->any())
-        <div class="alert alert-danger">
-            <ul>
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+@section('content')
+<div class="sp-page">
+
+    {{-- Fil d'ariane --}}
+    <nav class="sp-crumbs" aria-label="Fil d'ariane">
+        <a href="{{ url('/') }}">Accueil</a>
+        <i class="fa-solid fa-chevron-right"></i>
+        <a href="{{ route('ads.index') }}">Mes annonces</a>
+        <i class="fa-solid fa-chevron-right"></i>
+        <span class="is-current">Modifier</span>
+    </nav>
+
+    {{-- En-tete --}}
+    <header class="sp-head">
+        <div>
+            <h1 class="sp-title">Modifier l'annonce</h1>
+            <p class="sp-subtitle">{{ $ad->title }}</p>
         </div>
-    @endif
 
-    <!-- SECTION INFORMATIONS -->
-    <div class="form-container">
-        <div class="form-section-header">
-            <div class="d-flex justify-content-between flex-wrap w-100">
-                <div class="form-section-icon">
-                    <i class="fa-solid fa-file-lines"></i>
+        <a href="{{ route('ads.show', $ad) }}" class="sp-btn-primary">
+            Voir l'annonce
+        </a>
+    </header>
+
+    {{-- Les identifiants des champs sont ceux attendus par assets/js/adress.js
+         (carte, autocompletion), assets/js/ckeditor.js (editeurs de texte) et
+         assets/js/deleteAdsImgs.js (suppression d'une photo). --}}
+    <form action="{{ route('ads.update', $ad) }}" method="POST" enctype="multipart/form-data" id="annonceForm">
+        @csrf
+        @method('PUT')
+
+        @if ($errors->any())
+            <div class="sp-alert">
+                <strong>L'annonce n'a pas pu être enregistrée.</strong>
+                <ul>
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- 1. Informations --}}
+        <section class="sp-form-section">
+            <div class="sp-form-head">
+                <span class="sp-step">1</span>
+                <div>
+                    <h2>Informations</h2>
+                    <p>Le titre et la catégorie déterminent où votre annonce est visible.</p>
                 </div>
-                <h2 class="form-section-title mt-2">Informations</h2>
-                @if($ad->expires_at && Carbon::parse($ad->expires_at)->toDateString() < now()->toDateString())
-                    <span class="expired">Expirée</span>
-                @endif
             </div>
 
-        </div>
-                    
-        <div class="form-grid">
-            <div class="form-group">
-                <label class="form-label">
-                    Titre de l'annonce <span class="required">*</span>
-                </label>
-                <input type="text" name="title" class="form-input" 
-                        placeholder="Titre de l'annonce" required
-                        value="{{ old('title', $ad->title) }}">
+            <div class="sp-form-grid">
+                <div class="sp-field">
+                    <label class="sp-label" for="title">Titre de l'annonce <span class="sp-req">*</span></label>
+                    <input type="text" name="title" id="title" class="sp-input"
+                           value="{{ old('title', $ad->title) }}" required>
+                </div>
+
+                <div class="sp-field">
+                    <label class="sp-label" for="category_id">Catégorie <span class="sp-req">*</span></label>
+                    <select name="category_id" id="category_id" class="sp-input" required>
+                        <option value="">Choisir une catégorie</option>
+                        @forelse($categories->groupBy(fn ($c) => $c->service->display_name ?? 'Autres') as $serviceName => $group)
+                            <optgroup label="{{ $serviceName }}">
+                                @foreach($group as $category)
+                                    <option value="{{ $category->id }}" @selected(old('category_id', $ad->category_id) == $category->id)>
+                                        {{ $category->nom }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                        @empty
+                            <option value="" disabled>Aucune catégorie disponible</option>
+                        @endforelse
+                    </select>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">
-                    Catégorie <span class="required">*</span>
-                </label>
-                <select name="category_id" class="form-select" required>
-                    <option value="">Choisir Catégorie</option>
-                    {{-- Les categories sont regroupees par service : Vente > Vehicules, ... --}}
-                    @forelse($categories->groupBy(fn ($c) => $c->service->display_name ?? 'Autres') as $serviceName => $group)
-                        <optgroup label="{{ $serviceName }}">
-                            @foreach($group as $category)
-                                <option value="{{ $category->id }}" @selected($category->id == old('category_id', $ad->category_id))>
-                                    {{ $category->nom }}
-                                </option>
-                            @endforeach
-                        </optgroup>
-                    @empty
-                        <option value="">Aucune catégorie trouvée</option>
-                    @endforelse
-                </select>
+            <div class="sp-field">
+                <label class="sp-label" for="summary">Aperçu</label>
+                <textarea name="summary" id="summary" placeholder="Une phrase qui résume votre offre">{{ old('summary', $ad->summary) }}</textarea>
+                <span class="sp-help">C'est ce texte court qui apparaît dans les listes de résultats.</span>
             </div>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Aperçu de l'annonce</label>
-            <textarea name="summary" id="summary">{{ old('summary', $ad->summary) }}</textarea>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Description de l'annonce</label>
-            <textarea name="description" id="description">{{ old('description', $ad->description) }}</textarea>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Photo de l'annonce</label>
-            <input type="file" name="images[]" class="form-input" accept="image/*" multiple>
+
+            <div class="sp-field">
+                <label class="sp-label" for="description">Description</label>
+                <textarea name="description" id="description">{{ old('description', $ad->description) }}</textarea>
+            </div>
+
+            <div class="sp-field">
+                <label class="sp-label" for="images">Ajouter des photos</label>
+                <input type="file" name="images[]" id="images" class="sp-input sp-file" accept="image/*" multiple>
+                <span class="sp-help">Les nouvelles photos s'ajoutent à celles déjà en ligne.</span>
+            </div>
 
             @if($ad->images->count())
-                <br/>
-                <div class="current-images" style="display:flex; gap:10px; flex-wrap:wrap;">
-                    @foreach($ad->images as $img)
-                        <div class="image-wrapper" data-id="{{ $img->id }}" style="position:relative;">
-                            <img src="{{ asset('storage/' . $img->path) }}" alt="Image annonce" width="100">
-                            <button type="button" class="delete-image" style="position:absolute; top:0; right:0; background:red;color:white;border:none;">×</button>
-                        </div>
-                    @endforeach
+                <div class="sp-field">
+                    <span class="sp-label">Photos actuelles</span>
+
+                    <div class="sp-thumbs current-images">
+                        @foreach($ad->images as $img)
+                            <div class="sp-thumb image-wrapper" data-id="{{ $img->id }}">
+                                <img src="{{ asset('storage/' . $img->path) }}" alt="Photo de l'annonce" loading="lazy">
+                                <button type="button" class="delete-image" aria-label="Supprimer cette photo">&times;</button>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
             @endif
-        </div>
-    </div>
-    @php
-        $today = now()->format('Y-m-d');
+        </section>
 
-        $availableFrom = optional($ad->available_from)->format('Y-m-d');
-        $availableUntil = optional($ad->available_until)->format('Y-m-d');
-
-        $minFrom = ($availableFrom && $availableFrom < $today) ? $availableFrom : $today;
-    @endphp
-
-    <div class="form-grid">
-        <div class="form-group">
-            <label class="form-label">
-                Disponible à partir du <span class="required">*</span>
-            </label>
-
-            <input 
-                type="date"
-                name="available_from"
-                class="form-input"
-                value="{{ old('available_from', $availableFrom) }}"
-                min="{{ $minFrom }}"
-                required
-            >
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">
-                Disponible jusqu'au <span class="required">*</span>
-            </label>
-
-            <input 
-                type="date"
-                name="available_until"
-                class="form-input"
-                value="{{ old('available_until', $availableUntil) }}"
-                min="{{ old('available_from', $availableFrom ?? $today) }}"
-                required
-            >
-        </div>
-    </div>
-
-    <!-- SECTION ADRESSE -->
-    <div class="form-container">
-        <div class="form-section-header">
-            <div class="form-section-icon">
-                <i class="fa-solid fa-location-dot"></i>
+        {{-- 2. Disponibilites --}}
+        <section class="sp-form-section">
+            <div class="sp-form-head">
+                <span class="sp-step">2</span>
+                <div>
+                    <h2>Disponibilités</h2>
+                    <p>La période pendant laquelle votre bien peut être réservé.</p>
+                </div>
             </div>
-            <h2 class="form-section-title">Adresse du vendeur</h2>
-        </div>
 
-        <div class="map-container">
-            <div id="map" style="height: 100%;"></div>
-        </div>
+            <div class="sp-form-grid">
+                <div class="sp-field">
+                    <label class="sp-label" for="available_from">Disponible à partir du <span class="sp-req">*</span></label>
+                    <input type="date" name="available_from" id="available_from" class="sp-input"
+                           value="{{ old('available_from', $availableFrom) }}"
+                           min="{{ $minFrom }}" required>
+                </div>
 
-        <div class="address-fields">
-            <div class="form-group">
-                <label class="form-label">Adresse</label>
-                <input type="text" name="address" id="adresseVendeur" class="form-input"
-                       placeholder="Adresse vendeur" value="{{ old('address', $ad->address) }}">
+                <div class="sp-field">
+                    <label class="sp-label" for="available_until">Disponible jusqu'au <span class="sp-req">*</span></label>
+                    <input type="date" name="available_until" id="available_until" class="sp-input"
+                           value="{{ old('available_until', $availableUntil) }}"
+                           min="{{ old('available_from', $availableFrom ?? $today) }}" required>
+                </div>
+            </div>
+        </section>
+
+        {{-- 3. Adresse --}}
+        <section class="sp-form-section">
+            <div class="sp-form-head">
+                <span class="sp-step">3</span>
+                <div>
+                    <h2>Adresse</h2>
+                    <p>Le point de retrait du bien. Sélectionnez une suggestion pour placer le repère.</p>
+                </div>
+            </div>
+
+            <div class="sp-map">
+                <div id="map" style="height:100%"></div>
+            </div>
+
+            <div class="sp-field">
+                <label class="sp-label" for="adresseVendeur">Adresse</label>
+                <input type="text" name="address" id="adresseVendeur" class="sp-input"
+                       value="{{ old('address', $ad->address) }}"
+                       placeholder="Commencez à saisir une adresse..." autocomplete="off">
                 <ul id="adresseSuggestions" class="suggestions"></ul>
             </div>
 
             <div class="coordinate-fields d-none">
-                <div class="form-group">
-                    <label class="form-label">Longitude</label>
-                    <input type="text" name="longitude" id="longitude" class="form-input"
-                           placeholder="Longitude" value="{{ old('longitude', $ad->longitude) }}">
+                <div class="sp-field">
+                    <label class="sp-label" for="longitude">Longitude</label>
+                    <input type="text" name="longitude" id="longitude" class="sp-input"
+                           value="{{ old('longitude', $ad->longitude) }}">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Latitude</label>
-                    <input type="text" name="latitude" id="latitude" class="form-input"
-                           placeholder="Latitude" value="{{ old('latitude', $ad->latitude) }}">
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- SECTION TARIF -->
-    <div class="form-container">
-        <div class="form-section-header">
-            <div class="form-section-icon">
-                <i class="fa-solid fa-tag"></i>
-            </div>
-            <h2 class="form-section-title">Tarif de l'annonce</h2>
-        </div>
-
-        <div class="form-grid">
-            <div class="form-group">
-                <label class="form-label">
-                    Prix par jour <span class="required">*</span>
-                </label>
-                <div class="input-group">
-                    <input type="number" name="price_per_day" class="form-input" placeholder="0" step="0.01" required
-                           value="{{ old('price_per_day', $ad->price_per_day) }}">
-                    <span class="input-suffix">€ / jour</span>
+                <div class="sp-field">
+                    <label class="sp-label" for="latitude">Latitude</label>
+                    <input type="text" name="latitude" id="latitude" class="sp-input"
+                           value="{{ old('latitude', $ad->latitude) }}">
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- SECTION LIVRAISON -->
-    <div class="form-container">
-        <div class="form-section-header">
-            <div class="form-section-icon">
-                <i class="fa-solid fa-truck"></i>
+        {{-- 4. Tarif et livraison --}}
+        <section class="sp-form-section">
+            <div class="sp-form-head">
+                <span class="sp-step">4</span>
+                <div>
+                    <h2>Tarif et livraison</h2>
+                    <p>Le prix affiché aux locataires, et la possibilité de faire livrer le bien.</p>
+                </div>
             </div>
-            <h2 class="form-section-title">Livraison</h2>
-        </div>
 
-        <div class="form-group">
-            <label class="form-label">Proposez-vous une livraison ?</label>
-            <div class="toggle-switch">
-                <input type="checkbox" name="delivery_active" id="livraisonActive"
-                       @if(old('delivery_active', $ad->delivery_active)) checked @endif>
-                <label for="livraisonActive" class="toggle-label"></label>
+            <div class="sp-form-grid">
+                <div class="sp-box">
+                    <div class="sp-box-head">
+                        <label class="sp-label" for="price_per_day">Prix par jour <span class="sp-req">*</span></label>
+                        <span class="sp-help">Le tarif journalier affiché aux locataires.</span>
+                    </div>
+
+                    <div class="sp-input-group">
+                        <input type="number" name="price_per_day" id="price_per_day" class="sp-input"
+                               step="0.01" min="0" value="{{ old('price_per_day', $ad->price_per_day) }}" required>
+                        <span class="sp-input-suffix">€ / jour</span>
+                    </div>
+                </div>
+
+                <div class="sp-box is-row">
+                    <div class="sp-box-head">
+                        <label class="sp-label" for="livraisonActive">Proposez-vous une livraison ?</label>
+                        <span class="sp-help">Les livreurs de la plateforme pourront se proposer pour l'acheminement.</span>
+                    </div>
+
+                    <div class="toggle-switch">
+                        <input type="checkbox" name="delivery_active" id="livraisonActive"
+                               @checked(old('delivery_active', $ad->delivery_active))>
+                        <label for="livraisonActive" class="toggle-label"></label>
+                    </div>
+                </div>
             </div>
+        </section>
+
+        {{-- Barre d'action --}}
+        <div class="sp-form-actions">
+            <a href="{{ route('ads.index') }}" class="sp-act is-ghost">Annuler</a>
+            <button type="submit" class="sp-btn-primary">Enregistrer les modifications</button>
         </div>
 
-    </div>
+        <input type="hidden" name="distance_km" id="distanceKm" value="{{ old('distance_km', $ad->distance_km) }}">
+        <input type="hidden" name="delivery_cost" id="deliveryCost" value="{{ old('delivery_cost', $ad->delivery_cost) }}">
+    </form>
+</div>
 
-    <div class="form-actions">
-        <button type="submit" class="btn-submit">
-            <i class="fa-solid fa-paper-plane"></i> Modifier l'annonce
-        </button>
-    </div>
-    <input type="hidden" name="distance_km" id="distanceKm" value="{{ old('distance_km', $ad->distance_km) }}">
-    <input type="hidden" name="delivery_cost" id="deliveryCost" value="{{ old('delivery_cost', $ad->delivery_cost) }}">
-</form>
 <script src="{{ asset('assets/js/deleteAdsImgs.js') }}"></script>
 @endsection

@@ -1,210 +1,216 @@
 @extends('layouts.connected')
-@section('title', 'Mes Trajets | ' . config('app.name'))
+@section('title', 'Mes trajets | ' . config('app.name'))
+
+@php
+    /*
+     | $trajets = Covoiturage du conducteur connecte, deja tries par date de
+     | depart decroissante. La cle primaire du modele est covoiturage_id.
+     |
+     | Les etapes intermediaires se lisent sur « segments » (tableau de
+     | from / to / price) : l'ancienne version interrogeait $trajet->steps,
+     | une relation qui n'existe pas sur le modele — le bloc etait donc mort.
+     */
+    $statuts = [
+        'actif'   => ['Actif',      'is-paid'],
+        'validé'  => ['Validé',     'is-confirmed'],
+        'pending' => ['En attente', 'is-pending'],
+        'complet' => ['Complet',    'is-shipped'],
+        'inactif' => ['Inactif',    'is-neutral'],
+        'annulé'  => ['Annulé',     'is-cancelled'],
+    ];
+
+    $total     = $trajets->count();
+    $aVenir    = $trajets->filter(fn ($t) => $t->date_depart && $t->date_depart->isFuture())->count();
+    $places    = $trajets->sum(fn ($t) => (int) $t->nb_places);
+    $recette   = $trajets->sum(fn ($t) => (float) ($t->prix_place ?? 0) * (int) $t->nb_places);
+
+    $mois = [1 => 'janv', 'févr', 'mars', 'avr', 'mai', 'juin', 'juil', 'août', 'sept', 'oct', 'nov', 'déc'];
+@endphp
 
 @section('content')
+<div class="sp-page">
 
-    <style>
-        .font-jakarta {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
+    {{-- Fil d'ariane --}}
+    <nav class="sp-crumbs" aria-label="Fil d'ariane">
+        <a href="{{ url('/') }}">Accueil</a>
+        <i class="fa-solid fa-chevron-right"></i>
+        <span class="is-current">Mes trajets</span>
+    </nav>
 
-        .bg-primary-orange {
-            background-color: #FF4500;
-        }
+    {{-- En-tete --}}
+    <header class="sp-head">
+        <div>
+            <h1 class="sp-title">Mes trajets</h1>
+            <p class="sp-subtitle">Vos annonces de covoiturage, leurs places et leurs recettes.</p>
+        </div>
 
-        .text-primary-orange {
-            color: #FF4500;
-        }
+        <a href="{{ route('covoiturage.create') }}" class="sp-btn-primary">
+            Publier un trajet
+        </a>
+    </header>
 
-        .shadow-premium {
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.02), 0 10px 10px -5px rgba(0, 0, 0, 0.01);
-        }
-
-        .step-line {
-            background-image: linear-gradient(to bottom, #FF4500 50%, transparent 50%);
-            background-position: right;
-            background-size: 2px 10px;
-            background-repeat: repeat-y;
-        }
-
-        .pulse-emerald {
-            animation: pulse-emerald 2s infinite;
-        }
-
-        @keyframes pulse-emerald {
-            0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
-            70%  { transform: scale(1);   box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
-
-        .pulse-amber { animation: pulse-amber 2s infinite; }
-        @keyframes pulse-amber {
-            0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
-            70%  { transform: scale(1);   box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
-        }
-    </style>
-
-    <div class="min-h-screen bg-[#F8FAFC] py-12 px-4 sm:px-6 font-jakarta text-[#0F172A]">
-        <div class="max-w-7xl mx-auto">
-
-            <!-- En-tête -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
-                <div>
-                    <nav aria-label="Breadcrumb" class="flex-1">
-                        <ol class="flex items-center space-x-2 text-sm font-medium">
-                            <li><a href="#" class="text-slate-400 hover:text-slate-600 transition-colors">Chauffeur
-                                    VTC</a>
-                            </li>
-                            <li><i data-lucide="chevron-right" class="w-4 h-4 text-slate-300"></i></li>
-                            <li class="text-slate-900 font-bold">Mes trajets</li>
-                        </ol>
-                    </nav>
-
-                </div>
-
-                <a href="{{ route('covoiturage.create') }}"
-                    class="py-3 px-6 bg-[#ff3c00] hover:bg-black text-white rounded-[2rem] font-black uppercase tracking-widest text-xs transition-all duration-300 shadow-lg shadow-orange-200 flex items-center justify-center gap-2 whitespace-nowrap">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Nouveau trajet
-                </a>
+    {{-- Indicateurs --}}
+    <div class="sp-stats">
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-brand"><i class="fa-solid fa-car-side"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ $total }}</span>
+                <span class="sp-stat-label">Trajet{{ $total > 1 ? 's' : '' }} publié{{ $total > 1 ? 's' : '' }}</span>
             </div>
+        </div>
 
-            <!-- Grille de trajets (2 par ligne sur desktop) -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                @forelse($trajets as $trajet)
-                    <div
-                        class="group bg-white rounded-[2.5rem] border border-slate-100 shadow-premium hover:shadow-2xl transition-all duration-500 p-8 flex flex-col">
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-blue"><i class="fa-regular fa-clock"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ $aVenir }}</span>
+                <span class="sp-stat-label">À venir</span>
+            </div>
+        </div>
 
-                        <!-- Header de la carte -->
-                        <div class="flex justify-between items-start mb-8">
-                            <div class="flex flex-col gap-1">
-                                @php
-                                    $statusConfig = [
-                                        'actif'   => ['wrap' => 'bg-emerald-50 border-emerald-200', 'dot' => 'bg-emerald-500 pulse-emerald', 'text' => 'text-emerald-700', 'label' => 'Actif'],
-                                        'inactif' => ['wrap' => 'bg-slate-50 border-slate-200',   'dot' => 'bg-slate-400',                  'text' => 'text-slate-500',   'label' => 'Inactif'],
-                                        'pending' => ['wrap' => 'bg-amber-50 border-amber-200',   'dot' => 'bg-amber-500 pulse-amber',      'text' => 'text-amber-700',   'label' => 'En attente'],
-                                        'validé'  => ['wrap' => 'bg-blue-50 border-blue-200',     'dot' => 'bg-blue-500',                   'text' => 'text-blue-700',    'label' => 'Validé'],
-                                        'complet' => ['wrap' => 'bg-rose-50 border-rose-200',     'dot' => 'bg-rose-500',                   'text' => 'text-rose-700',    'label' => 'Complet'],
-                                    ];
-                                    $sc = $statusConfig[$trajet->statut] ?? ['wrap' => 'bg-slate-50 border-slate-200', 'dot' => 'bg-slate-400', 'text' => 'text-slate-500', 'label' => 'Inconnu'];
-                                @endphp
-                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full border {{ $sc['wrap'] }} w-fit">
-                                    <div class="w-2 h-2 rounded-full {{ $sc['dot'] }}"></div>
-                                    <span class="text-[10px] font-black uppercase tracking-widest {{ $sc['text'] }}">
-                                        {{ $sc['label'] }}
-                                    </span>
-                                </div>
-                                <span class="text-xs font-bold text-slate-400 mt-2">
-                                    {{ $trajet->date_depart ? \Carbon\Carbon::parse($trajet->date_depart)->translatedFormat('d M Y • H:i') : 'Date non définie' }}
-                                </span>
-                            </div>
-                            <div class="text-right">
-                                <span class="block text-[10px] font-bold text-slate-400 uppercase">Cagnotte</span>
-                                <span
-                                    class="text-2xl font-black text-primary-orange tracking-tighter">{{ number_format($trajet->prix_place, 0) }}€</span>
-                            </div>
-                        </div>
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-green"><i class="fa-solid fa-users"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ $places }}</span>
+                <span class="sp-stat-label">Place{{ $places > 1 ? 's' : '' }} proposée{{ $places > 1 ? 's' : '' }}</span>
+            </div>
+        </div>
 
-                        <!-- Corps : Itinéraire avec Steps -->
-                        <div class="flex gap-6 mb-8">
-                            <div class="flex flex-col items-center py-1">
-                                <div class="w-4 h-4 rounded-full border-4 border-primary-orange bg-white"></div>
-                                <div class="w-[2px] h-full bg-slate-100 my-1 relative">
-                                    <!-- Indication visuelle des steps sur la ligne -->
-                                    @if (isset($trajet->steps) && count($trajet->steps) > 0)
-                                        <div class="absolute inset-0 flex flex-col justify-around py-2">
-                                            @foreach ($trajet->steps as $step)
-                                                <div class="w-1.5 h-1.5 rounded-full bg-slate-300 -ml-[2px]"></div>
-                                            @endforeach
-                                        </div>
-                                    @endif
-                                </div>
-                                <div class="w-4 h-4 rounded-full bg-[#0F172A] border-4 border-slate-200"></div>
-                            </div>
-
-                            <div class="flex-grow flex flex-col justify-between py-0.5">
-                                <div>
-                                    <h3 class="text-xl font-black leading-none">{{ $trajet->depart }}</h3>
-                                    <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase">Point de rendez-vous</p>
-                                </div>
-
-                                <!-- Les Étapes (Steps) -->
-                                @if (isset($trajet->steps) && count($trajet->steps) > 0)
-                                    <div class="py-4 flex flex-wrap gap-2">
-                                        @foreach ($trajet->steps as $step)
-                                            <div
-                                                class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl">
-                                                <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor"
-                                                    viewBox="0 0 24 24">
-                                                    <path
-                                                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                    <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                </svg>
-                                                <span
-                                                    class="text-[10px] font-extrabold text-slate-600 uppercase">{{ $step->ville }}</span>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <div class="h-10"></div> <!-- Spacer si pas d'étapes -->
-                                @endif
-
-                                <div>
-                                    <h3 class="text-xl font-black leading-none">{{ $trajet->destination }}</h3>
-                                    <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase">Arrivée estimée</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Footer : Stats & Actions -->
-                        <div class="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between">
-                            <div class="flex items-center gap-6">
-                                <div>
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase mb-1">Passagers</p>
-                                    <div class="flex -space-x-2">
-                                        @for ($i = 0; $i < min($trajet->nb_places, 3); $i++)
-                                            <div
-                                                class="w-8 h-8 rounded-full bg-slate-50 border-2 border-white flex items-center justify-center text-slate-300">
-                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
-                                                </svg>
-                                            </div>
-                                        @endfor
-                                        <div
-                                            class="w-8 h-8 rounded-full bg-slate-900 border-2 border-white flex items-center justify-center text-[10px] font-black text-white">
-                                            {{ $trajet->nb_places }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex gap-2">
-                                <a href="{{ route('trajet.show', ['covoiturage' => $trajet->covoiturage_id]) }}"
-                                    class="flex items-center justify-center h-12 px-6 rounded-2xl bg-slate-50 text-[#0F172A] font-bold text-[10px] uppercase tracking-widest
-              hover:bg-slate-900 hover:text-white transition-all duration-300 gap-2">
-                                    Détails
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                    </svg>
-                                </a>
-                            </div>
-
-                        </div>
-                    </div>
-                @empty
-                    <!-- État vide -->
-                    <x-empty-state
-                        class="lg:col-span-2 bg-white rounded-[3rem] border-2 border-dashed border-slate-100"
-                        title="Aucun trajet pour le moment"
-                        text="Partagez votre route et commencez à rentabiliser vos déplacements."
-                        :action-url="route('covoiturage.create')"
-                        action-label="Publier un trajet" />
-                @endforelse
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-red"><i class="fa-solid fa-euro-sign"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ number_format($recette, 2, ',', ' ') }} €</span>
+                <span class="sp-stat-label">
+                    Recette potentielle
+                    <small>toutes places vendues</small>
+                </span>
             </div>
         </div>
     </div>
 
+    {{-- Panneau --}}
+    <section class="sp-panel">
+
+        <div class="sp-toolbar">
+            <div>
+                <h2 class="sp-toolbar-title">Mes publications</h2>
+                <span class="sp-count">{{ $total }} trajet{{ $total > 1 ? 's' : '' }} au total</span>
+            </div>
+        </div>
+
+        @if($total)
+            <div class="sp-grid">
+                @foreach($trajets as $trajet)
+                    @php
+                        [$stLabel, $stClass] = $statuts[$trajet->statut] ?? [ucfirst((string) $trajet->statut ?: 'Inconnu'), 'is-neutral'];
+
+                        $date = $trajet->date_depart;
+                        $etapes = collect($trajet->segments ?? [])
+                            ->pluck('to')
+                            ->filter()
+                            ->reject(fn ($v) => $v === $trajet->destination)
+                            ->unique()
+                            ->values();
+
+                        $passe = $date && $date->isPast();
+                    @endphp
+
+                    <article class="sp-card sp-mission {{ $passe ? 'is-out' : '' }}">
+
+                        <div class="sp-mission-head">
+                            <div>
+                                <span class="sp-status {{ $stClass }}">{{ $stLabel }}</span>
+
+                                <span class="sp-mission-date">
+                                    @if($date)
+                                        {{ $date->format('d') }} {{ $mois[(int) $date->format('n')] }} {{ $date->format('Y') }}
+                                        @if($trajet->heure_depart)
+                                            · {{ \Illuminate\Support\Str::of($trajet->heure_depart)->substr(0, 5) }}
+                                        @endif
+                                    @else
+                                        Date non définie
+                                    @endif
+                                </span>
+                            </div>
+
+                            <div class="sp-mission-price">
+                                {{ number_format((float) $trajet->prix_place, 2, ',', ' ') }} €
+                                <small>par place</small>
+                            </div>
+                        </div>
+
+                        <div class="sp-mission-body">
+
+                            {{-- Itineraire --}}
+                            <div class="sp-trip">
+                                <div class="sp-trip-step">
+                                    <span class="sp-trip-dot"></span>
+                                    <div>
+                                        <span class="sp-trip-label">Départ</span>
+                                        <span class="sp-trip-value">{{ $trajet->depart ?: 'Non précisé' }}</span>
+                                    </div>
+                                </div>
+
+                                <div class="sp-trip-step is-end">
+                                    <span class="sp-trip-dot"></span>
+                                    <div>
+                                        <span class="sp-trip-label">Arrivée</span>
+                                        <span class="sp-trip-value">{{ $trajet->destination ?: 'Non précisée' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if($etapes->count())
+                                <div class="sp-row-meta">
+                                    @foreach($etapes as $etape)
+                                        <span class="sp-tag">
+                                            <i class="fa-solid fa-location-dot"></i>
+                                            {{ $etape }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                            <div class="sp-row-meta">
+                                <span class="sp-tag">
+                                    <i class="fa-solid fa-users"></i>
+                                    {{ $trajet->nb_places }} place{{ $trajet->nb_places > 1 ? 's' : '' }}
+                                </span>
+
+                                @if($trajet->retour)
+                                    <span class="sp-tag is-ok">
+                                        <i class="fa-solid fa-rotate-left"></i>
+                                        Retour prévu
+                                    </span>
+                                @endif
+
+                                @if($trajet->prix_total_affiche)
+                                    <span class="sp-tag">
+                                        <i class="fa-solid fa-tag"></i>
+                                        Trajet complet : {{ number_format((float) $trajet->prix_total_affiche, 2, ',', ' ') }} €
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="sp-actions">
+                            <a href="{{ route('trajet.show', ['covoiturage' => $trajet->covoiturage_id]) }}"
+                               class="sp-act is-edit">Détails</a>
+
+                            <a href="{{ route('covoiturage.edit', $trajet->covoiturage_id) }}"
+                               class="sp-act is-ghost">Modifier</a>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        @else
+            <div class="sp-empty">
+                <x-empty-state
+                    title="Aucun trajet pour le moment"
+                    text="Partagez votre route et commencez à rentabiliser vos déplacements."
+                    :action-url="route('covoiturage.create')"
+                    action-label="Publier un trajet" />
+            </div>
+        @endif
+    </section>
+</div>
 @endsection

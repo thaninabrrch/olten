@@ -202,6 +202,7 @@ Route::middleware('auth', 'verified', 'subscription', 'approved', 'subscription.
         ->name('covoiturage.edit-retour');
     Route::put('/covoiturage/{id}/update-retour', [CovoiturageController::class, 'updateRetour'])
         ->name('covoiturage.update-retour');
+    Route::delete('/covoiturage/{id}/retour', [CovoiturageController::class, 'destroyRetour'])->name('covoiturage.destroy-retour');
     Route::put('/covoiturage/{id}/toggle-retour', [CovoiturageController::class, 'toggleRetour']);
     Route::get('/covoiturage/{id}/add-retour', [CovoiturageController::class, 'addRetour'])
     ->name('covoiturage.add-retour');

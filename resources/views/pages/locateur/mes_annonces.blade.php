@@ -1,188 +1,286 @@
 @extends('layouts.connected')
 @section('title', 'Mes annonces - Olten')
 
+@php
+    /*
+     | Tout vient du paginateur $ads et de $categories fournis par le
+     | controleur. Le total est celui de la requete complete ; les autres
+     | indicateurs portent sur les annonces affichees (« sur cette page »).
+     |
+     | Le statut d'une annonce se lit sur trois colonnes : is_approved,
+     | rejected_at et expires_at. Les memes regles que le filtre serveur
+     | sont reprises ici pour l'affichage.
+     */
+    $onPage     = $ads->getCollection();
+    $search     = trim((string) request('search'));
+    $status     = (string) request('status');
+    $categoryId = (string) request('category_id');
+
+    $adStatus = function ($ad) {
+        if ($ad->rejected_at) return 'rejected';
+        if ($ad->expires_at && $ad->expires_at->isPast()) return 'expired';
+        return $ad->is_approved ? 'approved' : 'pending';
+    };
+
+    $approved   = $onPage->filter(fn ($a) => $adStatus($a) === 'approved')->count();
+    $pending    = $onPage->filter(fn ($a) => $adStatus($a) === 'pending')->count();
+    $views      = $onPage->sum(fn ($a) => (int) ($a->views ?? 0));
+    $scopeLabel = $ads->hasPages() ? 'sur cette page' : null;
+
+    $tabs = [
+        ''         => 'Toutes',
+        'approved' => 'Approuvées',
+        'pending'  => 'En attente',
+        'rejected' => 'Refusées',
+        'expired'  => 'Expirées',
+    ];
+
+    $statusMeta = [
+        'approved' => ['Approuvée',  'is-online', 'fa-circle-check'],
+        'pending'  => ['En attente', 'is-draft',  'fa-hourglass-half'],
+        'rejected' => ['Refusée',    'is-out',    'fa-circle-xmark'],
+        'expired'  => ['Expirée',    'is-draft',  'fa-clock'],
+    ];
+
+    // Les filtres actifs suivent l'utilisateur d'un onglet a l'autre
+    $keep = array_filter(['search' => $search, 'category_id' => $categoryId]);
+@endphp
+
 @section('content')
-    <div class="breadcrumb">
-        <a href="#">Accueil</a>
-        <span>></span>
-        <span>Mes annonces</span>
+<div class="sp-page">
+
+    {{-- Fil d'ariane --}}
+    <nav class="sp-crumbs" aria-label="Fil d'ariane">
+        <a href="{{ url('/') }}">Accueil</a>
+        <i class="fa-solid fa-chevron-right"></i>
+        <span class="is-current">Mes annonces</span>
+    </nav>
+
+    {{-- En-tete --}}
+    <header class="sp-head">
+        <div>
+            <h1 class="sp-title">Mes annonces</h1>
+            <p class="sp-subtitle">Gérez vos annonces de location, leur visibilité et leur validité.</p>
+        </div>
+
+        <a href="{{ route('ads.create') }}" class="sp-btn-primary">
+            Déposer une annonce
+        </a>
+    </header>
+
+    {{-- Indicateurs --}}
+    <div class="sp-stats">
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-brand"><i class="fa-solid fa-bullhorn"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ $ads->total() }}</span>
+                <span class="sp-stat-label">Annonce{{ $ads->total() > 1 ? 's' : '' }} au total</span>
+            </div>
+        </div>
+
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-green"><i class="fa-solid fa-circle-check"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ $approved }}</span>
+                <span class="sp-stat-label">
+                    Approuvée{{ $approved > 1 ? 's' : '' }}
+                    @if($scopeLabel)<small>{{ $scopeLabel }}</small>@endif
+                </span>
+            </div>
+        </div>
+
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-red"><i class="fa-solid fa-hourglass-half"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ $pending }}</span>
+                <span class="sp-stat-label">
+                    En attente de validation
+                    @if($scopeLabel)<small>{{ $scopeLabel }}</small>@endif
+                </span>
+            </div>
+        </div>
+
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-blue"><i class="fa-regular fa-eye"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ $views }}</span>
+                <span class="sp-stat-label">
+                    Vue{{ $views > 1 ? 's' : '' }} cumulées
+                    @if($scopeLabel)<small>{{ $scopeLabel }}</small>@endif
+                </span>
+            </div>
+        </div>
     </div>
 
-    <h1 class="page-title">Mes annonces</h1>
-    @php
-        use Carbon\Carbon;
-    @endphp
-    <!-- SECTION MES ANNONCES -->
-    <div class="annonces-container">
-        <div class="section-header">
-            <h2 class="section-title">Annonces actives</h2>
-            <div class="search-filters">
-                <form method="GET" action="{{ route('ads.index') }}">
-                    <input type="text" name="search" class="search-input" placeholder="Rechercher une annonce"
-                        value="{{ request('search') }}">
+    {{-- Panneau --}}
+    <section class="sp-panel">
 
-                    <select name="category_id" class="filter-select">
-                        <option value="all" {{ request('category_id') == 'all' ? 'selected' : '' }}>
-                            Toutes les catégories
-                        </option>
-                        @forelse($categories->groupBy(fn ($c) => $c->service->nom ?? 'Autres') as $serviceName => $group)
+        <div class="sp-toolbar">
+            <div>
+                <h2 class="sp-toolbar-title">Mes publications</h2>
+                <span class="sp-count">
+                    @if($search)
+                        {{ $ads->total() }} résultat{{ $ads->total() > 1 ? 's' : '' }} pour « {{ $search }} »
+                    @else
+                        {{ $onPage->count() }} annonce{{ $onPage->count() > 1 ? 's' : '' }} affichée{{ $onPage->count() > 1 ? 's' : '' }} sur {{ $ads->total() }}
+                    @endif
+                </span>
+            </div>
+
+            <div class="sp-toolbar-actions">
+                <form method="GET" action="{{ route('ads.index') }}" class="sp-search" role="search">
+                    @if($status)
+                        <input type="hidden" name="status" value="{{ $status }}">
+                    @endif
+
+                    <div class="sp-search-field">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" name="search" class="sp-search-input"
+                               placeholder="Rechercher une annonce..."
+                               value="{{ request('search') }}"
+                               aria-label="Rechercher une annonce">
+
+                        @if($search)
+                            <a href="{{ route('ads.index', array_filter(['status' => $status, 'category_id' => $categoryId])) }}"
+                               class="sp-search-clear" title="Effacer la recherche" aria-label="Effacer la recherche">&times;</a>
+                        @endif
+                    </div>
+
+                    <select name="category_id" class="sp-select" aria-label="Filtrer par catégorie">
+                        <option value="all">Toutes les catégories</option>
+                        @foreach($categories->groupBy(fn ($c) => $c->service->nom ?? 'Autres') as $serviceName => $group)
                             <optgroup label="{{ $serviceName }}">
                                 @foreach($group as $category)
-                                    <option value="{{ $category->id }}"
-                                        {{ request('category_id') == $category->id ? 'selected' : '' }}>
+                                    <option value="{{ $category->id }}" @selected($categoryId == $category->id)>
                                         {{ $category->nom }}
                                     </option>
                                 @endforeach
                             </optgroup>
-                        @empty
-                            <option value="">Aucune catégorie disponible</option>
-                        @endforelse
+                        @endforeach
                     </select>
 
-                    <select name="status" class="filter-select">
-                        <option value="">Tous les statuts</option>
-                        <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>
-                            ✅ Approuvée
-                        </option>
-                        <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>
-                            ⏳ En attente
-                        </option>
-                        <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>
-                            ❌ Refusée
-                        </option>
-                        <option value="expired" {{ request('status') === 'expired' ? 'selected' : '' }}>
-                            🕐 Expirée
-                        </option>
-                    </select>
-
-                    <button type="submit" class="btn-search">
-                        <i class="fa-solid fa-search"></i>
-                    </button>
+                    <button type="submit" class="sp-search-submit">Filtrer</button>
                 </form>
             </div>
         </div>
 
-        <!-- LISTE DES ANNONCES -->
-        <div class="annonces-list">
-            @forelse ($ads as $ad)
-                <div class="annonce-card">
-                    <div class="annonce-image">
-                        <img src="{{ $ad->images->first() ? asset('storage/' . $ad->images->first()->path) : asset('assets/images/no-image.jpg') }}"
-                            alt="{{ $ad->title }}">
-                    </div>
-                    <div class="annonce-details">
-                        <h3 class="annonce-title">{{ $ad->title }}</h3>
-                        <div class="annonce-tags">
-                            <span class="tag tag-orange">
-                                {{ $ad->category->nom ?? 'Catégorie non définie' }}
-                            </span>
-                            @if ($ad->is_approved)
-                                <span class="tag tag-status tag-approved">
-                                    <i class="fa-solid fa-circle-check"></i> Approuvée
-                                </span>
-                            @elseif($ad->rejected_at)
-                                <span class="tag tag-status tag-rejected">
-                                    <i class="fa-solid fa-circle-xmark"></i> Refusée
-                                </span>
-                            @elseif($ad->expires_at && $ad->expires_at->isPast())
-                                <span class="tag tag-status tag-expired">
-                                    <i class="fa-solid fa-clock"></i> Expirée
-                                </span>
-                            @else
-                                <span class="tag tag-status tag-pending">
-                                    <i class="fa-solid fa-hourglass-half"></i> En attente de validation
-                                </span>
-                            @endif
-                        </div>
-
-                        @if ($ad->address)
-                            <div class="annonce-location">
-                                <i class="fa-solid fa-location-dot"></i>
-                                {{ $ad->address }}
-                            </div>
-                        @endif
-                        <div class="annonce-stats">
-                            <span class="stat-item">
-                                <i class="fa-solid fa-eye"></i>
-                                Vues : {{ $ad->views ?? 0 }}
-                            </span>
-                            <span class="stat-item">
-                                <i class="fa-solid fa-calendar"></i>
-                                Expirant : {{ $ad->expires_at ? $ad->expires_at->format('d/m/Y') : 'Jamais/non défini' }}
-                            </span>
-                            <span class="stat-item">
-                                <i class="fa-solid fa-truck"></i>
-                                Livraison : {{ $ad->delivery_active ? 'disponible' : 'Non disponible' }}
-                            </span>
-                        </div>
-                    </div>
-                    @if ($ad->expires_at && Carbon::parse($ad->expires_at)->toDateString() < now()->toDateString())
-                        <span class="expired">Expirée</span>
-                    @endif
-                    <div class="annonce-actions">
-                        <a href="{{ route('ads.ical', $ad) }}" class="btn-action btn-ical" title="Exporter en iCal">
-                            <i class="fa-solid fa-calendar-plus"></i> iCal
-                        </a>
-
-                        <a href="{{ route('ads.edit', $ad) }}" class="btn-action btn-edit" title="Modifier l'annonce">
-                            <i class="fa-solid fa-pen"></i> Modifier
-                        </a>
-
-                        <button type="button" class="btn-action btn-delete" data-bs-toggle="modal"
-                            data-bs-target="#deleteAdModal" data-title="{{ $ad->title }}"
-                            data-url="{{ route('ads.destroy', $ad) }}" title="Supprimer l'annonce">
-                            <i class="fa-solid fa-trash"></i> Supprimer
-                        </button>
-                    </div>
-                </div>
-            @empty
-                <x-empty-state
-                    title="Aucune annonce publiée"
-                    text="Déposez votre première annonce pour la rendre visible sur la plateforme."
-                    :action-url="route('ads.create')"
-                    action-label="Déposer une annonce" />
-            @endforelse
-        </div>
-
-        <!-- PAGINATION -->
-        <div class="pagination">
-            {{-- Bouton précédent --}}
-            @if ($ads->onFirstPage())
-                <button class="page-btn page-prev" disabled>
-                    <i class="fa-solid fa-chevron-left"></i>
-                </button>
-            @else
-                <a href="{{ $ads->previousPageUrl() }}" class="page-btn page-prev">
-                    <i class="fa-solid fa-chevron-left"></i>
-                </a>
-            @endif
-
-            @foreach ($ads->getUrlRange(1, $ads->lastPage()) as $page => $url)
-                @if ($page == $ads->currentPage())
-                    <button class="page-btn active">{{ $page }}</button>
-                @else
-                    <a href="{{ $url }}" class="page-btn">{{ $page }}</a>
-                @endif
+        {{-- Onglets de statut (filtre serveur, memes valeurs que le controleur) --}}
+        <div class="sp-tabs">
+            @foreach($tabs as $value => $label)
+                <a href="{{ route('ads.index', array_filter($keep + ['status' => $value])) }}"
+                   class="sp-tab {{ $status === $value ? 'is-active' : '' }}">{{ $label }}</a>
             @endforeach
+        </div>
 
-            @if ($ads->hasMorePages())
-                <a href="{{ $ads->nextPageUrl() }}" class="page-btn page-next">
-                    <i class="fa-solid fa-chevron-right"></i>
-                </a>
-            @else
-                <button class="page-btn page-next" disabled>
-                    <i class="fa-solid fa-chevron-right"></i>
-                </button>
+        @if($ads->count())
+            <div class="sp-grid">
+                @foreach ($ads as $ad)
+                    @php
+                        $state = $adStatus($ad);
+                        [$stLabel, $stClass, $stIcon] = $statusMeta[$state];
+                        $images = $ad->images;
+                        $cover  = $images->first()
+                            ? asset('storage/' . $images->first()->path)
+                            : asset('assets/images/no-image.jpg');
+                    @endphp
+
+                    <article class="sp-card {{ in_array($state, ['rejected', 'expired']) ? 'is-out' : '' }}">
+
+                        <a href="{{ route('ads.show', $ad) }}" class="sp-media" title="Voir l'annonce">
+                            <img src="{{ $cover }}" alt="{{ $ad->title }}" loading="lazy">
+
+                            <div class="sp-media-badges">
+                                <span class="sp-badge {{ $stClass }}">
+                                    <i class="fa-solid {{ $stIcon }}"></i> {{ $stLabel }}
+                                </span>
+                            </div>
+
+                            @if($images->count() > 1)
+                                <div class="sp-media-foot">
+                                    <span class="sp-badge is-photos"><i class="fa-regular fa-images"></i> {{ $images->count() }}</span>
+                                </div>
+                            @endif
+                        </a>
+
+                        <div class="sp-body">
+                            <div class="sp-list-main">
+                                <span class="sp-chip">
+                                    <i class="fa-solid fa-tag"></i>
+                                    {{ $ad->category->nom ?? 'Sans catégorie' }}
+                                </span>
+
+                                <a href="{{ route('ads.show', $ad) }}" class="sp-name">{{ $ad->title }}</a>
+
+                                <div class="sp-price">
+                                    {{ number_format((float) $ad->price_per_day, 2, ',', ' ') }} €
+                                    <small>/ jour</small>
+                                </div>
+                            </div>
+
+                            <div class="sp-meta">
+                                <span class="sp-tag">
+                                    <i class="fa-regular fa-eye"></i>
+                                    {{ $ad->views ?? 0 }} vue{{ ($ad->views ?? 0) > 1 ? 's' : '' }}
+                                </span>
+
+                                <span class="sp-tag {{ $state === 'expired' ? 'is-danger' : '' }}">
+                                    <i class="fa-regular fa-calendar"></i>
+                                    {{ $ad->expires_at ? 'Jusqu\'au ' . $ad->expires_at->format('d/m/Y') : 'Sans échéance' }}
+                                </span>
+
+                                <span class="sp-tag {{ $ad->delivery_active ? 'is-ok' : '' }}">
+                                    <i class="fa-solid fa-truck-fast"></i>
+                                    {{ $ad->delivery_active ? 'Livraison' : 'Sans livraison' }}
+                                </span>
+
+                                @if($ad->address)
+                                    <span class="sp-tag">
+                                        <i class="fa-solid fa-location-dot"></i>
+                                        {{ \Illuminate\Support\Str::limit($ad->address, 28) }}
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="sp-actions">
+                            <a href="{{ route('ads.edit', $ad) }}" class="sp-act is-edit">Modifier</a>
+
+                            <a href="{{ route('ads.ical', $ad) }}" class="sp-act is-ghost" title="Exporter le calendrier">iCal</a>
+
+                            <button type="button" class="sp-act is-delete"
+                                    data-bs-toggle="modal" data-bs-target="#deleteAdModal"
+                                    data-title="{{ $ad->title }}"
+                                    data-url="{{ route('ads.destroy', $ad) }}">Supprimer</button>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+
+            @if($ads->hasPages())
+                <div class="sp-pagination">
+                    {{ $ads->withQueryString()->links() }}
+                </div>
             @endif
-        </div>
-        @include('pages.modals.ad_confim_delete')
-        <!-- BOUTON NOUVELLE ANNONCE -->
-        <div class="create-annonce-section">
-            <a href="{{ route('ads.create') }}" class="btn-create-annonce">
-                <i class="fa-solid fa-plus"></i>
-                Soumettre une nouvelle annonce
-            </a>
-        </div>
-    </div>
-    <script src="{{ asset('assets/js/confirm_delete_ad.js') }}"></script>
+        @else
+            <div class="sp-empty">
+                @if($search || $status || ($categoryId && $categoryId !== 'all'))
+                    <x-empty-state
+                        title="Aucune annonce ne correspond à ces filtres"
+                        text="Modifiez votre recherche ou affichez de nouveau toutes vos annonces."
+                        :action-url="route('ads.index')"
+                        action-label="Voir toutes mes annonces" />
+                @else
+                    <x-empty-state
+                        title="Aucune annonce publiée"
+                        text="Déposez votre première annonce pour la rendre visible sur la plateforme."
+                        :action-url="route('ads.create')"
+                        action-label="Déposer une annonce" />
+                @endif
+            </div>
+        @endif
+    </section>
+</div>
+
+@include('pages.modals.ad_confim_delete')
+<script src="{{ asset('assets/js/confirm_delete_ad.js') }}"></script>
 @endsection

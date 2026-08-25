@@ -9,8 +9,11 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
+    .dashboard-content {
+        padding: 0px !important;
+    }
     .app-content-area {
-        height: calc(100vh - 64px);
+        height: calc(100vh);
         display: flex;
         overflow: hidden;
     }

@@ -332,7 +332,7 @@ class CovoiturageController extends Controller
             'prix_place'        => $prixTotal,
             'prix_total_affiche' => $prixTotal,
             'selected_route'      => json_decode($request->input('selected_route'), true),
-    '       selected_route_index' => $request->input('selected_route_index', 0),
+    'selected_route_index' => $request->input('selected_route_index', 0),
         ]);
 
 
@@ -510,6 +510,42 @@ class CovoiturageController extends Controller
             'covoiturage_id' => $covoiturage->covoiturage_id,
         ]);
     }
+    /**
+     * Retire le trajet retour, en miroir de storeRetour() : les quatre champs
+     * qu'il avait renseignes sont remis a zero, ainsi que les tarifs du retour
+     * ranges dans selected_route['pricing'].
+     */
+    public function destroyRetour($id)
+    {
+        $covoiturage = Covoiturage::findOrFail($id);
+
+        if ($covoiturage->conducteur_id !== Auth::id()) {
+            abort(403);
+        }
+
+        if (! $covoiturage->retour) {
+            return redirect()
+                ->route('covoiturage.edit', $covoiturage->covoiturage_id)
+                ->with('error', 'Ce trajet n\'a pas de trajet retour.');
+        }
+
+        $selectedRoute = $covoiturage->selected_route ?? [];
+        unset($selectedRoute['pricing']);
+
+        $covoiturage->update([
+            'retour'           => false,
+            'return_date'      => null,
+            'return_time'      => null,
+            'return_itinerary' => null,
+            'return_trip_data' => null,
+            'selected_route'   => $selectedRoute,
+        ]);
+
+        return redirect()
+            ->route('covoiturage.edit', $covoiturage->covoiturage_id)
+            ->with('success', 'Trajet retour supprimé.');
+    }
+
     public function editMode($id)
     {
         $covoiturage = Covoiturage::findOrFail($id);
