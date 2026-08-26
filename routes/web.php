@@ -63,7 +63,7 @@ Route::get('/covoiturage/trajet/{covoiturage}', [ServicePageController::class, '
 
 Route::prefix('admin')
     ->name('admin.')
-   
+    ->middleware(['auth', 'admin'])
     ->group(function () {
 
         Route::get('/settings', [SettingController::class, 'index'])
@@ -234,8 +234,10 @@ Route::get('/annonces/{ad}/détails', [AdController::class, 'show'])->name('ads.
 // Login admin public
 Route::get('admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
 Route::post('admin/login', [AdminAuthController::class, 'login'])->name('admin.login.submit');
-// Routes admin protégées
-Route::prefix('admin')->name('admin.')->group(function () {
+// Routes admin protégées : « auth » exige une session, « admin » exige le rôle
+// admin (403 sinon). Un visiteur non connecté est redirigé vers admin.login
+// (voir redirectGuestsTo dans bootstrap/app.php).
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     // covoiturage
     Route::get('rides', [CovoiturageAdminController::class, 'index'])->name('rides.index');
     Route::patch('rides/{ride}/toggle-status', [CovoiturageAdminController::class, 'toggleStatus'])->name('rides.toggle-status');
