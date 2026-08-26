@@ -40,11 +40,11 @@ class RegisteredUserController extends Controller
             'email.email' => 'L’adresse e-mail doit être valide.',
             'email.unique' => 'Cette adresse e-mail est déjà utilisée.',
             'password.required' => 'Le mot de passe est obligatoire.',
-            // 'password.confirmed' => 'Les mots de passe ne correspondent pas.',
             'password.min' => 'Le mot de passe doit contenir au moins 8 caractères.',
             'password.regex' => 'Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial.',
             'terms.accepted' => 'Vous devez accepter les conditions pour continuer.',
-            'role.required' => 'Le role est obligatoire.',
+            'role.required' => 'Le rôle est obligatoire.',
+            'role.in' => 'Le rôle sélectionné est invalide.',
         ];
 
         $validator = Validator::make($request->all(), [
@@ -53,12 +53,15 @@ class RegisteredUserController extends Controller
             'email'      => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password'   => [
                 'required',
-                // 'confirmed',
                 'min:8',
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/'
             ],
-            'terms'      => ['accepted'],
-            'role' => ['required'],
+            'terms' => ['accepted'],
+
+            'role' => [
+                'required',
+                'in:locateur|vendeur,livreur,chauffeur_vtc',
+            ],
         ], $messages);
 
         if ($validator->fails()) {
@@ -69,13 +72,13 @@ class RegisteredUserController extends Controller
         }
 
         $user = User::create([
-            'name'     => $request->first_name . ' ' . $request->last_name,
-            'firstname'     => $request->first_name,
-            'lastname'     => $request->last_name,
-            'email'    => $request->email,
-            'password' => Hash::make($request->password),
+            'name'      => $request->first_name . ' ' . $request->last_name,
+            'firstname' => $request->first_name,
+            'lastname'  => $request->last_name,
+            'email'     => $request->email,
+            'password'  => Hash::make($request->password),
         ]);
-        
+
         $roles = explode('|', $request->role);
 
         $roleIds = [];
@@ -84,7 +87,7 @@ class RegisteredUserController extends Controller
             $role = Role::where('name', $roleName)->first();
 
             if (!$role) {
-                throw new \Exception("Rôle invalide: $roleName");
+                throw new \Exception("Rôle invalide : $roleName");
             }
 
             $roleIds[] = $role->id;
@@ -96,9 +99,8 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        $roles = explode('|', $request->role);
-
         if (in_array('vendeur', $roles) || in_array('locateur', $roles)) {
+
             $subscription = Subscription::where('slug', 'vip')->first();
 
             if ($subscription) {
@@ -112,11 +114,11 @@ class RegisteredUserController extends Controller
                 'status' => 'success',
                 'redirect' => route('dashboard'),
             ]);
-        } else {
-            return response()->json([
-                'status' => 'success',
-                'redirect' => route('subscriptions.index'),
-            ]);
         }
+
+        return response()->json([
+            'status' => 'success',
+            'redirect' => route('subscriptions.index'),
+        ]);
     }
 }

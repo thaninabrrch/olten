@@ -99,7 +99,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/abonnements/paiement/cancel', [SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
 });
 
-Route::middleware('auth', 'verified', 'approved', 'subscription', 'role:locateur', 'subscription.level:standard,premium,vip')->group(function () {
+Route::middleware('auth', 'verified', 'approved', 'subscription', 'subscription.level:standard,premium,vip')->group(function () {
     Route::get('/annonces/deposer-une-annonce', [AdController::class, 'create'])->name('ads.create');
     Route::post('/ads', [AdController::class, 'store'])->name('ads.store');
     Route::get('/ads/reverse-geocode', [AdController::class, 'reverseGeocode'])->name('ads.reverse-geocode');
@@ -290,7 +290,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 // vendeur
 Route::prefix('vendeur')
     ->name('seller.')
-    ->middleware(['auth', 'role:vendeur', 'approved'])
+    ->middleware(['auth', 'approved'])
     ->group(function () {
         Route::resource('produits', ProductController::class);
         Route::delete('product-images/{id}', [ProductController::class, 'deleteImage'])->name('seller.product.image.delete');
@@ -308,7 +308,7 @@ Route::get('/produits/{product}', [ProductController::class, 'show'])->name('pro
 
 Route::prefix('produits')
     ->name('products.')
-    ->middleware(['auth', 'role:vendeur', 'approved'])
+    ->middleware(['auth', 'approved'])
     ->group(function () {
         Route::get('confirm', [ProductController::class, 'confirm'])->name('confirm')->middleware('auth');
         Route::post('pay', [ProductController::class, 'pay'])->name('pay')->middleware('auth');

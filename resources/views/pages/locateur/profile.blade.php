@@ -106,7 +106,7 @@
                             {{ $user->roles->pluck('display_name')->join(', ') ?: 'Aucun rôle actif' }}
                         </span>
 
-                        @if ($user->is_vtc_driver)
+                        @if ($user->hasRole('chauffeur_vtc'))
                             <span class="sp-status is-confirmed" id="vtc-stat">Chauffeur VTC</span>
                         @endif
                     </div>
@@ -147,7 +147,7 @@
                         </div>
 
                         <div class="toggle-switch">
-                            <input type="checkbox" id="vtc-toggle" @checked($user->is_vtc_driver)>
+                            <input type="checkbox" id="vtc-toggle" @checked($user->hasRole('chauffeur_vtc'))>
                             <label for="vtc-toggle" class="toggle-label"></label>
                         </div>
                     </div>

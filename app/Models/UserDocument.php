@@ -80,7 +80,7 @@ class UserDocument extends Model
             $profils[] = 'livreur';
         }
 
-        if ($user->is_vtc_driver) {
+        if ($user->hasRole('chauffeur_vtc')) {
             $profils[] = 'vtc';
         }
 

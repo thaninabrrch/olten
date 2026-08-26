@@ -83,14 +83,14 @@
            valide, tout son espace livraison est ferme. L'entree n'apparait
            ici que s'il n'est pas aussi chauffeur VTC, auquel cas elle figure
            deja dans la section « Chauffeur VTC ». */
-        if (! $user->is_vtc_driver) {
+        if (! ($user->hasRole('chauffeur_vtc'))) {
             $livraison[] = ['Documents requis', 'fa-id-card', route('livreur.carte.vtc'), request()->routeIs('livreur.carte.vtc'), false];
         }
     }
 
     $sections[] = ['label' => 'Livraison', 'icon' => 'fa-truck', 'items' => $livraison];
 
-    if ($user->is_vtc_driver) {
+    if ($user->hasRole('chauffeur_vtc')) {
         $sections[] = [
             'label' => 'Chauffeur VTC',
             'icon'  => 'fa-car-side',
