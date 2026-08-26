@@ -122,6 +122,7 @@ class ProfileController extends Controller
 
         return Redirect::to('/');
     }
+
     public function toggleVtc(Request $request)
     {
         $user = Auth::user();
@@ -130,11 +131,47 @@ class ProfileController extends Controller
             'is_vtc_driver' => 'required|boolean',
         ]);
 
-        $user->is_vtc_driver = $request->is_vtc_driver;
-        $user->save();
+        $roleId = DB::table('roles')
+            ->where('name', 'chauffeur_vtc')
+            ->value('id');
+
+        if (!$roleId) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Le rôle chauffeur_vtc n’existe pas.',
+            ], 500);
+        }
+
+        $roleExists = DB::table('role_user')
+            ->where('user_id', $user->id)
+            ->where('role_id', $roleId)
+            ->where('user_type', 'App\Models\User')
+            ->exists();
+
+        if ($request->boolean('is_vtc_driver')) {
+
+            // Ajouter le rôle chauffeur_vtc
+            if (!$roleExists) {
+                DB::table('role_user')->insert([
+                    'user_id' => $user->id,
+                    'role_id' => $roleId,
+                    'user_type' => 'App\Models\User',
+                ]);
+            }
+
+        } else {
+
+            // Retirer le rôle chauffeur_vtc
+            DB::table('role_user')
+                ->where('user_id', $user->id)
+                ->where('role_id', $roleId)
+                ->where('user_type', 'App\Models\User')
+                ->delete();
+        }
 
         return response()->json([
-            'is_vtc_driver' => $user->is_vtc_driver
+            'status' => 'success',
+            'is_vtc_driver' => $request->boolean('is_vtc_driver'),
         ]);
     }
 
