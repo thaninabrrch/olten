@@ -27,6 +27,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     {{-- Etat vide unique de la plateforme (<x-empty-state />) --}}
     <link rel="stylesheet" href="{{ asset('assets/css/empty-state.css') }}?v={{ @filemtime(public_path('assets/css/empty-state.css')) ?: 1 }}">
+
+    {{-- Feuilles de style poussees par les vues (@push('styles')) --}}
+    @stack('styles')
 </head>
 
 <body>
