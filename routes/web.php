@@ -99,7 +99,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/abonnements/paiement/cancel', [SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
 });
 
-Route::middleware('auth', 'verified', 'approved', 'subscription', 'subscription.level:standard,premium,vip')->group(function () {
+Route::middleware('auth', 'verified', 'approved')->group(function () {
     Route::get('/annonces/deposer-une-annonce', [AdController::class, 'create'])->name('ads.create');
     Route::post('/ads', [AdController::class, 'store'])->name('ads.store');
     Route::get('/ads/reverse-geocode', [AdController::class, 'reverseGeocode'])->name('ads.reverse-geocode');
@@ -123,7 +123,7 @@ Route::middleware('auth', 'verified', 'approved', 'subscription', 'subscription.
 // La page « Demandes de livraison » (/demandes-de-livraison, plus bas) n'est
 // PAS dans ce groupe : elle appartient au proprietaire qui recrute un livreur
 // pour ses biens, pas au livreur. Elle reste donc ouverte sans permis.
-Route::middleware('auth', 'verified', 'approved', 'subscription', 'role:livreur', 'subscription.level:standard,premium,vip', 'documents.approved:deliver')->group(function () {
+Route::middleware('auth', 'verified', 'approved', 'role:livreur', 'documents.approved:deliver')->group(function () {
     Route::get('/espace-livraison/missions', [DeliveryAdController::class, 'missions'])->name('livreur.missions');
     Route::get('/espace-livraison/demandes', [DeliveryAdController::class, 'demandes'])->name('livreur.demandes');
     Route::get('/espace-livraison/livraisons-en-cours', [DeliveryAdController::class, 'livraisons'])->name('livreur.livraisons');
@@ -134,7 +134,7 @@ Route::middleware('auth', 'verified', 'approved', 'subscription', 'role:livreur'
     Route::post('/delivery/ads/{ad}/{type}/request', [DeliveryAdController::class, 'sendRequest'])->name('delivery.ads.request');
 });
 
-Route::middleware('auth', 'verified', 'subscription', 'approved')->group(function () {
+Route::middleware('auth', 'verified', 'approved')->group(function () {
     Route::post('/profile/toggle-vtc', [ProfileController::class, 'toggleVtc'])->name('profile.toggleVtc');
     Route::post('/profile/toggleLivreur', [ProfileController::class, 'toggleLivreur'])->name('profile.toggleLivreur');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -144,7 +144,7 @@ Route::middleware('auth', 'verified', 'subscription', 'approved')->group(functio
     Route::delete('/profile/supprimer', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::middleware('auth', 'verified', 'subscription', 'approved', 'subscription.level:standard,premium,vip')->group(function () {
+Route::middleware('auth', 'verified', 'approved')->group(function () {
     Route::get('/mes-reservations', [BookingController::class, 'myBookings'])->name('bookings.myBookings');
     Route::get('/mes-messages', function () {
         return view('pages.locateur.messages');

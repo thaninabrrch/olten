@@ -99,26 +99,26 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        if (in_array('vendeur', $roles) || in_array('locateur', $roles)) {
+        // if (in_array('vendeur', $roles) || in_array('locateur', $roles)) {
 
-            $subscription = Subscription::where('slug', 'vip')->first();
+        //     $subscription = Subscription::where('slug', 'vip')->first();
 
-            if ($subscription) {
-                $user->update([
-                    'subscription_id' => $subscription->id,
-                    'subscription_expired_at' => now()->addMonth(),
-                ]);
-            }
-
-            return response()->json([
-                'status' => 'success',
-                'redirect' => route('dashboard'),
-            ]);
-        }
+        //     if ($subscription) {
+        //         $user->update([
+        //             'subscription_id' => $subscription->id,
+        //             'subscription_expired_at' => now()->addMonth(),
+        //         ]);
+        //     }
 
         return response()->json([
             'status' => 'success',
-            'redirect' => route('subscriptions.index'),
+            'redirect' => route('dashboard'),
         ]);
+        // }
+
+        // return response()->json([
+        //     'status' => 'success',
+        //     'redirect' => route('subscriptions.index'),
+        // ]);
     }
 }
