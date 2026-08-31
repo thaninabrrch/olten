@@ -22,12 +22,13 @@
                 {{ $from }} <span class="cv-hero-title-accent">→ {{ $to }}</span>
             </h1>
             <p class="cv-hero-subtitle">
-                {{ $total }} trajet{{ $total > 1 ? 's' : '' }} proposé{{ $total > 1 ? 's' : '' }} par nos conducteurs sur cette liaison.
+                {{ $routeTotal }} trajet{{ $routeTotal > 1 ? 's' : '' }} proposé{{ $routeTotal > 1 ? 's' : '' }} par nos conducteurs sur cette liaison.
             </p>
         </div>
     </section>
 
-    {{-- Recherche --}}
+    {{-- Recherche : mêmes critères que la page covoiturage, bornés par
+         l'offre réelle de cette liaison (places et prix). --}}
     <section class="cv-search-section">
         <form class="cv-search-form" action="{{ route('covoiturage.trips') }}" method="GET">
             <input type="hidden" name="from" value="{{ $from }}">
@@ -36,14 +37,17 @@
             <div class="cv-search-field">
                 <label for="cvStartDate">Départ à partir du</label>
                 <div class="cv-search-input">
-                    <input type="date" id="cvStartDate" name="start_date" value="{{ $filters['start_date'] }}">
+                    <input type="date" id="cvStartDate" name="start_date"
+                           value="{{ $filters['start_date'] }}" min="{{ now()->toDateString() }}">
                 </div>
             </div>
 
             <div class="cv-search-field">
                 <label for="cvEndDate">Départ jusqu'au</label>
                 <div class="cv-search-input">
-                    <input type="date" id="cvEndDate" name="end_date" value="{{ $filters['end_date'] }}">
+                    <input type="date" id="cvEndDate" name="end_date"
+                           value="{{ $filters['end_date'] }}"
+                           min="{{ $filters['start_date'] ?: now()->toDateString() }}">
                 </div>
             </div>
 
@@ -53,11 +57,35 @@
                     <i class="fa-solid fa-user-group"></i>
                     <select id="cvPersons" name="persons">
                         <option value="">Peu importe</option>
-                        @for ($i = 1; $i <= 4; $i++)
+                        @for ($i = 1; $i <= max($criteria['seats'], 1); $i++)
                             <option value="{{ $i }}" @selected($filters['persons'] === $i)>
                                 {{ $i }} personne{{ $i > 1 ? 's' : '' }}
                             </option>
                         @endfor
+                    </select>
+                </div>
+            </div>
+
+            <div class="cv-search-field">
+                <label for="cvMaxPrice">Prix maximum</label>
+                <div class="cv-search-input">
+                    <i class="fa-solid fa-euro-sign"></i>
+                    <input type="number" id="cvMaxPrice" name="max_price" min="0" step="1"
+                           max="{{ $criteria['max_price'] ? ceil($criteria['max_price']) : null }}"
+                           value="{{ $filters['max_price'] ?: '' }}"
+                           placeholder="{{ $criteria['max_price']
+                                ? "Jusqu'à " . number_format((float) $criteria['max_price'], 0, ',', ' ') . " €"
+                                : 'Sans limite' }}">
+                </div>
+            </div>
+
+            <div class="cv-search-field">
+                <label for="cvSort">Trier par</label>
+                <div class="cv-search-input">
+                    <i class="fa-solid fa-arrow-down-wide-short"></i>
+                    <select id="cvSort" name="sort">
+                        <option value="">Départ le plus tôt</option>
+                        <option value="price" @selected($filters['sort'] === 'price')>Prix le plus bas</option>
                     </select>
                 </div>
             </div>
@@ -69,24 +97,51 @@
     {{-- Liste des trajets --}}
     <section class="cv-trips">
         <div class="cv-trips-header">
-            <h2 class="cv-trips-title">
-                {{ $from }} <i class="fa-solid fa-arrow-right"></i> {{ $to }}
-            </h2>
-            <p class="cv-trips-count">
-                {{ $total }} trajet{{ $total > 1 ? 's' : '' }} à afficher
-            </p>
+            <div>
+                <h2 class="cv-trips-title">
+                    {{ $from }} <i class="fa-solid fa-arrow-right"></i> {{ $to }}
+                </h2>
+                <p class="olten-count">
+                    <span class="olten-count-pill">
+                        <i class="fa-solid fa-car-side"></i>
+                        {{ $total }} trajet{{ $total > 1 ? 's' : '' }}
+                    </span>
+                    <span class="olten-count-note">
+                        {{ $hasFilters ? 'correspondant à votre recherche' : 'sur cette liaison' }}
+                    </span>
+                </p>
+            </div>
+
+            @if ($hasFilters)
+                <a href="{{ route('covoiturage.trips', ['from' => $from, 'to' => $to]) }}" class="cv-destinations-link">
+                    <i class="fa-solid fa-rotate-left"></i> Réinitialiser la recherche
+                </a>
+            @endif
         </div>
 
         @if ($trips->isEmpty())
             <div class="cv-empty">
                 <span class="cv-empty-icon"><i class="fa-solid fa-route"></i></span>
-                <h3 class="cv-empty-title">Aucun trajet sur cette liaison</h3>
+                <h3 class="cv-empty-title">
+                    {{ $hasFilters
+                        ? 'Aucun trajet ne correspond à votre recherche'
+                        : 'Aucun trajet sur cette liaison' }}
+                </h3>
                 <p class="cv-empty-text">
-                    Aucun trajet ne correspond à ces dates. Élargissez la période ou consultez les autres itinéraires.
+                    {{ $hasFilters
+                        ? 'Élargissez la période, baissez le nombre de places ou relevez le prix maximum.'
+                        : 'Les prochains trajets publiés sur cette liaison apparaîtront ici.' }}
                 </p>
-                <a href="{{ route('services.show', 'covoiturage') }}#cv-trajets" class="cv-empty-btn">
-                    Voir tous les itinéraires
-                </a>
+
+                @if ($hasFilters)
+                    <a href="{{ route('covoiturage.trips', ['from' => $from, 'to' => $to]) }}" class="cv-empty-btn">
+                        Voir tous les trajets de la liaison
+                    </a>
+                @else
+                    <a href="{{ route('services.show', 'covoiturage') }}#cv-trajets" class="cv-empty-btn">
+                        Voir tous les itinéraires
+                    </a>
+                @endif
             </div>
         @else
             <div class="cv-trip-list">

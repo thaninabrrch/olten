@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Ad;
 use App\Models\Product;
+use App\Models\User;
 
 /**
  * Annonces et produits partagent les memes pages service, mais vivent dans
@@ -42,6 +43,8 @@ class Listing
             'latitude'     => $ad->latitude,
             'longitude'    => $ad->longitude,
             'url'          => route('ads.show', $ad),
+            'owner'        => $ad->user?->name,
+            'owner_photo'  => self::photo($ad->user),
             // Type attendu par le gestionnaire de favoris (assets/js/script.js)
             'favorite'     => 'ad',
         ];
@@ -69,7 +72,21 @@ class Listing
             'latitude'     => $product->latitude,
             'longitude'    => $product->longitude,
             'url'          => route('products.show', $product),
+            'owner'        => $product->user?->name,
+            'owner_photo'  => self::photo($product->user),
             'favorite'     => 'product',
         ];
+    }
+
+    /**
+     * Photo du proprietaire de l'offre, avec l'avatar par defaut de la
+     * plateforme : une carte qui montre qui loue affiche toujours un
+     * visage, meme quand le membre n'a pas renseigne de photo.
+     */
+    private static function photo(?User $user): string
+    {
+        return $user?->profile_photo
+            ? asset('storage/' . $user->profile_photo)
+            : asset('assets/images/user-profile.webp');
     }
 }

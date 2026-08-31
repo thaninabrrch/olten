@@ -10,6 +10,7 @@ use App\Models\Message;
 use App\Models\Service;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\View;
+use Illuminate\Pagination\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,6 +32,13 @@ class AppServiceProvider extends ServiceProvider
         // seule la mise en forme des dates est traduite, les messages de
         // validation ne sont pas concernes.
         Carbon::setLocale('fr');
+
+        // Pagination unique pour toute la plateforme. La vue livree par
+        // Laravel est ecrite pour Tailwind, qui n'est charge que dans
+        // l'admin : ailleurs ses classes utilitaires ne s'appliquent pas et
+        // ses deux variantes (mobile et bureau) s'affichent l'une sous
+        // l'autre. Le style vit dans public/assets/css/pagination.css.
+        Paginator::defaultView('vendor.pagination.olten');
 
         // Ce composer tourne sur chaque vue rendue (layout, composants,
         // partials...) : on memorise les collections pour ne faire qu'une

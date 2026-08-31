@@ -41,14 +41,16 @@
         </div>
     </section>
 
-    {{-- Search bar — section séparée, chevauche le bas du hero --}}
+    {{-- Search bar — section séparée, chevauche le bas du hero.
+         Villes, places et prix viennent des trajets publiés : la barre ne
+         propose que des critères qui ont des résultats. --}}
     <section class="cv-search-section">
-        <form class="cv-search-form" action="{{ route('services.show', 'covoiturage') }}" method="GET">
+        <form class="cv-search-form cv-search-form--wide" action="{{ route('services.show', 'covoiturage') }}" method="GET">
             <div class="cv-search-field">
                 <label for="cvDeparture">Lieu de départ</label>
                 <div class="cv-search-input">
                     <i class="fa-solid fa-location-dot"></i>
-                    <input type="text" id="cvDeparture" name="departure" list="cvCities"
+                    <input type="text" id="cvDeparture" name="departure" list="cvDepartureCities"
                            value="{{ $filters['departure'] }}" placeholder="Ville de départ">
                 </div>
             </div>
@@ -57,7 +59,7 @@
                 <label for="cvArrival">Lieu de fin</label>
                 <div class="cv-search-input">
                     <i class="fa-solid fa-location-dot"></i>
-                    <input type="text" id="cvArrival" name="arrival" list="cvCities"
+                    <input type="text" id="cvArrival" name="arrival" list="cvArrivalCities"
                            value="{{ $filters['arrival'] }}" placeholder="Ville d'arrivée">
                 </div>
             </div>
@@ -65,14 +67,17 @@
             <div class="cv-search-field">
                 <label for="cvStartDate">Départ à partir du</label>
                 <div class="cv-search-input">
-                    <input type="date" id="cvStartDate" name="start_date" value="{{ $filters['start_date'] }}">
+                    <input type="date" id="cvStartDate" name="start_date"
+                           value="{{ $filters['start_date'] }}" min="{{ now()->toDateString() }}">
                 </div>
             </div>
 
             <div class="cv-search-field">
                 <label for="cvEndDate">Départ jusqu'au</label>
                 <div class="cv-search-input">
-                    <input type="date" id="cvEndDate" name="end_date" value="{{ $filters['end_date'] }}">
+                    <input type="date" id="cvEndDate" name="end_date"
+                           value="{{ $filters['end_date'] }}"
+                           min="{{ $filters['start_date'] ?: now()->toDateString() }}">
                 </div>
             </div>
 
@@ -82,7 +87,7 @@
                     <i class="fa-solid fa-user-group"></i>
                     <select id="cvPersons" name="persons">
                         <option value="">Peu importe</option>
-                        @for ($i = 1; $i <= 4; $i++)
+                        @for ($i = 1; $i <= max($criteria['seats'], 1); $i++)
                             <option value="{{ $i }}" @selected($filters['persons'] === $i)>
                                 {{ $i }} personne{{ $i > 1 ? 's' : '' }}
                             </option>
@@ -91,11 +96,49 @@
                 </div>
             </div>
 
-            <button type="submit" class="cv-search-btn">Rechercher</button>
+            <div class="cv-search-field">
+                <label for="cvMaxPrice">Prix maximum</label>
+                <div class="cv-search-input">
+                    <i class="fa-solid fa-euro-sign"></i>
+                    <input type="number" id="cvMaxPrice" name="max_price" min="0" step="1"
+                           max="{{ $criteria['max_price'] ? ceil($criteria['max_price']) : null }}"
+                           value="{{ $filters['max_price'] ?: '' }}"
+                           placeholder="{{ $criteria['max_price']
+                                ? "Jusqu'à " . number_format((float) $criteria['max_price'], 0, ',', ' ') . " €"
+                                : 'Sans limite' }}">
+                </div>
+            </div>
+
+            <div class="cv-search-field">
+                <label for="cvSort">Trier par</label>
+                <div class="cv-search-input">
+                    <i class="fa-solid fa-arrow-down-wide-short"></i>
+                    <select id="cvSort" name="sort">
+                        <option value="">Départ le plus tôt</option>
+                        <option value="price" @selected($filters['sort'] === 'price')>Prix le plus bas</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="cv-search-actions">
+                @if ($hasFilters)
+                    <a href="{{ route('services.show', 'covoiturage') }}#cv-trajets" class="cv-search-reset">
+                        <i class="fa-solid fa-rotate-left"></i> Réinitialiser
+                    </a>
+                @endif
+
+                <button type="submit" class="cv-search-btn">Rechercher</button>
+            </div>
         </form>
 
-        <datalist id="cvCities">
-            @foreach ($cities as $city)
+        <datalist id="cvDepartureCities">
+            @foreach ($cities['from'] as $city)
+                <option value="{{ $city }}"></option>
+            @endforeach
+        </datalist>
+
+        <datalist id="cvArrivalCities">
+            @foreach ($cities['to'] as $city)
                 <option value="{{ $city }}"></option>
             @endforeach
         </datalist>
@@ -106,10 +149,18 @@
         <div class="cv-destinations-header">
             <div>
                 <h2 class="cv-section-title">Destinations disponibles</h2>
-                <p class="cv-destinations-count">
-                    {{ $routes->total() }} itinéraire{{ $routes->total() > 1 ? 's' : '' }}
-                    · {{ $tripTotal }} trajet{{ $tripTotal > 1 ? 's' : '' }}
-                    {{ $hasFilters ? 'correspondent à votre recherche' : 'à venir' }}
+                <p class="olten-count">
+                    <span class="olten-count-pill">
+                        <i class="fa-solid fa-route"></i>
+                        {{ $routes->total() }} itinéraire{{ $routes->total() > 1 ? 's' : '' }}
+                    </span>
+                    <span class="olten-count-pill">
+                        <i class="fa-solid fa-car-side"></i>
+                        {{ $tripTotal }} trajet{{ $tripTotal > 1 ? 's' : '' }}
+                    </span>
+                    <span class="olten-count-note">
+                        {{ $hasFilters ? 'correspondant à votre recherche' : 'à venir' }}
+                    </span>
                 </p>
             </div>
 
@@ -174,8 +225,8 @@
                                         <small>Prix sur demande</small>
                                     @endif
                                 </span>
-                                <span class="cv-card-arrow" aria-hidden="true">
-                                    <i class="fa-solid fa-arrow-right"></i>
+                                <span class="cv-card-btn">
+                                    Voir les trajets
                                 </span>
                             </div>
 

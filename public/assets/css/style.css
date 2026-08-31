@@ -5699,7 +5699,10 @@ product-card:hover {
 /* ==========================================================================
    PAGE SERVICE / CATÉGORIE (service-standard.blade.php)
    ========================================================================== */
-.cs-page {
+/* Ces variables sont declarees ici et non sur `.cs-page` : la carte d'offre
+   (.cs-card, composant <x-services.listing-card />) est partagee par les
+   pages service et la page location, elle vit donc hors de `.cs-page`. */
+:root {
     --cs-radius-lg: 16px;
     --cs-radius-md: 12px;
     --cs-radius-sm: 8px;
@@ -6645,6 +6648,45 @@ product-card:hover {
 }
 
 /* ==========================================================================
+   COMPTEUR DE RESULTATS
+   --------------------------------------------------------------------------
+   Le nombre de resultats sous un titre de section : des pastilles pour les
+   chiffres, une note en clair pour dire de quoi ils parlent. Partage par la
+   page covoiturage et la page location.
+   ========================================================================== */
+.olten-count {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0 0;
+}
+
+.olten-count-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 12px;
+    border: 1px solid var(--color-divider);
+    border-radius: var(--border-radius-round, 999px);
+    background: var(--color-grey-light);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-black);
+    white-space: nowrap;
+}
+
+.olten-count-pill i {
+    font-size: 11px;
+    color: var(--color-primary);
+}
+
+.olten-count-note {
+    font-size: 12.5px;
+    color: var(--color-grey-dark);
+}
+
+/* ==========================================================================
    PAGE LOCATION DE VOITURE (location-voiture.blade.php)
    ========================================================================== */
 .lv-page {
@@ -6801,12 +6843,6 @@ product-card:hover {
     opacity: .9;
 }
 
-.lv-types {
-    max-width: var(--lv-max-width);
-    margin: 100px auto 0;
-    padding: 0 20px;
-}
-
 .lv-section-title {
     position: relative;
     font-size: 22px;
@@ -6824,72 +6860,6 @@ product-card:hover {
     height: 3px;
     border-radius: var(--border-radius-round);
     background: var(--color-primary);
-}
-
-.lv-types-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--lv-gap);
-}
-
-.lv-type-card {
-    display: flex;
-    flex-direction: column;
-    background: var(--color-white);
-    border: 1px solid var(--color-divider);
-    border-radius: 14px;
-    padding: 20px;
-    text-decoration: none;
-    color: var(--color-black);
-    transition: box-shadow var(--transition-speed) ease,
-    transform var(--transition-speed) ease,
-    border-color var(--transition-speed) ease;
-}
-
-.lv-type-card:hover {
-    box-shadow: var(--shadow-strong);
-    border-color: var(--color-primary);
-    transform: translateY(-2px);
-}
-
-.lv-type-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 10px;
-    background: var(--color-grey-light);
-    color: var(--color-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    margin-bottom: 14px;
-}
-
-.lv-type-title {
-    font-size: 16px;
-    font-weight: 700;
-    margin: 0 0 6px;
-}
-
-.lv-type-desc {
-    font-size: 12.5px;
-    color: var(--color-grey-dark);
-    line-height: 1.5;
-    margin: 0 0 14px;
-    flex: 1;
-}
-
-.lv-type-link {
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--color-primary);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.lv-type-link i {
-    font-size: 10px;
 }
 
 /* Recent listings */
@@ -6926,158 +6896,8 @@ product-card:hover {
     font-size: 10px;
 }
 
-.lv-recent-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--lv-gap);
-}
-
-.lv-card {
-    background: var(--color-white);
-    border: 1px solid var(--color-divider);
-    border-radius: 14px;
-    overflow: hidden;
-    transition: box-shadow var(--transition-speed) ease,
-                transform var(--transition-speed) ease;
-}
-
-.lv-card:hover {
-    box-shadow: var(--shadow-strong);
-    transform: translateY(-3px);
-}
-
-.lv-card-media {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 4 / 3;
-    background: var(--color-grey-light);
-}
-
-.lv-card-media img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.lv-favorite-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: none;
-    background: rgba(255,255,255,.92);
-    color: var(--color-black);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.lv-favorite-btn:hover {
-    color: var(--color-primary);
-}
-
-.lv-card-body {
-    padding: 14px 16px 16px;
-}
-
-.lv-card-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-
-.lv-card-title {
-    font-size: 15px;
-    font-weight: 700;
-    margin: 0;
-}
-
-.lv-card-price {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--color-primary);
-    white-space: nowrap;
-}
-
-.lv-card-price span {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--color-grey-dark);
-}
-
-.lv-card-specs {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 11.5px;
-    color: var(--color-grey-dark);
-    margin-bottom: 14px;
-}
-
-.lv-card-specs i {
-    color: var(--color-primary);
-    margin-right: 4px;
-}
-
-.lv-card-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.lv-card-agent {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12.5px;
-    font-weight: 600;
-}
-
-.lv-card-agent img {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-.lv-card-arrow {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--color-bg-body);
-    border: 1px solid var(--color-divider);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--color-black);
-    text-decoration: none;
-    font-size: 12px;
-    transition: background var(--transition-speed) ease,
-    color var(--transition-speed) ease,
-    border-color var(--transition-speed) ease;
-}
-
-.lv-card-arrow:hover {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: var(--color-white);
-}
-
 /* Tablette — max-width: 1024px */
 @media (max-width: 1024px) {
-    .lv-types-grid,
-    .lv-recent-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
     .lv-search-form {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -7109,10 +6929,6 @@ product-card:hover {
     .lv-search-btn {
         grid-column: 2;
     }
-
-    .lv-types {
-        margin-top: 40px;
-    }
 }
 
 /* Mobile — max-width: 480px */
@@ -7125,14 +6941,338 @@ product-card:hover {
         font-size: 13px;
     }
 
-    .lv-types-grid,
-    .lv-recent-grid {
-        grid-template-columns: 1fr;
-    }
-
     .lv-recent-header {
         flex-direction: column;
         align-items: flex-start;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Page des offres d'une categorie de location (location-annonces.blade.php)
+   Elle reprend le design de la vitrine : meme hero, meme barre, memes cartes.
+   -------------------------------------------------------------------------- */
+.lv-hero-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 18px;
+    padding: 7px 14px;
+    border-radius: var(--border-radius-round, 999px);
+    background: rgba(255, 255, 255, .16);
+    color: var(--color-white);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    backdrop-filter: blur(4px);
+    transition: background var(--transition-speed) ease;
+}
+
+.lv-hero-back:hover {
+    background: rgba(255, 255, 255, .28);
+    color: var(--color-white);
+}
+
+.lv-hero-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 34px;
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+}
+
+.lv-hero-stats li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.lv-hero-stats strong {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--color-white);
+    line-height: 1;
+}
+
+.lv-hero-stats span {
+    font-size: 12px;
+    color: rgba(255, 255, 255, .78);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+/* Barre de filtres complete : deux rangees de champs, puis les actions.
+   Ses regles responsives sont redefinies ici car elles arrivent apres
+   celles de `.lv-search-form`, qui sinon reprendraient la main. */
+.lv-search-form--filters {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.lv-search-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 4px;
+}
+
+.lv-search-reset {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-grey-dark);
+    text-decoration: none;
+    transition: color var(--transition-speed) ease;
+}
+
+.lv-search-reset:hover {
+    color: var(--color-primary);
+}
+
+.lv-search-reset i {
+    font-size: 11px;
+}
+
+/* Le bouton n'est plus une cellule de la grille : il vit dans les actions */
+.lv-search-form--filters .lv-search-btn {
+    grid-column: auto;
+}
+
+@media (max-width: 1024px) {
+    .lv-search-form--filters {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .lv-search-form--filters {
+        grid-template-columns: 1fr;
+    }
+
+    .lv-search-actions {
+        justify-content: space-between;
+    }
+}
+
+/* Passage d'une categorie a l'autre sans repasser par la vitrine */
+.lv-chips {
+    max-width: var(--lv-max-width);
+    margin: 34px auto 0;
+    padding: 0 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.lv-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px;
+    border: 1px solid var(--color-divider);
+    border-radius: var(--border-radius-round, 999px);
+    background: var(--color-white);
+    color: var(--color-black);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: border-color var(--transition-speed) ease,
+                background var(--transition-speed) ease,
+                color var(--transition-speed) ease;
+}
+
+.lv-chip i {
+    font-size: 12px;
+    color: var(--color-primary);
+}
+
+.lv-chip:hover {
+    border-color: var(--color-primary);
+    color: var(--color-black);
+}
+
+.lv-chip.is-active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-white);
+}
+
+.lv-chip.is-active i {
+    color: var(--color-white);
+}
+
+.lv-pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 34px;
+}
+
+.lv-pagination nav {
+    font-size: 13px;
+}
+
+.lv-pagination svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Banniere « publiez votre annonce » */
+.lv-banner {
+    position: relative;
+    max-width: var(--lv-max-width);
+    margin: 64px auto 0;
+    padding: 0 20px;
+}
+
+.lv-banner-bg {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+}
+
+.lv-banner-bg img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.lv-banner-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(0,0,0,.8) 0%, rgba(0,0,0,.45) 60%, rgba(0,0,0,.15) 100%);
+}
+
+.lv-banner-content {
+    position: relative;
+    z-index: 1;
+    padding: 40px;
+    max-width: 520px;
+}
+
+.lv-banner-badge {
+    display: inline-block;
+    background: var(--color-primary);
+    color: var(--color-white);
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: var(--border-radius-round);
+    margin-bottom: 16px;
+}
+
+.lv-banner-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--color-white);
+    margin: 0 0 14px;
+    line-height: 1.25;
+}
+
+.lv-banner-title-accent {
+    color: var(--color-primary);
+}
+
+.lv-banner-subtitle {
+    font-size: 13.5px;
+    color: rgba(255,255,255,.85);
+    line-height: 1.6;
+    margin: 0 0 22px;
+}
+
+.lv-banner-btn {
+    display: inline-block;
+    background: var(--color-white);
+    color: var(--color-black);
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 12px 22px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: opacity var(--transition-speed) ease;
+}
+
+.lv-banner-btn:hover {
+    opacity: .9;
+}
+
+/* Notre engagement */
+.lv-engagement {
+    max-width: var(--lv-max-width);
+    margin: 64px auto 80px;
+    padding: 0 20px;
+}
+
+.lv-engagement-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--lv-gap);
+}
+
+.lv-engagement-card {
+    background: var(--color-white);
+    border: 1px solid var(--color-divider);
+    border-radius: 14px;
+    padding: 22px;
+}
+
+.lv-engagement-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--color-grey-light);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    margin-bottom: 16px;
+}
+
+.lv-engagement-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 8px;
+}
+
+.lv-engagement-desc {
+    font-size: 12.5px;
+    color: var(--color-grey-dark);
+    line-height: 1.6;
+    margin: 0;
+}
+
+@media (max-width: 1024px) {
+    .lv-engagement-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .lv-hero-stats {
+        gap: 22px;
+    }
+
+    .lv-banner-content {
+        padding: 28px;
+    }
+
+    .lv-banner-title {
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 480px) {
+    .lv-engagement-grid {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -7315,6 +7455,61 @@ product-card:hover {
 }
 
 /* Destinations disponible */
+/* Barre de recherche etendue : deux rangees de criteres, puis les actions.
+   Ses regles responsives sont redefinies ici car elles arrivent apres celles
+   de `.cv-search-form`, qui sinon reprendraient la main. */
+.cv-search-form--wide {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.cv-search-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 4px;
+}
+
+.cv-search-reset {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-grey-dark);
+    text-decoration: none;
+    transition: color var(--transition-speed) ease;
+}
+
+.cv-search-reset:hover {
+    color: var(--color-primary);
+}
+
+.cv-search-reset i {
+    font-size: 11px;
+}
+
+.cv-search-form--wide .cv-search-btn {
+    grid-column: auto;
+}
+
+@media (max-width: 1024px) {
+    .cv-search-form--wide {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .cv-search-form--wide {
+        grid-template-columns: 1fr;
+    }
+
+    .cv-search-actions {
+        justify-content: space-between;
+    }
+}
+
 .cv-destinations {
     max-width: var(--cv-max-width);
     margin: 100px auto 0;
@@ -7327,6 +7522,8 @@ product-card:hover {
     justify-content: space-between;
     gap: 16px;
     flex-wrap: wrap;
+    /* Les pastilles de resultats ne doivent pas toucher la grille. */
+    margin-bottom: 22px;
 }
 
 .cv-destinations-link {
@@ -7405,22 +7602,20 @@ product-card:hover {
     font-weight: 700;
 }
 
-.cv-card-arrow {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--color-black);
-    color: var(--color-white);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Meme bouton que les cartes d'annonce : une carte se lit partout pareil. */
+.cv-card-btn {
+    background: var(--color-bg-body);
+    border: 1px solid var(--color-divider);
+    color: var(--color-black);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: var(--cs-radius-sm);
     text-decoration: none;
-    font-size: 12px;
-    transition: background var(--transition-speed) ease;
-}
-
-.cv-card-arrow:hover {
-    background: var(--color-primary);
+    white-space: nowrap;
+    transition: background var(--transition-speed) ease,
+                color var(--transition-speed) ease,
+                border-color var(--transition-speed) ease;
 }
 
 .cv-card-footer {
@@ -7488,12 +7683,6 @@ product-card:hover {
 }
 
 /* ---- Entete de la grille ---- */
-.cv-destinations-count {
-    margin: 6px 0 0;
-    font-size: 13px;
-    color: var(--color-grey-dark);
-}
-
 .cv-destinations-link i {
     font-size: 11px;
 }
@@ -7744,8 +7933,10 @@ product-card:hover {
     backdrop-filter: blur(4px);
 }
 
-.cv-card--route:hover .cv-card-arrow {
+.cv-card--route:hover .cv-card-btn {
     background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-white);
 }
 
 .cv-card-price small {
