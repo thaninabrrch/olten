@@ -1,0 +1,91 @@
+/* ==========================================================================
+   PAGINATION — vue vendor/pagination/olten.blade.php
+   --------------------------------------------------------------------------
+   Design unique pour toute la plateforme. La vue par defaut de Laravel est
+   ecrite pour Tailwind : hors de l'admin, ou Tailwind n'est pas charge, ses
+   classes utilitaires ne s'appliquent pas et les deux variantes (mobile et
+   bureau) s'affichent l'une sous l'autre. Cette feuille et sa vue
+   remplacent l'ensemble.
+
+   Elle est chargee par les trois layouts (public, connecte, admin) pour que
+   la pagination soit identique partout. Les variables ont donc un repli :
+   elles n'existent que dans style.css.
+   ========================================================================== */
+.olten-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-family, inherit);
+}
+
+.olten-pager-link,
+.olten-pager-gap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--color-divider, #e5e7eb);
+    border-radius: 10px;
+    background: var(--color-white, #fff);
+    color: var(--color-black, #111827);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: border-color .2s ease, background .2s ease, color .2s ease;
+}
+
+.olten-pager-link:hover {
+    border-color: var(--color-primary, #ff4d1c);
+    color: var(--color-primary, #ff4d1c);
+}
+
+/* Page courante : elle n'est pas cliquable, elle se donne a lire */
+.olten-pager-link.is-current {
+    background: var(--color-primary, #ff4d1c);
+    border-color: var(--color-primary, #ff4d1c);
+    color: #fff;
+    cursor: default;
+}
+
+/* Bornes de la liste : plus de page avant / apres */
+.olten-pager-link.is-disabled {
+    opacity: .45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.olten-pager-gap {
+    border-color: transparent;
+    background: transparent;
+    color: var(--color-grey-dark, #6b7280);
+    font-weight: 500;
+}
+
+.olten-pager-link i {
+    font-size: 11px;
+}
+
+/* Le nombre de resultats, sous les boutons */
+.olten-pager-info {
+    width: 100%;
+    text-align: center;
+    margin: 12px 0 0;
+    font-size: 12.5px;
+    color: var(--color-grey-dark, #6b7280);
+}
+
+/* Mobile : les numeros du milieu prennent trop de place, seules les
+   fleches et la page courante restent utiles. */
+@media (max-width: 480px) {
+    .olten-pager-number:not(.is-current),
+    .olten-pager-gap {
+        display: none;
+    }
+}
