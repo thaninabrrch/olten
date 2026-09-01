@@ -2,48 +2,39 @@
 
 namespace Database\Seeders;
 
-use App\Models\Subscription;
 use Illuminate\Database\Seeder;
+use App\Models\Subscription;
 
 class SubscriptionSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $subscriptions = [
-            [
-                'name' => 'Gratuit',
-                'slug' => 'free',
-                'price' => 0,
-                'description' => 'Compte gratuit avec fonctionnalités limitées.',
-            ],
-            [
-                'name' => 'Standard',
-                'slug' => 'standard',
-                'price' => 4.99,
-                'description' => 'Accès aux fonctionnalités essentielles.',
-            ],
-            [
-                'name' => 'Premium',
-                'slug' => 'premium',
-                'price' => 14.99,
-                'description' => 'Plus de visibilité et d\'avantages.',
-            ],
-            [
-                'name' => 'VIP',
-                'slug' => 'vip',
-                'price' => 29.99,
-                'description' => 'Accès complet à toutes les fonctionnalités.',
-            ],
-        ];
+        Subscription::query()->delete();
 
-        foreach ($subscriptions as $subscription) {
-            Subscription::updateOrCreate(
-                ['slug' => $subscription['slug']],
-                $subscription
-            );
-        }
+        Subscription::create([
+            'name' => 'Standard',
+            'slug' => 'standard',
+            'price' => 9.99,
+            'description' => "Pour les utilisateurs actifs :\n\n"
+                . "Répondre aux offres de livraison\n"
+                . "Répondre aux offres VTC\n"
+                . "Répondre aux appels d'offres\n"
+                . "Meilleure visibilité",
+        ]);
+
+        Subscription::create([
+            'name' => 'Premium',
+            'slug' => 'premium',
+            'price' => 19.99,
+            'description' =>  "Pour les utilisateurs actifs :\n\n"
+                . "Répondre aux offres de livraison\n"
+                . "Répondre aux offres VTC\n"
+                . "Répondre aux appels d'offres\n"
+                . "Meilleure visibilité\n"
+                . "Notifications e-mail\n"
+                . "Notifications en temps réel\n"
+                . "Mise en avant des annonces\n"
+                . "Support prioritaire",
+        ]);
     }
 }

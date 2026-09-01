@@ -111,7 +111,21 @@
             @foreach($subscriptions as $subscription)
 
                 @php
-                    $isFeatured = $subscription->slug === 'premium';
+                    // Standard = forfait le plus populaire
+                    $isFeatured = $subscription->slug === 'standard';
+
+                    // Récupérer les lignes de la description depuis la BDD
+                    $descriptionLines = preg_split(
+                        "/\r\n|\r|\n/",
+                        $subscription->description,
+                        -1,
+                        PREG_SPLIT_NO_EMPTY
+                    );
+
+                    // La première ligne est la phrase de présentation
+                    // Les lignes suivantes correspondent aux fonctionnalités
+                    $description = $descriptionLines[0] ?? '';
+                    $features = array_slice($descriptionLines, 1);
                 @endphp
 
                 <div class="olten-plan @if($isFeatured) is-featured @endif">
@@ -123,33 +137,31 @@
                         </span>
                     @endif
 
-                    <h2 class="olten-plan-name">{{ $subscription->name }}</h2>
+                    <h2 class="olten-plan-name">
+                        {{ $subscription->name }}
+                    </h2>
 
-                    <p class="olten-plan-desc">{{ $subscription->description }}</p>
+                    <p class="olten-plan-desc">
+                        {{ $description }}
+                    </p>
 
                     <div class="olten-plan-price">
                         <span class="olten-plan-amount">
                             {{ number_format($subscription->price, 2, ',', ' ') }} €
                         </span>
-                        <span class="olten-plan-period">/ mois</span>
+
+                        <span class="olten-plan-period">
+                            / mois
+                        </span>
                     </div>
 
                     <ul class="olten-plan-features">
 
                         @foreach($features as $feature)
 
-                            @php
-                                $value = $feature['plans'][$subscription->slug] ?? false;
-                                $label = is_string($value) ? $value : $feature['label'];
-                            @endphp
-
-                            <li class="@if(! $value) is-off @endif">
-                                <i class="fas {{ $value ? 'fa-check' : 'fa-xmark' }}"
-                                   aria-hidden="true"></i>
-                                <span>{{ $label }}</span>
-                                <span class="visually-hidden">
-                                    {{ $value ? '(inclus)' : '(non inclus)' }}
-                                </span>
+                            <li>
+                                <i class="fas fa-check" aria-hidden="true"></i>
+                                <span>{{ $feature }}</span>
                             </li>
 
                         @endforeach
@@ -157,12 +169,12 @@
                     </ul>
 
                     <form action="{{ route('subscriptions.select', $subscription->slug) }}"
-                          method="POST">
+                        method="POST">
 
                         @csrf
 
                         <button type="submit"
-                                class="olten-plan-btn @if(! $isFeatured) is-ghost @endif">
+                                class="olten-plan-btn @if(!$isFeatured) is-ghost @endif">
                             Choisir {{ $subscription->name }}
                         </button>
 
@@ -175,13 +187,6 @@
         </div>
 
         <div class="olten-plans-footer">
-
-            <form action="{{ route('subscriptions.select', 'free') }}" method="POST">
-                @csrf
-                <button type="submit" class="olten-plans-free">
-                    Continuer avec un compte gratuit
-                </button>
-            </form>
 
             <div class="olten-plans-trust">
                 <span>

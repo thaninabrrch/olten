@@ -310,7 +310,7 @@ Route::get('/produit/{product}', [ProductController::class, 'show'])->name('prod
 
 Route::prefix('produits')
     ->name('products.')
-    ->middleware(['auth', 'approved'])
+    ->middleware(['auth', 'verified', 'approved'])
     ->group(function () {
         Route::get('confirm', [ProductController::class, 'confirm'])->name('confirm')->middleware('auth');
         Route::post('pay', [ProductController::class, 'pay'])->name('pay')->middleware('auth');

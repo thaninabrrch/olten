@@ -11,9 +11,7 @@ class SubscriptionController extends Controller
 {
     public function index()
     {
-        $subscriptions = Subscription::where('slug', '!=', 'free')
-                                     ->orderBy('price')
-                                     ->get();
+        $subscriptions = Subscription::orderBy('price')->get();
         return view('subscriptions.index', compact('subscriptions'));
     }
 
@@ -23,25 +21,12 @@ class SubscriptionController extends Controller
 
         $subscription = Subscription::where('slug', $slug)->firstOrFail();
 
-        if ($subscription->slug === 'free') {
-
-            $user->update([
-                'subscription_id' => $subscription->id,
-            ]);
-
-            return redirect()->route('dashboard')->with('success', 'Votre compte gratuit a été activé.');
-        }
-
         return redirect()->route('subscriptions.payment', $subscription->slug);
     }
 
     public function payment(Subscription $subscription)
     {
         $user = Auth::user();
-
-        if ($subscription->slug === 'free') {
-            abort(404);
-        }
 
         Stripe::setApiKey(config('services.stripe.secret'));
 
