@@ -46,10 +46,14 @@ window.openAuthModal = function (tab, redirect) {
  * Il suffit d'ajouter `data-auth-required` sur le lien ; son `href` reste
  * le repli si le JavaScript ne s'execute pas.
  *
+ * Le selecteur ne vise que les liens et les boutons : porte par un
+ * formulaire, l'attribut couvre l'envoi (voir plus bas) et un clic dans un
+ * champ ne doit pas ouvrir la popin.
+ *
  * L'ecoute est deleguee : elle couvre aussi le contenu injecte apres coup.
  */
 document.addEventListener('click', function (event) {
-    const trigger = event.target.closest('[data-auth-required]');
+    const trigger = event.target.closest('a[data-auth-required], button[data-auth-required]');
 
     if (!trigger || window.IS_AUTHENTICATED) {
         return;
@@ -61,6 +65,30 @@ document.addEventListener('click', function (event) {
         event.preventDefault();
     }
 });
+
+/**
+ * Formulaires reserves aux membres (« Reserver maintenant » d'une annonce) :
+ * `data-auth-required` sur le <form> ouvre la popin au lieu de laisser
+ * l'envoi partir vers une route protegee, qui renverrait sur /login.
+ *
+ * L'ecoute est en phase de capture pour passer avant les validations de la
+ * page. Par defaut le visiteur revient sur la page courante une fois
+ * connecte ; `data-auth-redirect` permet de viser une autre destination.
+ */
+document.addEventListener('submit', function (event) {
+    const form = event.target.closest('form[data-auth-required]');
+
+    if (!form || window.IS_AUTHENTICATED) {
+        return;
+    }
+
+    const destination = form.dataset.authRedirect || window.location.href;
+
+    if (window.openAuthModal(form.dataset.authTab, destination)) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+}, true);
 
 document.addEventListener('DOMContentLoaded', function() {
 

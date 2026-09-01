@@ -6,6 +6,11 @@
 
         Voir le service          -> /vente
         Une categorie precise    -> /vente/telephones-tablettes
+
+    Les compteurs annoncent TOUTES les offres d'un service — annonces,
+    produits, et trajets pour le covoiturage — et non les seules annonces :
+    un service qui ne vend que des produits affichait « 0 annonce ».
+    Le calcul vit dans ServicePageController::index().
 --}}
 @extends('layouts.main')
 
@@ -17,6 +22,8 @@
 
     {{-- En-tete --}}
     <div class="sv-hero">
+        <div class="sv-hero-veil"></div>
+
         <div class="sv-hero-inner">
             <nav class="sv-breadcrumb" aria-label="Fil d'Ariane">
                 <a href="{{ route('home') }}" class="sv-breadcrumb-link">Accueil</a>
@@ -33,20 +40,26 @@
             </p>
 
             @if($services->isNotEmpty())
-                <div class="sv-hero-stats">
-                    <div class="sv-stat">
-                        <span class="sv-stat-value">{{ $services->count() }}</span>
-                        <span class="sv-stat-label">service(s)</span>
-                    </div>
-                    <div class="sv-stat">
-                        <span class="sv-stat-value">{{ $categoryTotal }}</span>
-                        <span class="sv-stat-label">catégorie(s)</span>
-                    </div>
-                    <div class="sv-stat">
-                        <span class="sv-stat-value">{{ $adTotal }}</span>
-                        <span class="sv-stat-label">annonce(s) en ligne</span>
-                    </div>
-                </div>
+                <p class="olten-count">
+                    <span class="olten-count-pill">
+                        <i class="fa-solid fa-grip"></i>
+                        {{ $services->count() }} service{{ $services->count() > 1 ? 's' : '' }}
+                    </span>
+
+                    <span class="olten-count-pill">
+                        <i class="fa-solid fa-border-all"></i>
+                        {{ $categoryTotal }} catégorie{{ $categoryTotal > 1 ? 's' : '' }}
+                    </span>
+
+                    <span class="olten-count-pill">
+                        <i class="fa-solid fa-tag"></i>
+                        {{ $offerTotal }} offre{{ $offerTotal > 1 ? 's' : '' }}
+                    </span>
+
+                    <span class="olten-count-note">
+                        {{ $offerTotal > 0 ? 'en ligne en ce moment' : 'pour le moment' }}
+                    </span>
+                </p>
             @endif
         </div>
     </div>
@@ -61,16 +74,19 @@
                     $tileHue = ($service->id * 47) % 360;
                     $shown   = $service->categories->take(5);
                     $rest    = $service->categories_count - $shown->count();
+                    $offers  = $service->offers_count;
                 @endphp
 
                 <article class="sv-card">
 
-                    {{-- Visuel du service : uniquement son image. Les services
-                         sans image tombent sur un dégradé teinté, stable. --}}
+                    {{-- Visuel du service : son image, sinon un aplat teinte
+                         stable sur lequel se detache son glyphe. --}}
                     <a href="{{ route('services.show', $service->slug) }}"
                        class="sv-card-visual"
                        style="--tile-hue: {{ $tileHue }};@if($service->image) --tile-image: url('{{ asset('storage/' . $service->image) }}');@endif"
-                       aria-label="Voir le service {{ $service->display_name }}"></a>
+                       aria-label="Voir le service {{ $service->display_name }}">
+                        <i class="{{ $service->icon_class }} sv-card-glyph" aria-hidden="true"></i>
+                    </a>
 
                     <div class="sv-card-body">
                         <h2 class="sv-card-title">
@@ -83,10 +99,17 @@
                                     ?: 'Découvrez toutes les annonces disponibles pour ' . $service->display_name . '.') }}
                         </p>
 
-                        <p class="sv-card-stats">
-                            <span><i class="fa-solid fa-layer-group"></i> {{ $service->categories_count }} catégorie(s)</span>
-                            <span><i class="fa-solid fa-bullhorn"></i> {{ $service->ads_count }} annonce(s)</span>
-                        </p>
+                        <div class="sv-card-stats">
+                            <span class="sv-card-stat {{ $service->categories_count ? '' : 'is-empty' }}">
+                                <i class="fa-solid fa-border-all"></i>
+                                {{ $service->categories_count }} catégorie{{ $service->categories_count > 1 ? 's' : '' }}
+                            </span>
+
+                            <span class="sv-card-stat {{ $offers ? '' : 'is-empty' }}">
+                                <i class="fa-solid fa-tag"></i>
+                                {{ $offers ? $offers . ' offre' . ($offers > 1 ? 's' : '') : 'Aucune offre' }}
+                            </span>
+                        </div>
 
                         @if($shown->isNotEmpty())
                             <div class="sv-card-tags">
@@ -100,7 +123,8 @@
 
                                 @if($rest > 0)
                                     <a href="{{ route('services.show', $service->slug) }}"
-                                       class="sv-tag sv-tag--more">+{{ $rest }}</a>
+                                       class="sv-tag sv-tag--more"
+                                       aria-label="Voir les {{ $rest }} autres catégories de {{ $service->display_name }}">+{{ $rest }}</a>
                                 @endif
                             </div>
                         @endif

@@ -61,7 +61,7 @@
         @endif
 
         <p class="cs-card-stats">
-            <span><i class="fa-regular fa-eye"></i> {{ $listing['views'] }} vue(s)</span>
+            <span><i class="fa-regular fa-eye"></i> {{ $listing['views'] }} vue{{ $listing['views'] > 1 ? 's' : '' }}</span>
 
             @if($isProduct && $listing['stock'] !== null)
                 <span>

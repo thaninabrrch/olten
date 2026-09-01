@@ -15,6 +15,14 @@
 
 @section('content')
 
+@php
+    // Reperes du fil d'Ariane : la categorie de l'offre et le service dont
+    // elle depend. Le service peut manquer sur une categorie orpheline ; le
+    // fil se replie alors sur la categorie seule.
+    $crumbCategory = $ad->category;
+    $crumbService  = $crumbCategory?->service;
+@endphp
+
 <div class="dt">
     <div class="dt-wrap">
 
@@ -22,8 +30,20 @@
         <nav class="dt-crumbs" aria-label="Fil d'ariane">
             <a href="{{ url('/') }}">Accueil</a>
             <i class="fa-solid fa-chevron-right"></i>
-            @if ($ad->category)
-                <a href="{{ route('categories.show', $ad->category->slug) }}">{{ $ad->category->nom }}</a>
+
+            {{-- La categorie ne renvoie plus a l'ancienne page
+                 /categories/{slug} mais a la page du service, filtree sur
+                 elle : c'est la que vivent desormais les offres. Le service
+                 lui-meme prend un cran du fil, pour remonter d'un niveau. --}}
+            @if ($crumbService)
+                <a href="{{ route('services.show', $crumbService->slug) }}">{{ $crumbService->display_name }}</a>
+                <i class="fa-solid fa-chevron-right"></i>
+            @endif
+
+            @if ($crumbCategory)
+                <a href="{{ $crumbService
+                            ? route('services.category', [$crumbService->slug, $crumbCategory->slug])
+                            : route('categories.show', $crumbCategory->slug) }}">{{ $crumbCategory->nom }}</a>
                 <i class="fa-solid fa-chevron-right"></i>
             @endif
             <span class="is-current">{{ $ad->title }}</span>
@@ -123,7 +143,12 @@
                     </div>
 
                     @if ($bookable)
-                        <form action="{{ route('bookings.store', $ad) }}" method="POST">
+                        {{-- `data-auth-required` : un visiteur non connecte voit la
+                             popin de connexion (assets/js/auth.js) au lieu d'etre
+                             renvoye sur /login par le middleware. Il revient sur
+                             cette annonce une fois connecte. --}}
+                        <form action="{{ route('bookings.store', $ad) }}" method="POST"
+                              data-auth-required data-auth-redirect="{{ url()->current() }}">
                             @csrf
 
                             <div class="dt-field">
@@ -297,6 +322,96 @@
     </div>
 </div>
 
+{{-- Popin de signalement --}}
+@php
+    $reportReasons = [
+        ['value' => 'Arnaque ou tentative de fraude',   'hint' => 'Paiement hors plateforme, faux profil, demande suspecte.'],
+        ['value' => 'Annonce trompeuse',                'hint' => 'Photos, description ou prix qui ne correspondent pas au bien.'],
+        ['value' => 'Contenu inapproprié',              'hint' => 'Propos ou images choquants, haineux ou à caractère sexuel.'],
+        ['value' => 'Objet interdit à la location',     'hint' => 'Produit illégal, contrefait ou dangereux.'],
+        ['value' => 'Annonce en double ou indisponible','hint' => 'Le bien est déjà loué, ou publié plusieurs fois.'],
+        ['value' => 'Autre motif',                      'hint' => 'Décrivez le problème dans le champ ci-dessous.'],
+    ];
+@endphp
+
+<div class="dt-rep"
+     id="dt-report-modal"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="dt-report-title"
+     data-dt-report-guest="{{ auth()->check() ? '0' : '1' }}"
+     hidden>
+
+    <div class="dt-rep-backdrop" data-dt-report-close></div>
+
+    <div class="dt-rep-card">
+        <form class="dt-rep-form" data-dt-report-form data-dt-report-url="{{ route('ads.report', $ad) }}">
+            <div class="dt-rep-head">
+                <span class="dt-rep-badge"><i class="fa-solid fa-flag"></i></span>
+
+                <div class="dt-rep-head-text">
+                    <h2 class="dt-rep-title" id="dt-report-title">Signaler cette annonce</h2>
+                    <p class="dt-rep-sub">
+                        Votre signalement reste confidentiel : le propriétaire n'en est pas informé.
+                        Notre équipe de modération examine chaque demande.
+                    </p>
+                </div>
+
+                <button type="button" class="dt-rep-close" data-dt-report-close aria-label="Fermer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="dt-rep-body">
+                <fieldset class="dt-rep-options">
+                    <legend class="dt-rep-legend">Motif du signalement</legend>
+
+                    @foreach ($reportReasons as $i => $reason)
+                        <label class="dt-rep-option">
+                            <input type="radio" name="reason" value="{{ $reason['value'] }}">
+                            <span class="dt-rep-dot" aria-hidden="true"></span>
+                            <span class="dt-rep-option-text">
+                                {{ $reason['value'] }}
+                                <small>{{ $reason['hint'] }}</small>
+                            </span>
+                        </label>
+                    @endforeach
+                </fieldset>
+
+                <label class="dt-rep-field">
+                    <span class="dt-rep-label">
+                        Précisions <span class="dt-rep-count" data-dt-report-count>0 / 500</span>
+                    </span>
+                    <textarea class="dt-rep-textarea"
+                              data-dt-report-details
+                              maxlength="500"
+                              placeholder="Ajoutez tout élément utile à la modération (échanges, dates, liens…)."></textarea>
+                </label>
+
+                <p class="dt-rep-alert" data-dt-report-alert hidden role="alert">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span></span>
+                </p>
+            </div>
+
+            <div class="dt-rep-foot">
+                <button type="button" class="dt-rep-btn is-ghost" data-dt-report-close>Annuler</button>
+                <button type="submit" class="dt-rep-btn is-danger" data-dt-report-submit>
+                    <i class="fa-solid fa-flag"></i>
+                    <span>Envoyer le signalement</span>
+                </button>
+            </div>
+        </form>
+
+        <div class="dt-rep-done" data-dt-report-done tabindex="-1" hidden>
+            <div class="dt-rep-done-icon"><i class="fa-solid fa-check"></i></div>
+            <h3>Signalement transmis</h3>
+            <p data-dt-report-done-text>Notre équipe de modération va examiner cette annonce.</p>
+            <button type="button" class="dt-rep-btn is-ghost" data-dt-report-close>Fermer</button>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -373,23 +488,166 @@
         }
 
         // ---- Signalement ----
-        document.querySelector('[data-dt-report]')?.addEventListener('click', function () {
-            const reason = prompt('Pourquoi voulez-vous signaler cette annonce ?');
-            if (!reason) return;
+        // Le prompt() natif affichait l'URL du site et n'offrait aucun motif :
+        // le bouton pilote desormais la popin .dt-rep.
+        const reportTrigger = document.querySelector('[data-dt-report]');
+        const reportModal   = document.getElementById('dt-report-modal');
 
-            fetch('/ads/' + this.dataset.dtReport + '/report', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ reason: reason })
-            })
-                .then(res => res.json())
-                .then(data => alert(data.message || 'Annonce signalée.'))
-                .catch(err => console.error(err));
-        });
+        if (reportTrigger && reportModal) {
+            const reportForm  = reportModal.querySelector('[data-dt-report-form]');
+            const reportDone  = reportModal.querySelector('[data-dt-report-done]');
+            const doneText    = reportModal.querySelector('[data-dt-report-done-text]');
+            const alertBox    = reportModal.querySelector('[data-dt-report-alert]');
+            const alertText   = alertBox.querySelector('span');
+            const details     = reportModal.querySelector('[data-dt-report-details]');
+            const counter     = reportModal.querySelector('[data-dt-report-count]');
+            const submitBtn   = reportModal.querySelector('[data-dt-report-submit]');
+            const submitIcon  = submitBtn.querySelector('i');
+            const submitLabel = submitBtn.querySelector('span');
+            const options     = Array.from(reportForm.querySelectorAll('.dt-rep-option'));
+            const isGuest     = reportModal.dataset.dtReportGuest === '1';
+
+            let lastFocused = null;
+
+            function resetReport() {
+                alertBox.hidden = true;
+                reportDone.hidden = true;
+                reportForm.hidden = false;
+                reportForm.reset();
+                options.forEach(function (opt) {
+                    opt.classList.remove('is-selected');
+                });
+                counter.textContent = '0 / ' + details.maxLength;
+            }
+
+            function openReport() {
+                resetReport();
+                lastFocused = document.activeElement;
+                reportModal.hidden = false;
+                document.body.classList.add('dt-rep-open');
+                reportForm.querySelector('input[name="reason"]').focus();
+            }
+
+            function closeReport() {
+                reportModal.hidden = true;
+                document.body.classList.remove('dt-rep-open');
+                lastFocused?.focus();
+            }
+
+            function showReportAlert(message) {
+                alertText.textContent = message;
+                alertBox.hidden = false;
+                alertBox.scrollIntoView({ block: 'nearest' });
+            }
+
+            reportTrigger.addEventListener('click', function () {
+                // Visiteur non connecte : on ouvre la connexion, comme ailleurs
+                // sur le site (favoris, depot d'annonce).
+                if (isGuest) {
+                    window.openAuthModal?.('login', window.location.href);
+                    return;
+                }
+
+                openReport();
+            });
+
+            reportModal.querySelectorAll('[data-dt-report-close]').forEach(function (el) {
+                el.addEventListener('click', closeReport);
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !reportModal.hidden) closeReport();
+            });
+
+            // Un radio natif ne se stylise pas : on marque l'etiquette choisie.
+            reportForm.addEventListener('change', function () {
+                options.forEach(function (opt) {
+                    opt.classList.toggle('is-selected', opt.querySelector('input').checked);
+                });
+            });
+
+            details.addEventListener('input', function () {
+                counter.textContent = details.value.length + ' / ' + details.maxLength;
+            });
+
+            reportForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                alertBox.hidden = true;
+
+                const checked = reportForm.querySelector('input[name="reason"]:checked');
+
+                if (!checked) {
+                    showReportAlert('Merci de choisir un motif de signalement.');
+                    return;
+                }
+
+                const precision = details.value.trim();
+
+                if (checked.value === 'Autre motif' && precision === '') {
+                    showReportAlert('Merci de préciser le motif de votre signalement.');
+                    details.focus();
+                    return;
+                }
+
+                const reason = precision ? checked.value + ' — ' + precision : checked.value;
+
+                submitBtn.disabled = true;
+                submitIcon.className = 'fa-solid fa-spinner';
+                submitLabel.textContent = 'Envoi en cours…';
+
+                try {
+                    const res = await fetch(reportForm.dataset.dtReportUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ reason: reason })
+                    });
+
+                    // Session expiree pendant la visite
+                    if (res.status === 401 || res.status === 419) {
+                        closeReport();
+                        window.openAuthModal?.('login', window.location.href);
+                        return;
+                    }
+
+                    // « verified » et « approved » redirigent au lieu de repondre en
+                    // JSON : fetch suit la redirection et renvoie une page HTML en 200.
+                    // Sans ce garde-fou, la popin annoncait un succes fictif.
+                    if (!(res.headers.get('content-type') || '').includes('application/json')) {
+                        showReportAlert("Votre compte ne permet pas encore d'envoyer un signalement. Vérifiez votre adresse e-mail, puis réessayez.");
+                        return;
+                    }
+
+                    const data = await res.json().catch(() => ({}));
+
+                    // Laravel renvoie ici un message en anglais.
+                    if (res.status === 403) {
+                        showReportAlert("Votre adresse e-mail doit être vérifiée avant de pouvoir signaler une annonce.");
+                        return;
+                    }
+
+                    if (!res.ok) {
+                        showReportAlert(data.message || "Le signalement n'a pas pu être envoyé.");
+                        return;
+                    }
+
+                    doneText.textContent = data.message || 'Notre équipe de modération va examiner cette annonce.';
+                    reportForm.hidden = true;
+                    reportDone.hidden = false;
+                    reportDone.focus();
+                } catch (err) {
+                    console.error(err);
+                    showReportAlert('Connexion impossible. Merci de réessayer dans un instant.');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitIcon.className = 'fa-solid fa-flag';
+                    submitLabel.textContent = 'Envoyer le signalement';
+                }
+            });
+        }
 
         // ---- Calendrier de réservation ----
         const datesInput = document.getElementById('reservation_dates');

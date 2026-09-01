@@ -14,6 +14,14 @@
 
 @section('content')
 
+@php
+    // Reperes du fil d'Ariane : la categorie de l'offre et le service dont
+    // elle depend. Le service peut manquer sur une categorie orpheline ; le
+    // fil se replie alors sur la categorie seule.
+    $crumbCategory = $product->category;
+    $crumbService  = $crumbCategory?->service;
+@endphp
+
 <div class="dt">
     <div class="dt-wrap">
 
@@ -21,8 +29,20 @@
         <nav class="dt-crumbs" aria-label="Fil d'ariane">
             <a href="{{ url('/') }}">Accueil</a>
             <i class="fa-solid fa-chevron-right"></i>
-            @if ($product->category)
-                <a href="{{ route('categories.show', $product->category->slug) }}">{{ $product->category->nom }}</a>
+
+            {{-- La categorie ne renvoie plus a l'ancienne page
+                 /categories/{slug} mais a la page du service, filtree sur
+                 elle : c'est la que vivent desormais les offres. Le service
+                 lui-meme prend un cran du fil, pour remonter d'un niveau. --}}
+            @if ($crumbService)
+                <a href="{{ route('services.show', $crumbService->slug) }}">{{ $crumbService->display_name }}</a>
+                <i class="fa-solid fa-chevron-right"></i>
+            @endif
+
+            @if ($crumbCategory)
+                <a href="{{ $crumbService
+                            ? route('services.category', [$crumbService->slug, $crumbCategory->slug])
+                            : route('categories.show', $crumbCategory->slug) }}">{{ $crumbCategory->nom }}</a>
                 <i class="fa-solid fa-chevron-right"></i>
             @endif
             <span class="is-current">{{ $product->name }}</span>
@@ -121,7 +141,14 @@
                     </span>
 
                     @if ($stock > 0 && ! $isOwner)
-                        <form action="{{ route('products.purchase', $product) }}" method="POST" style="margin-top:16px;">
+                        {{-- `data-auth-required` : un visiteur non connecte voit la
+                             popin de connexion (assets/js/auth.js) au lieu d'etre
+                             renvoye sur /login par le middleware `auth` de la route
+                             `products.purchase`. Il revient sur ce produit une fois
+                             connecte, sa quantite est simplement a resaisir. --}}
+                        <form action="{{ route('products.purchase', $product) }}" method="POST"
+                              style="margin-top:16px;"
+                              data-auth-required data-auth-redirect="{{ url()->current() }}">
                             @csrf
 
                             <div class="dt-field">

@@ -83,7 +83,19 @@
     {{-- Filtres : les libelles suivent la categorie ouverte (`fields`), les
          champs sont ceux que la recherche sait reellement appliquer. --}}
     <section class="lv-search-section">
+        @php
+            // Les criteres secondaires ouvrent le volet d'eux-memes quand
+            // ils sont poses : sinon le visiteur verrait des resultats
+            // filtres sans voir par quoi.
+            $extraOuvert = collect(['type', 'min_price', 'max_price', 'sort'])
+                ->contains(fn ($cle) => request()->filled($cle));
+        @endphp
+
         <form class="lv-search-form lv-search-form--filters" action="{{ $selfUrl }}" method="GET">
+
+            {{-- Rangee unique : ce qu'on renseigne presque toujours. --}}
+            <div class="lv-search-row">
+
             <div class="lv-search-field">
                 <label for="lvSearch">Que recherchez-vous ?</label>
                 <div class="lv-search-input">
@@ -121,6 +133,28 @@
                            min="{{ request('start_date') }}">
                 </div>
             </div>
+
+                <button type="submit" class="lv-search-btn">Rechercher</button>
+            </div>{{-- /.lv-search-row --}}
+
+            {{-- Barre de service : deplier les criteres secondaires, et
+                 repartir de zero quand une recherche est en cours. --}}
+            <div class="lv-search-foot">
+                <button type="button" class="lv-search-more" data-lv-more
+                        aria-expanded="{{ $extraOuvert ? 'true' : 'false' }}" aria-controls="lvExtra">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Plus de filtres</span>
+                    <i class="fa-solid fa-chevron-down lv-search-more-caret"></i>
+                </button>
+
+                @if($hasFilters)
+                    <a href="{{ $selfUrl }}#offres" class="lv-search-reset">
+                        <i class="fa-solid fa-rotate-left"></i> Réinitialiser
+                    </a>
+                @endif
+            </div>
+
+            <div class="lv-search-extra" id="lvExtra" data-lv-extra @unless($extraOuvert) hidden @endunless>
 
             <div class="lv-search-field">
                 <label for="lvType">Type d'offre</label>
@@ -167,29 +201,34 @@
                 </div>
             </div>
 
-            <div class="lv-search-actions">
-                @if($hasFilters)
-                    <a href="{{ $selfUrl }}#offres" class="lv-search-reset">
-                        <i class="fa-solid fa-rotate-left"></i> Réinitialiser
-                    </a>
-                @endif
-
-                <button type="submit" class="lv-search-btn">Rechercher</button>
-            </div>
+            </div>{{-- /.lv-search-extra --}}
         </form>
     </section>
 
-    {{-- Les autres categories du service, pour passer de l'une a l'autre --}}
+    {{-- Les autres categories du service, pour passer de l'une a l'autre.
+         Une categorie sans aucune offre part en gris : le visiteur voit
+         avant de cliquer qu'il n'y trouvera rien. --}}
     @if($categories->isNotEmpty())
+        @php $totalOffres = $categories->sum('ads_count') + $categories->sum('products_count'); @endphp
+
         <nav class="lv-chips" aria-label="Catégories de {{ $service->display_name }}">
             <a href="{{ route('services.show', $service->slug) }}"
-               class="lv-chip {{ $selectedCategory ? '' : 'is-active' }}">
+               class="lv-chip {{ $selectedCategory ? '' : 'is-active' }} {{ $totalOffres ? '' : 'is-empty' }}"
+               @unless($selectedCategory) aria-current="page" @endunless>
                 <i class="fa-solid fa-border-all"></i> Toutes
             </a>
 
             @foreach($categories as $category)
+                @php
+                    // Annonces et produits partagent la meme grille : c'est
+                    // leur somme qui dit si la categorie a quelque chose.
+                    $nbOffres = ($category->ads_count ?? 0) + ($category->products_count ?? 0);
+                    $estActive = $selectedCategory?->id === $category->id;
+                @endphp
+
                 <a href="{{ route('services.category', [$service->slug, $category->slug]) }}"
-                   class="lv-chip {{ $selectedCategory?->id === $category->id ? 'is-active' : '' }}">
+                   class="lv-chip {{ $estActive ? 'is-active' : '' }} {{ $nbOffres ? '' : 'is-empty' }}"
+                   @if($estActive) aria-current="page" @endif>
                     <i class="{{ $category->icon_class }}"></i> {{ $category->nom }}
                 </a>
             @endforeach
@@ -299,3 +338,25 @@
 </div>
 
 @endsection
+
+@push('scripts')
+<script>
+    // Volet des criteres secondaires de la barre de recherche : la rangee
+    // visible reste sur une seule ligne, le reste se deplie a la demande.
+    document.addEventListener('DOMContentLoaded', function () {
+        const bouton = document.querySelector('[data-lv-more]');
+        const volet  = document.querySelector('[data-lv-extra]');
+
+        if (! bouton || ! volet) {
+            return;
+        }
+
+        bouton.addEventListener('click', function () {
+            const ouvrir = volet.hidden;
+
+            volet.hidden = ! ouvrir;
+            bouton.setAttribute('aria-expanded', String(ouvrir));
+        });
+    });
+</script>
+@endpush

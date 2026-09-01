@@ -73,15 +73,27 @@ class ServicePageController extends Controller
             ->withCount([
                 'categories',
                 'ads as ads_count' => fn (Builder $q) => $q->where('ads.is_approved', true),
+                'products as products_count' => fn (Builder $q) => $q->where('products.is_active', true),
             ])
             ->with(['categories' => fn ($q) => $q->orderBy('id')])
             ->orderBy('id')
             ->get();
 
+        // Le covoiturage ne publie ni annonces ni produits : ses offres sont
+        // des trajets, ranges dans une table a part. Sans ce cas particulier,
+        // sa carte annoncait « 0 offre » alors que des trajets sont en ligne.
+        $trips = $this->tripQuery()->count();
+
+        $services->each(function (Service $service) use ($trips) {
+            $service->offers_count = str_starts_with($service->slug, 'covoiturage')
+                ? $trips
+                : $service->ads_count + $service->products_count;
+        });
+
         return view('services.index', [
             'services'      => $services,
             'categoryTotal' => $services->sum('categories_count'),
-            'adTotal'       => $services->sum('ads_count'),
+            'offerTotal'    => $services->sum('offers_count'),
         ]);
     }
 
@@ -721,6 +733,13 @@ class ServicePageController extends Controller
         // Grille : annonces et produits ramenes au meme format, tries ensemble
         $all = $this->listings($request, $categoryIds);
 
+        // La barre de facettes annonce en direct le nombre d'offres qu'un
+        // reglage donnerait (« Afficher 842 offres ») : elle rejoue la meme
+        // requete et ne demande que le total, sans recharger la page.
+        if ($request->boolean('count_only')) {
+            return response()->json(['total' => $all->count()]);
+        }
+
         return view('services.service-standard', [
             'service'          => $service,
             'categories'       => $categories,
@@ -733,6 +752,8 @@ class ServicePageController extends Controller
             ],
             'mapPoints'        => $this->mapPoints($request, $categoryIds),
             'cities'           => $this->cities($categoryIds),
+            'priceBounds'      => $bounds = $this->priceBounds($categoryIds),
+            'priceBrackets'    => $this->priceBrackets($bounds['max']),
             'popular'          => $this->popular($categoryIds),
         ]);
     }
@@ -905,6 +926,79 @@ class ServicePageController extends Controller
             ->values();
 
         return $points;
+    }
+
+    /**
+     * Bornes du curseur de prix : le plus haut tarif du perimetre, annonces
+     * et produits confondus.
+     *
+     * Volontairement calculees sans tenir compte des filtres en cours. Des
+     * bornes qui suivraient la recherche se resserreraient autour du prix
+     * deja choisi, et la poignee du curseur se retrouverait collee a son
+     * propre reglage des le premier deplacement.
+     */
+    private function priceBounds(array $categoryIds): array
+    {
+        $annonces = (float) (Ad::where('is_approved', true)
+            ->whereIn('category_id', $categoryIds)
+            ->max('price_per_day') ?? 0);
+
+        $produits = (float) (Product::where('is_active', true)
+            ->whereIn('category_id', $categoryIds)
+            ->max('price') ?? 0);
+
+        $max = max($annonces, $produits);
+
+        // Un plafond arrondi vers le haut donne une graduation lisible et
+        // evite que la poignee droite bute sur un prix exact.
+        return [
+            'min' => 0,
+            'max' => $max > 0 ? (int) (ceil($max / 100) * 100) : 1000,
+        ];
+    }
+
+    /**
+     * Les quatre fourchettes proposees d'un clic sous le curseur de prix.
+     * Le pas suit le catalogue : un service a 300 EUR et un service a
+     * 300 000 EUR ne peuvent pas partager les memes paliers.
+     */
+    private function priceBrackets(int $max): array
+    {
+        $pas = $this->roundPrice(max($max / 4, 1));
+
+        return [
+            ['label' => 'Moins de ' . $this->formatPrice($pas),              'min' => null,      'max' => $pas],
+            ['label' => $this->formatPrice($pas) . ' – ' . $this->formatPrice($pas * 2), 'min' => $pas,  'max' => $pas * 2],
+            ['label' => $this->formatPrice($pas * 2) . ' – ' . $this->formatPrice($pas * 4), 'min' => $pas * 2, 'max' => $pas * 4],
+            ['label' => 'Plus de ' . $this->formatPrice($pas * 4),           'min' => $pas * 4,  'max' => null],
+        ];
+    }
+
+    /**
+     * Arrondit a un palier « rond » (1, 2 ou 5 fois une puissance de dix) :
+     * « Moins de 2 500 EUR » se lit mieux que « Moins de 2 437 EUR ».
+     *
+     * L'arrondi va vers le BAS. La derniere fourchette vaut quatre fois ce
+     * pas : arrondi vers le haut, elle depassait le prix le plus eleve du
+     * catalogue et ne contenait jamais rien — sur un service plafonnant a
+     * 55 000 EUR, on proposait « Plus de 80 000 EUR ».
+     */
+    private function roundPrice(float $valeur): int
+    {
+        $puissance = 10 ** max(0, (int) floor(log10(max($valeur, 1))));
+
+        foreach ([5, 2, 1] as $facteur) {
+            if ($valeur >= $facteur * $puissance) {
+                return (int) ($facteur * $puissance);
+            }
+        }
+
+        return (int) max(1, $puissance);
+    }
+
+    private function formatPrice(int $valeur): string
+    {
+        return number_format($valeur, 0, ',', ' ') . ' €';
     }
 
     /**

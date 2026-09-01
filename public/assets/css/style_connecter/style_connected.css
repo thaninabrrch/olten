@@ -7480,6 +7480,254 @@ span.expired {
 }
 
 /* ===================================================================
+   TABLEAU DE BORD — STATISTIQUES DETAILLEES
+   -------------------------------------------------------------------
+   Grille souple : chaque carte demande 340px et se partage l'espace
+   restant, les cartes larges prennent la ligne entiere. Les cartes
+   d'une meme ligne s'etirent a la meme hauteur (align-items: stretch
+   par defaut), ce qui aligne les bas de carte sans hauteur figee.
+
+   Les hauteurs sont volontairement contenues : un graphique de tableau
+   de bord se lit d'un coup d'oeil, il n'a pas besoin de la moitie de
+   l'ecran. Toutes les hauteurs minimales incluent la bande des
+   libelles d'axe, pour qu'aucune carte ne declenche d'ascenseur
+   interne.
+   =================================================================== */
+
+.sp-page .sp-viz-grid {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 16px;
+    margin: 0 0 24px;
+}
+
+.sp-page .sp-viz {
+    /* min() borne la contribution en largeur maximale : sans lui, une rangee
+       flex qui passe a la ligne elargit le conteneur parent sur mobile. */
+    flex: 1 1 min(340px, 100%);
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.sp-page .sp-viz--wide {
+    flex-basis: 100%;
+}
+
+/* En-tete plus compact que celui des grands panneaux de la page. */
+.sp-page .sp-viz .sp-toolbar {
+    flex-shrink: 0;
+    padding: 14px 18px;
+}
+
+.sp-page .sp-viz .sp-toolbar-title {
+    font-size: 15px;
+}
+
+.sp-page .sp-viz .sp-count {
+    font-size: 11.5px;
+    margin-top: 2px;
+}
+
+/* La zone de trace occupe la hauteur restante : le bas des cartes
+   d'une meme ligne reste aligne meme si les titres tiennent sur deux
+   lignes. */
+.sp-page .sp-viz-canvas {
+    position: relative;
+    flex: 1 1 auto;
+    height: 200px;
+    min-height: 0;
+    padding: 14px 18px;
+}
+
+.sp-page .sp-viz-canvas.is-tall {
+    height: 240px;
+}
+
+/* flex-grow a zero : deux anneaux voisins gardent le meme diametre meme
+   si l un a une legende plus longue — c est la legende qui absorbe la
+   difference de hauteur, pas le trace. */
+.sp-page .sp-viz-canvas.is-ring {
+    flex: 0 0 auto;
+    height: 170px;
+    padding: 14px 18px 4px;
+}
+
+.sp-page .sp-viz-canvas.is-list {
+    height: 200px;
+    padding: 14px 18px 10px;
+}
+
+/* Chart.js pose une largeur en ligne sur le canvas et la recalcule de
+   facon asynchrone : le temps d'un redimensionnement de fenetre, cette
+   valeur perimee elargirait la carte. Ce plafond l'en empeche. */
+.sp-page .sp-viz-canvas canvas {
+    max-width: 100%;
+}
+
+/* Total pose au centre de l'anneau : pointer-events a none pour ne pas
+   voler le survol aux arcs qui sont dessous. */
+.sp-page .sp-viz-center {
+    position: absolute;
+    inset: 14px 18px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    pointer-events: none;
+    text-align: center;
+}
+
+.sp-page .sp-viz-center strong {
+    font-size: 21px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -.03em;
+    color: var(--sp-ink);
+}
+
+.sp-page .sp-viz-center span {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--sp-muted);
+}
+
+/* Pastille d'en-tete : l'icone porte la couleur de la serie, le texte
+   garde une encre lisible — une couleur de serie ne fait jamais office
+   de couleur de texte. */
+.sp-page .sp-viz-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border: 1px solid var(--sp-border);
+    border-radius: 999px;
+    background: #f7f8fa;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--sp-ink);
+    white-space: nowrap;
+}
+
+.sp-page .sp-viz-tag i {
+    font-size: 10.5px;
+    color: var(--tag, var(--color-primary));
+}
+
+/* Legende a icone : une couleur d'etat ne porte jamais le sens seule. */
+.sp-page .sp-legend-icon {
+    width: 13px;
+    flex-shrink: 0;
+    font-size: 11.5px;
+    text-align: center;
+}
+
+/* La legende d'un anneau se colle au bas de la carte pour que deux
+   cartes voisines finissent a la meme hauteur. */
+.sp-page .sp-viz .sp-legend {
+    margin-top: auto;
+    padding: 2px 18px 16px;
+}
+
+.sp-page .sp-viz .sp-legend li {
+    gap: 9px;
+    padding: 7px 0;
+    font-size: 12.5px;
+}
+
+/* ---------- Etapes de l'entonnoir ---------- */
+.sp-page .sp-funnel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    list-style: none;
+    margin: 0;
+    padding: 2px 18px 18px;
+}
+
+.sp-page .sp-funnel li {
+    flex: 1 1 118px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 9px 12px;
+    border: 1px solid var(--sp-border);
+    border-radius: var(--sp-radius-sm);
+    background: #fbfbfc;
+}
+
+.sp-page .sp-funnel-value {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -.02em;
+    color: var(--sp-ink);
+}
+
+.sp-page .sp-funnel-name {
+    font-size: 11.5px;
+    color: var(--sp-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-page .sp-funnel-part {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #495057;
+}
+
+@media (max-width: 992px) {
+    .sp-page .sp-viz {
+        flex-basis: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .sp-page .sp-viz-grid {
+        gap: 14px;
+    }
+
+    .sp-page .sp-viz-canvas,
+    .sp-page .sp-viz-canvas.is-tall,
+    .sp-page .sp-viz-canvas.is-list {
+        height: 190px;
+        padding: 12px 14px 10px;
+    }
+
+    .sp-page .sp-viz-canvas.is-ring {
+        height: 165px;
+        padding: 12px 14px 4px;
+    }
+
+    .sp-page .sp-viz-center {
+        inset: 12px 14px 4px;
+    }
+
+    .sp-page .sp-viz .sp-legend {
+        padding: 2px 14px 14px;
+    }
+
+    .sp-page .sp-funnel {
+        padding: 2px 14px 16px;
+    }
+
+    .sp-page .sp-funnel li {
+        flex-basis: 104px;
+        padding: 8px 10px;
+    }
+
+    .sp-page .sp-funnel-value {
+        font-size: 16px;
+    }
+}
+
+/* ===================================================================
    VIGNETTES DES PHOTOS DEJA EN LIGNE (formulaires d'edition)
    Les classes .current-images / .image-wrapper / .delete-image sont
    celles attendues par deleteAdsImgs.js et deleteProductImgs.js.

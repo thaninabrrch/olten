@@ -102,4 +102,16 @@ class Service extends Model
     {
         return $this->hasManyThrough(Ad::class, Category::class, 'service_id', 'category_id');
     }
+
+    /**
+     * Relation : tous les produits du service, via ses catégories.
+     *
+     * Annonces et produits vivent dans deux tables distinctes mais se
+     * présentent côte à côte sur la plateforme : compter les unes sans les
+     * autres annonçait « 0 annonce » sur un service qui vendait des produits.
+     */
+    public function products()
+    {
+        return $this->hasManyThrough(Product::class, Category::class, 'service_id', 'category_id');
+    }
 }

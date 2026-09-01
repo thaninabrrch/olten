@@ -17,6 +17,10 @@ use App\Models\Delivery;
 use App\Models\Ad;
 use App\Models\Booking;
 use App\Models\PointsFidelite;
+use App\Models\AdVisit;
+use App\Models\Product;
+use App\Models\UserDocument;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -193,6 +197,100 @@ class DashboardController extends Controller
             $graphData = $septJours;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | STATISTIQUES DETAILLEES
+        |--------------------------------------------------------------------------
+        | Toutes les series ci-dessous sont lues en base, sans valeur de
+        | demonstration. Un graphique vide veut donc dire « aucune donnee de ce
+        | type pour l'instant » : c'est une information juste, la vue affiche un
+        | message plutot qu'une courbe inventee.
+        */
+        $adIds     = Ad::where('user_id', $user->id)->pluck('id');
+        $produitIds = Product::where('user_id', $user->id)->pluck('id');
+
+        $visites = $adIds->isEmpty()
+            ? collect()
+            : AdVisit::whereIn('ad_id', $adIds)->get(['user_id', 'created_at']);
+
+        // -- Trafic : une barre par jour sur trente jours glissants --
+        $parJour = [];
+
+        for ($i = 29; $i >= 0; $i--) {
+            $parJour[Carbon::today()->subDays($i)->format('Y-m-d')] = 0;
+        }
+
+        foreach ($visites as $visite) {
+            $jour = Carbon::parse($visite->created_at)->format('Y-m-d');
+
+            if (array_key_exists($jour, $parJour)) {
+                $parJour[$jour]++;
+            }
+        }
+
+        $trafic = [
+            'labels'  => array_map(fn ($j) => Carbon::parse($j)->format('d/m'), array_keys($parJour)),
+            'valeurs' => array_values($parJour),
+            'total'   => array_sum($parJour),
+        ];
+
+        // -- Affluence par jour de la semaine, sur tout l'historique --
+        $affluence = array_fill(0, 7, 0);
+
+        foreach ($visites as $visite) {
+            $affluence[Carbon::parse($visite->created_at)->dayOfWeekIso - 1]++;
+        }
+
+        // Les zeros sont retires : une part nulle n'a pas de place dans un anneau.
+        $catalogue = array_filter([
+            'Annonces' => Ad::where('user_id', $user->id)->count(),
+            'Produits' => $produitIds->count(),
+            'Trajets'  => Covoiturage::where('conducteur_id', $user->id)->count(),
+        ]);
+
+        // -- Recette potentielle des trajets publies : prix de la place x places --
+        $premiereVille = function ($adresse) {
+            $ville = trim(explode(',', (string) $adresse)[0] ?? '');
+
+            return $ville !== '' ? $ville : '—';
+        };
+
+        $trajets = Covoiturage::where('conducteur_id', $user->id)
+            ->orderByDesc('date_depart')
+            ->limit(6)
+            ->get(['depart', 'destination', 'prix_place', 'nb_places']);
+
+        $recetteTrajets = [
+            'labels'  => $trajets->map(fn ($t) => $premiereVille($t->depart) . ' → ' . $premiereVille($t->destination))->all(),
+            'valeurs' => $trajets->map(fn ($t) => round((float) $t->prix_place * max((int) $t->nb_places, 1), 2))->all(),
+        ];
+
+        // -- Dossier de verification : un document, un statut --
+        $statutsDocs = UserDocument::where('user_id', $user->id)->pluck('status')->countBy();
+
+        $verification = array_filter([
+            'Validé'     => (int) ($statutsDocs['approved'] ?? 0),
+            'En attente' => (int) ($statutsDocs['pending'] ?? 0),
+            'Refusé'     => (int) ($statutsDocs['rejected'] ?? 0),
+        ]);
+
+        // -- Entonnoir : ce que devient une visite --
+        $reservations = $adIds->isEmpty()
+            ? collect()
+            : Booking::whereIn('ad_id', $adIds)->pluck('status');
+
+        $misesEnFavori = DB::table('favorites')
+            ->when($adIds->isNotEmpty(), fn ($q) => $q->orWhereIn('ad_id', $adIds))
+            ->when($produitIds->isNotEmpty(), fn ($q) => $q->orWhereIn('product_id', $produitIds))
+            ->count();
+
+        $entonnoir = [
+            'Vues'         => (int) Ad::where('user_id', $user->id)->sum('views'),
+            'Favoris'      => ($adIds->isEmpty() && $produitIds->isEmpty()) ? 0 : $misesEnFavori,
+            'Réservations' => $reservations->count(),
+            'Payées'       => $reservations->filter(fn ($s) => $s === 'paid')->count(),
+        ];
+
         $revenusPeriode = array_sum($repartition);
 
         return view('pages.locateur.dashboard', compact(
@@ -212,7 +310,13 @@ class DashboardController extends Controller
             'revenusMensuels',
             'repartition',
             'septJours',
-            'revenusPeriode'
+            'revenusPeriode',
+            'trafic',
+            'affluence',
+            'catalogue',
+            'recetteTrajets',
+            'verification',
+            'entonnoir'
         ));
     }
 }

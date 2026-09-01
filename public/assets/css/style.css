@@ -3762,6 +3762,429 @@ textarea {
     color: #b42318;
 }
 
+/* --------------------------------------------------------------------------
+   Popin de signalement d'une annonce
+   Le prompt() natif du navigateur affichait l'URL du site et n'offrait aucun
+   choix de motif. On ouvre desormais une vraie fenetre : motifs pre-definis,
+   champ de precision et confirmation visible apres envoi.
+   -------------------------------------------------------------------------- */
+.dt-rep {
+    /* La popin est rendue hors de <div class="dt"> : on redeclare ici les
+       variables du bloc fiche, sinon bordures, rayon et gris ne resolvent pas. */
+    --dt-radius: 18px;
+    --dt-border: #e9ecef;
+    --dt-muted: #8a9099;
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.dt-rep[hidden] {
+    display: none;
+}
+
+body.dt-rep-open {
+    overflow: hidden;
+}
+
+.dt-rep-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(12, 13, 17, .62);
+    backdrop-filter: blur(2px);
+}
+
+.dt-rep-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: min(520px, 100%);
+    max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
+    overflow: hidden;
+    background: var(--color-white, #fff);
+    border-radius: var(--dt-radius);
+    box-shadow: 0 24px 60px rgba(16, 24, 40, .28);
+    animation: dt-rep-in .18s ease-out;
+}
+
+@keyframes dt-rep-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(.98);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dt-rep-card {
+        animation: none;
+    }
+}
+
+.dt-rep-form {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.dt-rep-form[hidden] {
+    display: none;
+}
+
+.dt-rep-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    padding: 22px 22px 16px;
+    border-bottom: 1px solid var(--dt-border);
+}
+
+.dt-rep-badge {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: #fdecec;
+    color: #b42318;
+    font-size: 16px;
+}
+
+.dt-rep-head-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.dt-rep-title {
+    margin: 0 0 4px;
+    font-size: 16.5px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--color-black, #16181d);
+}
+
+.dt-rep-sub {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--dt-muted);
+}
+
+.dt-rep-close {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--dt-muted);
+    font-size: 15px;
+    cursor: pointer;
+    transition: background .2s ease, color .2s ease;
+}
+
+.dt-rep-close:hover {
+    background: #f2f4f7;
+    color: var(--color-black, #16181d);
+}
+
+.dt-rep-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 18px 22px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.dt-rep-legend {
+    display: block;
+    margin-bottom: 10px;
+    padding: 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    color: var(--dt-muted);
+}
+
+.dt-rep-options {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 16px;
+    padding: 0;
+    border: 0;
+}
+
+.dt-rep-option {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 11px 13px;
+    border: 1px solid var(--dt-border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color .18s ease, background .18s ease;
+}
+
+.dt-rep-option:hover {
+    border-color: #f5c2c3;
+    background: #fffafa;
+}
+
+.dt-rep-option input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+}
+
+.dt-rep-dot {
+    flex: 0 0 auto;
+    width: 17px;
+    height: 17px;
+    margin-top: 1px;
+    border: 1.5px solid #c6cbd2;
+    border-radius: 50%;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.dt-rep-option-text {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--color-grey-dark, #555);
+}
+
+.dt-rep-option-text small {
+    display: block;
+    margin-top: 2px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--dt-muted);
+}
+
+/* Etat selectionne : le navigateur ne peut pas styler un radio natif, on
+   colore donc l'etiquette entiere via :has(). */
+.dt-rep-option.is-selected {
+    border-color: #d9534f;
+    background: #fdecec;
+}
+
+.dt-rep-option.is-selected .dt-rep-dot {
+    border-color: #b42318;
+    box-shadow: inset 0 0 0 4px #b42318;
+}
+
+.dt-rep-option.is-selected .dt-rep-option-text {
+    color: #8f2226;
+}
+
+.dt-rep-option:focus-within {
+    outline: 2px solid #b42318;
+    outline-offset: 2px;
+}
+
+.dt-rep-field {
+    display: block;
+}
+
+.dt-rep-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-grey-dark, #555);
+}
+
+.dt-rep-count {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--dt-muted);
+}
+
+.dt-rep-textarea {
+    width: 100%;
+    min-height: 92px;
+    padding: 11px 13px;
+    border: 1px solid var(--dt-border);
+    border-radius: 12px;
+    background: var(--color-white, #fff);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--color-grey-dark, #555);
+    resize: vertical;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.dt-rep-textarea:focus {
+    outline: none;
+    border-color: #d9534f;
+    box-shadow: 0 0 0 3px rgba(180, 35, 24, .12);
+}
+
+.dt-rep-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 14px;
+    padding: 11px 13px;
+    border: 1px solid #f5c2c3;
+    border-radius: 12px;
+    background: #fdecec;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #8f2226;
+}
+
+.dt-rep-alert[hidden] {
+    display: none;
+}
+
+.dt-rep-alert i {
+    margin-top: 2px;
+}
+
+.dt-rep-alert a {
+    color: inherit;
+    font-weight: 700;
+}
+
+.dt-rep-foot {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 10px;
+    padding: 16px 22px 20px;
+    border-top: 1px solid var(--dt-border);
+}
+
+.dt-rep-btn {
+    flex: 1 1 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, color .2s ease, opacity .2s ease;
+}
+
+.dt-rep-btn.is-ghost {
+    border-color: var(--dt-border);
+    background: var(--color-white, #fff);
+    color: var(--color-grey-dark, #555);
+}
+
+.dt-rep-btn.is-ghost:hover {
+    border-color: #c6cbd2;
+    background: #f8f9fa;
+}
+
+.dt-rep-btn.is-danger {
+    background: #b42318;
+    color: #fff;
+}
+
+.dt-rep-btn.is-danger:hover {
+    background: #91190f;
+}
+
+.dt-rep-btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.dt-rep-btn .fa-spinner {
+    animation: dt-rep-spin .8s linear infinite;
+}
+
+@keyframes dt-rep-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Ecran de confirmation, une fois le signalement transmis */
+.dt-rep-done {
+    min-height: 0;
+    padding: 34px 26px 30px;
+    overflow-y: auto;
+    text-align: center;
+}
+
+.dt-rep-done[hidden] {
+    display: none;
+}
+
+.dt-rep-done-icon {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #e7f6ec;
+    color: #1c7c3f;
+    font-size: 22px;
+}
+
+.dt-rep-done h3 {
+    margin: 0 0 7px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-black, #16181d);
+}
+
+.dt-rep-done p {
+    margin: 0 auto 20px;
+    max-width: 340px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--dt-muted);
+}
+
+.dt-rep-done .dt-rep-btn {
+    flex: 0 0 auto;
+    min-width: 170px;
+}
+
+@media (max-width: 575.98px) {
+    .dt-rep {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    .dt-rep-card {
+        width: 100%;
+        max-height: 92vh;
+        max-height: 92dvh;
+        border-radius: 18px 18px 0 0;
+    }
+
+    .dt-rep-foot {
+        flex-direction: column-reverse;
+    }
+}
+
 /* ---- Etats et alertes ---- */
 .dt-note {
     display: flex;
@@ -5698,169 +6121,323 @@ product-card:hover {
 
 /* ==========================================================================
    PAGE SERVICE / CATÉGORIE (service-standard.blade.php)
+   --------------------------------------------------------------------------
+   La page est un empilement de blocs : hero, categories, carte, filtres +
+   grille, populaires. Tous sont cales sur le meme contenant
+   (--cs-max-width + --cs-pad) : le hero se decalait de 20px par rapport au
+   reste parce qu'il avait sa propre gouttiere.
+
+   Les variables restent sur :root et non sur `.cs-page` : la carte d'offre
+   (.cs-card, composant <x-services.listing-card />) est partagee avec la page
+   location, elle vit donc hors de `.cs-page`.
    ========================================================================== */
-/* Ces variables sont declarees ici et non sur `.cs-page` : la carte d'offre
-   (.cs-card, composant <x-services.listing-card />) est partagee par les
-   pages service et la page location, elle vit donc hors de `.cs-page`. */
 :root {
     --cs-radius-lg: 16px;
     --cs-radius-md: 12px;
-    --cs-radius-sm: 8px;
-    --cs-max-width: 1180px;
+    --cs-radius-sm: 10px;
+    --cs-max-width: 1320px;
+    --cs-pad: 20px;
     --cs-gap: 20px;
-}
+    --cs-block: 52px;
 
-.cs-page * {
-    box-sizing: border-box;
+    /* Filets et gris propres a ces pages. Le `--color-divider` global (#ddd)
+       cerne trop : sur une grille de cartes, le contour prenait le pas sur
+       le contenu. */
+    --cs-line: #e7e9ec;
+    --cs-line-strong: #d8dbe0;
+    --cs-ink-soft: #6b7280;
+    --cs-tint: #fff5f1;
+    --cs-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+    --cs-shadow-hover: 0 12px 26px rgba(16, 24, 40, .10);
+    --cs-control-h: 42px;
 }
 
 .cs-page {
     max-width: var(--cs-max-width);
     margin: 0 auto;
-    padding: 0 20px 64px;
+    padding: 0 var(--cs-pad) 72px;
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     color: var(--color-black);
 }
 
-/* Hero section */
+/* --------------------------------------------------------------------------
+   Hero
+   Une banniere sombre, photo du service en fond derriere un voile : la bande
+   peche precedente reprenait le meme rose que les cartes et le fil d'Ariane
+   s'y noyait. Le hero est pose avant `.cs-page` dans la vue et reprend la
+   meme gouttiere interne, donc le fil d'Ariane s'aligne sur les blocs qui le
+   suivent.
+   -------------------------------------------------------------------------- */
 .cs-hero {
-    width: 100vw;
     position: relative;
-    left: 50%;
-    right: 50%;
-    margin-left: -50vw;
-    margin-right: -50vw;
-    background: linear-gradient(90deg, #fdece0 0%, #fff9f5 100%);
-    padding: 28px 0 32px;
-    margin-bottom: 28px;
+    isolation: isolate;
+    overflow: hidden;
+    background: #12141a;
+    padding: 40px 0 46px;
+    margin-bottom: var(--cs-block);
+}
+
+.cs-hero-bg {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+}
+
+.cs-hero-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Deux couches : un degrade qui garde le texte lisible a gauche et laisse
+   respirer la photo a droite, puis une lueur orange qui rattache la banniere
+   a la couleur de la marque. */
+.cs-hero-veil {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+        radial-gradient(120% 150% at 100% 0%, rgba(255, 60, 0, .34) 0%, rgba(255, 60, 0, 0) 58%),
+        linear-gradient(100deg, rgba(12, 13, 17, .96) 0%, rgba(12, 13, 17, .88) 46%, rgba(18, 12, 9, .58) 100%);
+}
+
+/* Sans photo, la banniere ne doit pas rester un aplat noir. */
+.cs-hero:not(.has-image) .cs-hero-veil {
+    background:
+        radial-gradient(110% 140% at 100% 0%, rgba(255, 60, 0, .40) 0%, rgba(255, 60, 0, 0) 60%),
+        linear-gradient(115deg, #12141a 0%, #1b1d25 55%, #241a17 100%);
 }
 
 .cs-hero-inner {
+    position: relative;
     max-width: var(--cs-max-width);
     margin: 0 auto;
-    padding: 0 0px;
+    padding: 0 var(--cs-pad);
 }
 
-/* Breadcrumb */
+/* Le glyphe du service en filigrane, pour que la banniere ne soit pas
+   qu'un bloc de texte quand le service n'a pas de photo. */
+.cs-hero-glyph {
+    position: absolute;
+    right: var(--cs-pad);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 132px;
+    line-height: 1;
+    color: rgba(255, 255, 255, .07);
+    pointer-events: none;
+}
+
 .cs-breadcrumb {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     font-size: 13px;
-    color: var(--color-grey-dark);
-    margin-bottom: 14px;
+    color: rgba(255, 255, 255, .6);
+    margin-bottom: 18px;
 }
 
 .cs-breadcrumb-link {
-    color: var(--color-grey-dark);
+    color: rgba(255, 255, 255, .6);
     text-decoration: none;
     font-weight: 500;
     transition: color var(--transition-speed) ease;
 }
 
 .cs-breadcrumb-link:hover {
-    color: var(--color-primary);
+    color: var(--color-white);
 }
 
 .cs-breadcrumb-sep {
     font-size: 9px;
-    color: var(--color-grey-dark);
-    opacity: .7;
+    color: rgba(255, 255, 255, .38);
 }
 
 .cs-breadcrumb-current {
-    color: var(--color-primary);
+    color: #ff7a4d;
     font-weight: 600;
+}
+
+/* Nom du service au-dessus du titre : sur une page de categorie, le titre
+   est celui de la categorie et le service se perdait. */
+.cs-hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 13px;
+    border-radius: var(--border-radius-round);
+    background: rgba(255, 60, 0, .16);
+    border: 1px solid rgba(255, 122, 77, .42);
+    color: #ff8b62;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-bottom: 14px;
 }
 
 .cs-hero-title {
-    font-size: 26px;
-    font-weight: 700;
-    color: var(--color-black);
-    margin: 0 0 8px;
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    line-height: 1.12;
+    color: var(--color-white);
+    margin: 0 0 12px;
 }
 
 .cs-hero-subtitle {
-    font-size: 14px;
-    color: var(--color-grey-dark);
-    margin: 0;
-    max-width: 560px;
-}
-
-@media (max-width: 768px) {
-    .cs-page {
-        margin: 0 auto;
-        padding: 0 0 0;
-    }
-    .cs-hero {
-        padding: 20px 20px 20px;
-    }
-
-    .cs-hero-title {
-        font-size: 21px;
-    }
-
-    .cs-hero-subtitle {
-        font-size: 13px;
-    }
-}
-
-/* Categories grid */
-.cs-categories {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: var(--cs-gap);
-    margin-bottom: 28px;
-}
-
-.cs-cat-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--color-white);
-    border: 1px solid var(--color-divider);
-    border-radius: var(--cs-radius-md);
-    padding: 16px 14px;
-    text-decoration: none;
-    color: var(--color-black);
-    transition: box-shadow var(--transition-speed) ease,
-                transform var(--transition-speed) ease,
-                border-color var(--transition-speed) ease;
-}
-
-.cs-cat-item:hover {
-    box-shadow: var(--shadow-strong);
-    border-color: var(--color-primary);
-    transform: translateY(-2px);
-}
-
-.cs-cat-icon {
-    flex: 0 0 auto;
-    width: 34px;
-    height: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--cs-radius-sm);
-    background: var(--color-grey-light);
-    color: var(--color-primary);
     font-size: 15px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, .74);
+    margin: 0;
+    max-width: 620px;
 }
 
-.cs-cat-label {
+/* Les pastilles de comptage reprennent `.olten-count`, partage avec les
+   pages covoiturage et location, retournees pour un fond sombre. */
+.cs-hero .olten-count {
+    margin-top: 20px;
+}
+
+.cs-hero .olten-count-pill {
+    background: rgba(255, 255, 255, .10);
+    border-color: rgba(255, 255, 255, .20);
+    color: var(--color-white);
+    backdrop-filter: blur(4px);
+}
+
+.cs-hero .olten-count-pill i {
+    color: #ff8b62;
+}
+
+.cs-hero .olten-count-note {
+    color: rgba(255, 255, 255, .6);
+}
+
+/* --------------------------------------------------------------------------
+   Titre de section (Categories, Toutes les offres, Les plus consultees)
+   Le libelle et sa note etaient pousses aux deux bords opposes de la page :
+   de loin, la note ne se rattachait plus a rien. Ils sont empiles.
+   -------------------------------------------------------------------------- */
+.cs-section-head {
+    margin-bottom: 20px;
+}
+
+.cs-section-title,
+.cs-listings-title {
+    position: relative;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    margin: 0;
+    padding-bottom: 12px;
+}
+
+.cs-section-title::after,
+.cs-listings-title::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 44px;
+    height: 3px;
+    border-radius: var(--border-radius-round);
+    background: var(--color-primary);
+}
+
+.cs-section-hint {
+    display: block;
     font-size: 13.5px;
-    font-weight: 600;
-    line-height: 1.25;
+    color: var(--cs-ink-soft);
+    margin-top: 10px;
 }
 
-/* Map card */
+/* --------------------------------------------------------------------------
+   Categories
+   Les vignettes occupaient trois rangees pleines avant meme la premiere
+   annonce. En pastilles, les treize categories tiennent sur deux lignes et
+   la page va droit aux offres. Meme dessin que les pastilles de la page
+   location (.lv-chip), pour qu'une categorie se choisisse partout pareil.
+   -------------------------------------------------------------------------- */
+.cs-categories-block {
+    margin-bottom: var(--cs-block);
+}
+
+.cs-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.cs-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border: 1px solid var(--cs-line-strong);
+    border-radius: var(--border-radius-round);
+    background: var(--color-white);
+    color: var(--color-black);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: border-color var(--transition-speed) ease,
+                background var(--transition-speed) ease,
+                color var(--transition-speed) ease;
+}
+
+.cs-chip i {
+    font-size: 12px;
+    color: var(--color-primary);
+}
+
+.cs-chip:hover {
+    border-color: var(--color-primary);
+    color: var(--color-black);
+}
+
+.cs-chip.is-active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-white);
+}
+
+.cs-chip.is-active i,
+.cs-chip.is-active:hover {
+    color: var(--color-white);
+}
+
+/* Categorie sans offre : elle reste cliquable, mais le compteur ayant
+   disparu de la pastille, c'est le gris qui dit qu'il n'y a rien. */
+.cs-chip.is-empty:not(.is-active) {
+    background: #fbfbfc;
+    border-color: var(--cs-line);
+    color: #6b7280;
+}
+
+.cs-chip.is-empty:not(.is-active) i {
+    color: #a2a8b0;
+}
+
+.cs-chip.is-empty:not(.is-active):hover {
+    border-color: var(--color-primary);
+    color: var(--color-black);
+}
+
+/* --------------------------------------------------------------------------
+   Carte des annonces
+   -------------------------------------------------------------------------- */
 .cs-map-card {
     background: var(--color-white);
-    border: 1px solid var(--color-divider);
+    border: 1px solid var(--cs-line);
     border-radius: var(--cs-radius-lg);
+    box-shadow: var(--cs-shadow);
     padding: 20px;
-    margin-bottom: 36px;
+    margin-bottom: var(--cs-block);
 }
 
 .cs-map-header {
@@ -5873,21 +6450,26 @@ product-card:hover {
 }
 
 .cs-map-title {
-    font-size: var(--font-size-subheading);
-    font-weight: 600;
+    font-size: 13.5px;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--cs-ink-soft);
     margin: 0;
     max-width: 560px;
 }
 
+/* Pastille sobre : en orange plein, elle se lisait comme un bouton et
+   entrait en concurrence avec les vraies actions de la page. */
 .cs-map-badge {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: var(--color-primary);
-    color: var(--color-white);
+    background: var(--cs-tint);
+    border: 1px solid #ffd9c8;
+    color: var(--color-primary);
     font-size: 12.5px;
     font-weight: 600;
-    padding: 8px 14px;
+    padding: 7px 14px;
     border-radius: var(--border-radius-round);
     white-space: nowrap;
 }
@@ -5895,16 +6477,626 @@ product-card:hover {
 .cs-map-frame {
     border-radius: var(--cs-radius-md);
     overflow: hidden;
-    border: 1px solid var(--color-divider);
+    border: 1px solid var(--cs-line);
 }
 
 .cs-map-canvas {
     width: 100%;
-    height: 320px;
+    height: 340px;
+    background: var(--color-grey-light);
+    z-index: 0;
+}
+
+.cs-map-placeholder {
+    border: 1px dashed var(--cs-line-strong);
+    border-radius: var(--cs-radius-md);
+    background: #fafbfc;
+    padding: 44px 20px;
+    text-align: center;
+    color: var(--cs-ink-soft);
+}
+
+.cs-map-placeholder i {
+    font-size: 30px;
+    color: var(--color-primary);
+    margin-bottom: 12px;
+}
+
+.cs-map-placeholder-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-black);
+    margin: 0 0 6px;
+}
+
+.cs-map-placeholder-text {
+    font-size: 13px;
+    margin: 0;
+}
+
+/* Bulle d'un marqueur */
+.cs-map-popup {
+    display: block;
+    width: 190px;
+    text-decoration: none;
+    color: var(--color-black);
+}
+
+.cs-map-popup img {
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+    border-radius: var(--cs-radius-sm);
+    margin-bottom: 8px;
+}
+
+.cs-map-popup-cat {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--color-primary);
+    font-weight: 700;
+}
+
+.cs-map-popup strong {
+    display: block;
+    font-size: 13.5px;
+    margin: 2px 0 4px;
+}
+
+.cs-map-popup-address {
+    display: block;
+    font-size: 12px;
+    color: var(--cs-ink-soft);
+}
+
+.cs-map-popup-price {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-top: 6px;
+}
+
+/* --------------------------------------------------------------------------
+   Rail de filtres + resultats
+   Les criteres tenaient dans une rangee de menus deroulants : il fallait
+   ouvrir chaque menu pour savoir ce qu'il proposait, et la marge gauche de
+   la page restait vide. Ils occupent maintenant cette marge, en colonne, et
+   se lisent tous d'un coup.
+   -------------------------------------------------------------------------- */
+.cs-listings {
+    display: grid;
+    grid-template-columns: 288px minmax(0, 1fr);
+    align-items: start;
+    gap: 28px;
+    margin-bottom: var(--cs-block);
+}
+
+.cs-results {
+    min-width: 0;
+}
+
+/* Le rail suit le defilement : sur une longue grille, les filtres restent
+   a portee sans remonter en haut de page. */
+.cs-facets {
+    position: sticky;
+    top: calc(var(--header-height) + 16px);
+    max-height: calc(100vh - var(--header-height) - 32px);
+    overflow-y: auto;
+    background: var(--color-white);
+    border: 1px solid var(--cs-line);
+    border-radius: var(--cs-radius-lg);
+    box-shadow: var(--cs-shadow);
+    padding: 18px;
+}
+
+.cs-facets-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--cs-line);
+}
+
+.cs-facets-head-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.cs-facets-head-title i {
+    color: var(--color-primary);
+    font-size: 13px;
+}
+
+/* Bouton de repli : n'existe que sous 900px, quand le rail passe au-dessus
+   des resultats. */
+.cs-facets-toggle {
+    display: none;
+}
+
+.cs-facets-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    margin-left: 6px;
+    border-radius: var(--border-radius-round);
+    background: var(--color-primary);
+    color: var(--color-white);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.cs-facets-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 42px;
+    padding: 0 14px;
+    background: var(--color-white);
+    border: 1px solid var(--cs-line-strong);
+    border-radius: var(--cs-radius-sm);
+    color: var(--cs-ink-soft);
+    margin-bottom: 16px;
+    transition: border-color var(--transition-speed) ease,
+                box-shadow var(--transition-speed) ease;
+}
+
+.cs-facets-search:focus-within {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(255, 60, 0, .12);
+}
+
+.cs-facets-search input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: var(--font-family);
+    font-size: 13.5px;
+    color: var(--color-black);
+}
+
+/* --- Une section du rail --- */
+.cs-facet {
+    border-top: 1px solid var(--cs-line);
+    padding: 14px 0;
+}
+
+.cs-facet:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+
+.cs-facet-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-family: var(--font-family);
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--color-black);
+    text-align: left;
+    cursor: pointer;
+}
+
+.cs-facet-name {
+    flex: 0 0 auto;
+}
+
+/* Valeur retenue, rappelee sur l'en-tete : la section repliee dit quand
+   meme ce qu'elle filtre. */
+.cs-facet-value {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.cs-facet-caret {
+    flex: 0 0 auto;
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--cs-ink-soft);
+    transition: transform var(--transition-speed) ease;
+}
+
+.cs-facet-value + .cs-facet-caret {
+    margin-left: 0;
+}
+
+.cs-facet.is-open .cs-facet-caret {
+    transform: rotate(180deg);
+}
+
+.cs-facet-panel {
+    padding-top: 12px;
+}
+
+.cs-facet-panel[hidden] {
+    display: none;
+}
+
+.cs-facet-field {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--cs-line-strong);
+    border-radius: var(--cs-radius-sm);
+    color: var(--cs-ink-soft);
+    margin-bottom: 10px;
+}
+
+.cs-facet-field:focus-within {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(255, 60, 0, .12);
+}
+
+.cs-facet-field input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: var(--font-family);
+    font-size: 13px;
+    color: var(--color-black);
+}
+
+/* Liste de villes bornee en hauteur : un service a cent villes pousserait
+   le reste du rail hors de l'ecran. */
+.cs-facet-options {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 176px;
+    overflow-y: auto;
+}
+
+.cs-facet-option {
+    text-align: left;
+    padding: 7px 10px;
+    border: none;
+    border-radius: var(--cs-radius-sm);
+    background: transparent;
+    font-family: var(--font-family);
+    font-size: 13px;
+    color: var(--color-black);
+    cursor: pointer;
+    transition: background var(--transition-speed) ease;
+}
+
+.cs-facet-option:hover {
     background: var(--color-grey-light);
 }
 
-/* Listings header */
+.cs-facet-option.is-on {
+    background: var(--cs-tint);
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.cs-facet-radios {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cs-facet-radio {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: var(--cs-radius-sm);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background var(--transition-speed) ease;
+}
+
+.cs-facet-radio:hover {
+    background: var(--color-grey-light);
+}
+
+.cs-facet-radio input {
+    accent-color: var(--color-primary);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}
+
+.cs-facet-radio:has(input:checked) {
+    background: var(--cs-tint);
+}
+
+.cs-facet-radio:has(input:checked) span {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.cs-facet-clear {
+    margin-top: 10px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-family: var(--font-family);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--cs-ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    transition: color var(--transition-speed) ease;
+}
+
+.cs-facet-clear:hover {
+    color: var(--color-primary);
+}
+
+/* Colle au bas du rail : quand la liste des criteres depasse la hauteur
+   disponible, le rail defile en interne et le bouton d'application sortait
+   de vue — on ne savait plus comment valider sa recherche. */
+.cs-facets-foot {
+    position: sticky;
+    bottom: -18px;
+    padding: 16px 0 0;
+    margin-top: 4px;
+    border-top: 1px solid var(--cs-line);
+    background: var(--color-white);
+}
+
+.cs-facet-apply {
+    width: 100%;
+    height: 42px;
+    border: none;
+    border-radius: var(--cs-radius-sm);
+    background: var(--color-primary);
+    color: var(--color-white);
+    font-family: var(--font-family);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-speed) ease;
+}
+
+.cs-facet-apply:hover {
+    background: var(--color-primary-dark);
+}
+
+/* --- Curseur de prix a deux poignees --- */
+.cs-price-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.cs-price-inputs input {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 38px;
+    padding: 0 10px;
+    border: 1px solid var(--cs-line-strong);
+    border-radius: var(--cs-radius-sm);
+    font-family: var(--font-family);
+    font-size: 13px;
+    color: var(--color-black);
+    /* Les fleches natives mangent la place du montant. */
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.cs-price-inputs input::-webkit-outer-spin-button,
+.cs-price-inputs input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.cs-price-inputs input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(255, 60, 0, .12);
+}
+
+.cs-price-sep {
+    flex: 0 0 auto;
+    color: var(--cs-ink-soft);
+}
+
+/* Deux `input[range]` superposes. Ils ne recoivent le clic que sur leur
+   poignee (`pointer-events` retire de la piste), sinon celui du dessus
+   avalerait tous les clics et l'autre poignee serait inatteignable. */
+.cs-price-slider {
+    position: relative;
+    height: 24px;
+    margin-bottom: 16px;
+}
+
+.cs-price-track,
+.cs-price-fill {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 4px;
+    border-radius: var(--border-radius-round);
+}
+
+.cs-price-track {
+    left: 0;
+    right: 0;
+    background: var(--cs-line-strong);
+}
+
+.cs-price-fill {
+    background: var(--color-primary);
+}
+
+.cs-price-slider input[type="range"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    background: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    pointer-events: none;
+}
+
+.cs-price-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    pointer-events: auto;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    border: 3px solid var(--color-white);
+    box-shadow: 0 1px 4px rgba(16, 24, 40, .28);
+    cursor: grab;
+}
+
+.cs-price-slider input[type="range"]::-moz-range-thumb {
+    pointer-events: auto;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    border: 3px solid var(--color-white);
+    box-shadow: 0 1px 4px rgba(16, 24, 40, .28);
+    cursor: grab;
+}
+
+.cs-price-slider input[type="range"]::-moz-range-track {
+    background: transparent;
+}
+
+.cs-price-slider input[type="range"]:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.cs-price-brackets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.cs-price-bracket {
+    padding: 6px 10px;
+    border: 1px solid var(--cs-line-strong);
+    border-radius: var(--border-radius-round);
+    background: var(--color-white);
+    font-family: var(--font-family);
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--color-black);
+    cursor: pointer;
+    transition: background var(--transition-speed) ease,
+                border-color var(--transition-speed) ease,
+                color var(--transition-speed) ease;
+}
+
+.cs-price-bracket:hover,
+.cs-price-bracket.is-on {
+    background: var(--cs-tint);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+/* --- Criteres poses --- */
+.cs-facets-active {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.cs-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    max-width: 100%;
+    padding: 5px 10px;
+    border: 1px solid var(--cs-line);
+    border-radius: var(--cs-radius-sm);
+    background: var(--color-grey-light);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-black);
+    text-decoration: none;
+    transition: background var(--transition-speed) ease,
+                border-color var(--transition-speed) ease,
+                color var(--transition-speed) ease;
+}
+
+.cs-tag i {
+    font-size: 10px;
+    color: var(--cs-ink-soft);
+}
+
+.cs-tag:hover {
+    background: var(--cs-tint);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.cs-tag:hover i {
+    color: var(--color-primary);
+}
+
+.cs-tag-clear {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--cs-ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    white-space: nowrap;
+}
+
+.cs-tag-clear:hover {
+    color: var(--color-primary);
+}
+
+/* Texte reserve aux lecteurs d'ecran : la croix seule ne dit pas ce qu'elle
+   retire. */
+.cs-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   En-tete de la grille d'offres
+   -------------------------------------------------------------------------- */
 .cs-listings-header {
     display: flex;
     align-items: flex-end;
@@ -5914,75 +7106,257 @@ product-card:hover {
     margin-bottom: 20px;
 }
 
-.cs-listings-title {
-    font-size: var(--font-size-subheading);
-    font-weight: 700;
-    margin: 0 0 4px;
-}
 
-.cs-listings-count {
-    font-size: 13px;
-    color: var(--color-grey-dark);
-}
-
-.cs-listings-controls {
-    display: flex;
+/* --------------------------------------------------------------------------
+   Bascule Liste / Carte
+   La carte occupait un bloc entier au-dessus des filtres, que le visiteur
+   devait franchir a chaque visite. Elle partage maintenant la place de la
+   grille : deux onglets, un seul contenu visible.
+   -------------------------------------------------------------------------- */
+.cs-view-switch {
+    display: inline-flex;
     align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+    background: #f1f2f4;
+    border: 1px solid var(--cs-line);
+    border-radius: var(--border-radius-round);
 }
 
-.cs-search-input {
-    display: flex;
+.cs-view-btn {
+    display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: var(--color-white);
-    border: 1px solid var(--color-divider);
-    border-radius: var(--cs-radius-sm);
-    padding: 9px 14px;
-    color: var(--color-grey-dark);
-    font-size: 13px;
-}
-
-.cs-search-input input {
+    height: 36px;
+    padding: 0 18px;
     border: none;
-    outline: none;
-    font-size: 13px;
-    font-family: var(--font-family);
+    border-radius: var(--border-radius-round);
     background: transparent;
-    width: 180px;
-    color: var(--color-black);
-}
-
-.cs-sort-select {
-    border: 1px solid var(--color-divider);
-    background: var(--color-white);
-    border-radius: var(--cs-radius-sm);
-    padding: 9px 14px;
-    font-size: 13px;
+    color: var(--cs-ink-soft);
     font-family: var(--font-family);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-speed) ease,
+                color var(--transition-speed) ease,
+                box-shadow var(--transition-speed) ease;
+}
+
+.cs-view-btn i {
+    font-size: 12px;
+}
+
+.cs-view-btn:hover {
     color: var(--color-black);
 }
 
-/* Cards grid */
+.cs-view-btn[aria-selected="true"] {
+    background: #16181d;
+    color: var(--color-white);
+    box-shadow: 0 2px 6px rgba(16, 24, 40, .18);
+}
+
+.cs-view-btn[aria-selected="true"]:hover {
+    color: var(--color-white);
+}
+
+/* `!important` : les panneaux portent aussi des regles d'affichage (grille,
+   carte), qui reprendraient la main sur l'attribut `hidden`. */
+.cs-panel[hidden] {
+    display: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   Popin d'une offre reperee sur la carte
+   La bulle Leaflet etait minuscule, coupee par les bords de la carte et
+   impossible a lire sur mobile. Un clic sur un repere ouvre desormais une
+   vraie fenetre.
+   -------------------------------------------------------------------------- */
+.cs-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.cs-modal[hidden] {
+    display: none;
+}
+
+body.cs-modal-open {
+    overflow: hidden;
+}
+
+.cs-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(12, 13, 17, .62);
+    backdrop-filter: blur(2px);
+}
+
+.cs-modal-card {
+    position: relative;
+    width: min(420px, 100%);
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    background: var(--color-white);
+    border-radius: var(--cs-radius-lg);
+    box-shadow: 0 24px 60px rgba(16, 24, 40, .28);
+    animation: cs-modal-in .18s ease-out;
+}
+
+@keyframes cs-modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(.98);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cs-modal-card {
+        animation: none;
+    }
+}
+
+.cs-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .94);
+    color: #16181d;
+    font-size: 15px;
+    cursor: pointer;
+    box-shadow: var(--cs-shadow);
+    transition: background var(--transition-speed) ease,
+                color var(--transition-speed) ease;
+}
+
+.cs-modal-close:hover {
+    background: var(--color-white);
+    color: var(--color-primary);
+}
+
+.cs-modal-media {
+    aspect-ratio: 16 / 10;
+    background: var(--color-grey-light);
+}
+
+.cs-modal-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.cs-modal-body {
+    padding: 18px;
+}
+
+.cs-modal-cat {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--color-primary);
+    margin-bottom: 6px;
+}
+
+.cs-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0 0 8px;
+}
+
+.cs-modal-address {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    font-size: 13px;
+    color: var(--cs-ink-soft);
+    margin: 0 0 16px;
+}
+
+.cs-modal-address i {
+    margin-top: 2px;
+    color: var(--color-primary);
+}
+
+.cs-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid var(--cs-line);
+}
+
+.cs-modal-price {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -.01em;
+}
+
+.cs-modal-btn {
+    background: var(--color-primary);
+    color: var(--color-white);
+    border-radius: var(--cs-radius-sm);
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background var(--transition-speed) ease;
+}
+
+.cs-modal-btn:hover {
+    background: var(--color-primary-dark);
+    color: var(--color-white);
+}
+
+/* --------------------------------------------------------------------------
+   Grille et carte d'offre
+   Partagees avec la page location : toute retouche ici s'y voit aussi.
+   -------------------------------------------------------------------------- */
 .cs-cards-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: var(--cs-gap);
     margin-bottom: 28px;
 }
 
+.cs-cards-grid--four {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
 .cs-card {
+    display: flex;
+    flex-direction: column;
     background: var(--color-white);
-    border: 1px solid var(--color-divider);
+    border: 1px solid var(--cs-line);
     border-radius: var(--cs-radius-lg);
     overflow: hidden;
+    box-shadow: var(--cs-shadow);
     transition: box-shadow var(--transition-speed) ease,
-                transform var(--transition-speed) ease;
+                transform var(--transition-speed) ease,
+                border-color var(--transition-speed) ease;
 }
 
 .cs-card:hover {
-    box-shadow: var(--shadow-strong);
+    border-color: var(--cs-line-strong);
+    box-shadow: var(--cs-shadow-hover);
     transform: translateY(-3px);
 }
 
@@ -5991,6 +7365,7 @@ product-card:hover {
     width: 100%;
     aspect-ratio: 4 / 3;
     background: var(--color-grey-light);
+    overflow: hidden;
 }
 
 .cs-card-media img {
@@ -5998,6 +7373,11 @@ product-card:hover {
     height: 100%;
     object-fit: cover;
     display: block;
+    transition: transform .45s ease;
+}
+
+.cs-card:hover .cs-card-media img {
+    transform: scale(1.04);
 }
 
 /* Nature de l'offre : la grille melange annonces (location) et produits (vente) */
@@ -6046,14 +7426,26 @@ product-card:hover {
     border-radius: var(--border-radius-round);
 }
 
-/* Prix : le suffixe distingue « / jour » (location) de « l'unite » (vente) */
-.cs-price-value small {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--color-grey-dark);
-    margin-left: 2px;
+.cs-badge-delivery {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, .95);
+    color: var(--color-black);
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: var(--border-radius-round);
+    box-shadow: var(--cs-shadow);
 }
 
+.cs-badge-delivery i {
+    color: var(--color-primary);
+    font-size: 10px;
+}
 
 .cs-favorite-btn {
     position: absolute;
@@ -6070,30 +7462,51 @@ product-card:hover {
     justify-content: center;
     cursor: pointer;
     font-size: 14px;
+    box-shadow: var(--cs-shadow);
+    transition: color var(--transition-speed) ease,
+                background var(--transition-speed) ease;
 }
 
 .cs-favorite-btn:hover {
+    background: var(--color-white);
     color: var(--color-primary);
 }
 
+/* `flex: 1` sur le corps et `margin-top: auto` sur le pied : dans une
+   rangee, les prix et les boutons s'alignent meme quand les titres n'ont
+   pas le meme nombre de lignes. */
 .cs-card-body {
-    padding: 14px 16px 16px;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
 }
 
 .cs-card-meta {
     font-size: 11.5px;
     color: var(--color-primary);
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .02em;
-    margin: 0 0 4px;
+    letter-spacing: .03em;
+    margin: 0 0 6px;
+}
+
+.cs-card-meta i {
+    margin-right: 5px;
 }
 
 .cs-card-title {
     font-size: 15px;
     font-weight: 700;
-    margin: 0 0 6px;
-    line-height: 1.3;
+    margin: 0 0 8px;
+    line-height: 1.35;
+
+    /* Deux lignes au maximum : un titre a rallonge poussait le pied de la
+       carte vers le bas et cassait l'alignement de la rangee. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .cs-card-location {
@@ -6101,8 +7514,28 @@ product-card:hover {
     align-items: center;
     gap: 6px;
     font-size: 12.5px;
-    color: var(--color-grey-dark);
+    color: var(--cs-ink-soft);
+    margin: 0 0 10px;
+}
+
+.cs-card-location i {
+    flex: 0 0 auto;
+    color: var(--color-primary);
+    opacity: .8;
+}
+
+.cs-card-stats {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 11.5px;
+    color: var(--cs-ink-soft);
     margin: 0 0 14px;
+}
+
+.cs-card-stats i {
+    margin-right: 4px;
 }
 
 .cs-card-footer {
@@ -6110,31 +7543,44 @@ product-card:hover {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--cs-line);
 }
 
 .cs-card-price {
     display: flex;
     flex-direction: column;
     line-height: 1.2;
+    min-width: 0;
 }
 
 .cs-price-label {
     font-size: 10.5px;
-    color: var(--color-grey-dark);
+    color: var(--cs-ink-soft);
 }
 
 .cs-price-value {
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -.01em;
+}
+
+/* Le suffixe distingue « / jour » (location) de « l'unite » (vente) */
+.cs-price-value small {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--cs-ink-soft);
+    margin-left: 2px;
 }
 
 .cs-btn-details {
     background: var(--color-bg-body);
-    border: 1px solid var(--color-divider);
+    border: 1px solid var(--cs-line-strong);
     color: var(--color-black);
     font-size: 12.5px;
     font-weight: 600;
-    padding: 8px 14px;
+    padding: 9px 15px;
     border-radius: var(--cs-radius-sm);
     text-decoration: none;
     white-space: nowrap;
@@ -6149,373 +7595,10 @@ product-card:hover {
     border-color: var(--color-primary);
     color: var(--color-white);
 }
-.cs-badge-delivery {
-    position: absolute;
-    bottom: 12px;
-    left: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: rgba(255, 255, 255, .95);
-    color: var(--color-black);
-    font-size: 10.5px;
-    font-weight: 600;
-    padding: 5px 10px;
-    border-radius: var(--border-radius-round);
-}
 
-.cs-badge-delivery i {
-    color: var(--color-primary);
-    font-size: 10px;
-}
-
-/* Tablette — max-width: 1024px */
-@media (max-width: 1024px) {
-    .cs-categories {
-        grid-template-columns: repeat(3, 1fr);
-    }
-
-    .cs-cards-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .cs-map-canvas {
-        height: 260px;
-    }
-}
-
-/* Tablette — max-width: 768px */
-@media (max-width: 768px) {
-    .cs-page {
-        padding: 0px 16px 48px;
-    }
-
-    .cs-categories {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-
-    .cs-cat-item {
-        padding: 12px;
-    }
-
-    .cs-map-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .cs-listings-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .cs-listings-controls {
-        width: 100%;
-    }
-
-    .cs-search-input {
-        flex: 1 1 auto;
-    }
-
-    .cs-search-input input {
-        width: 100%;
-    }
-
-    .cs-cards-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 14px;
-    }
-}
-
-/* Mobile — max-width: 480px */
-@media (max-width: 480px) {
-    .cs-categories {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-    }
-
-    .cs-cat-label {
-        font-size: 12.5px;
-    }
-
-    .cs-map-canvas {
-        height: 200px;
-    }
-
-    .cs-listings-controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .cs-sort-select {
-        width: 100%;
-    }
-
-    .cs-cards-grid {
-        grid-template-columns: 1fr;
-        gap: 14px;
-    }
-
-    .cs-card-footer {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .cs-btn-details {
-        width: 100%;
-        text-align: center;
-    }
-    .cs-badge-delivery {
-    font-size: 10px;
-    padding: 4px 8px;
-}   
-
-}
-
-/* ==========================================================================
-   PAGE SERVICE — blocs complementaires
-   (titres de section, filtres, carte Leaflet, pagination, etats vides)
-   ========================================================================== */
-
-/* Titre de section (Categories, Annonces populaires...) */
-.cs-section-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-}
-
-.cs-section-title {
-    font-size: var(--font-size-subheading);
-    font-weight: 700;
-    margin: 0;
-}
-
-.cs-section-hint {
-    font-size: 13px;
-    color: var(--color-grey-dark);
-}
-
-.cs-categories-block {
-    margin-bottom: 36px;
-}
-
-/* Categorie : texte sur deux lignes (nom + compteur) */
-.cs-cat-text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-}
-
-.cs-cat-count {
-    font-size: 11.5px;
-    color: var(--color-grey-dark);
-}
-
-.cs-cat-item.is-active {
-    border-color: var(--color-primary);
-    background: #fff6f2;
-    box-shadow: var(--shadow-light);
-}
-
-.cs-cat-item.is-active .cs-cat-icon {
-    background: var(--color-primary);
-    color: var(--color-white);
-}
-
-.cs-cat-item.is-active .cs-cat-label {
-    color: var(--color-primary);
-}
-
-/* Carte : etat vide et bulles */
-.cs-map-placeholder {
-    border: 1px dashed var(--color-divider);
-    border-radius: var(--cs-radius-md);
-    background: var(--color-grey-light);
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--color-grey-dark);
-}
-
-.cs-map-placeholder i {
-    font-size: 30px;
-    color: var(--color-primary);
-    margin-bottom: 12px;
-}
-
-.cs-map-placeholder-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--color-black);
-    margin: 0 0 6px;
-}
-
-.cs-map-placeholder-text {
-    font-size: 13px;
-    margin: 0;
-}
-
-.cs-map-canvas {
-    z-index: 0;
-}
-
-.cs-map-popup {
-    display: block;
-    width: 190px;
-    text-decoration: none;
-    color: var(--color-black);
-}
-
-.cs-map-popup img {
-    width: 100%;
-    height: 90px;
-    object-fit: cover;
-    border-radius: var(--cs-radius-sm);
-    margin-bottom: 8px;
-}
-
-.cs-map-popup-cat {
-    display: block;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    color: var(--color-primary);
-    font-weight: 600;
-}
-
-.cs-map-popup strong {
-    display: block;
-    font-size: 13.5px;
-    margin: 2px 0 4px;
-}
-
-.cs-map-popup-address {
-    display: block;
-    font-size: 12px;
-    color: var(--color-grey-dark);
-}
-
-.cs-map-popup-price {
-    display: block;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--color-primary);
-    margin-top: 6px;
-}
-
-/* Bloc annonces */
-.cs-listings {
-    margin-bottom: 44px;
-}
-
-/* Filtres */
-.cs-filters {
-    display: grid;
-    grid-template-columns: 1.4fr 1fr .7fr .7fr .9fr auto;
-    align-items: end;
-    gap: 14px;
-    background: var(--color-white);
-    border: 1px solid var(--color-divider);
-    border-radius: var(--cs-radius-lg);
-    padding: 18px;
-    margin-bottom: 24px;
-}
-
-.cs-filter-field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
-}
-
-.cs-filter-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--color-grey-dark);
-}
-
-.cs-filters .cs-search-input {
-    width: 100%;
-}
-
-.cs-filters .cs-search-input input {
-    width: 100%;
-    min-width: 0;
-}
-
-.cs-filters .cs-sort-select {
-    width: 100%;
-}
-
-.cs-filter-suffix {
-    font-size: 13px;
-    color: var(--color-grey-dark);
-}
-
-.cs-filter-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.cs-btn-filter {
-    background: var(--color-primary);
-    color: var(--color-white);
-    border: none;
-    border-radius: var(--cs-radius-sm);
-    padding: 11px 18px;
-    font-family: var(--font-family);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background var(--transition-speed) ease;
-}
-
-.cs-btn-filter:hover {
-    background: var(--color-primary-dark);
-}
-
-.cs-btn-reset {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--color-grey-dark);
-    text-decoration: none;
-    white-space: nowrap;
-    padding: 11px 4px;
-}
-
-.cs-btn-reset:hover {
-    color: var(--color-primary);
-}
-
-/* Carte d'annonce : ligne de statistiques */
-.cs-card-stats {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    font-size: 11.5px;
-    color: var(--color-grey-dark);
-    margin: 0 0 12px;
-}
-
-.cs-card-stats i {
-    margin-right: 4px;
-}
-
-.cs-card-meta i {
-    margin-right: 5px;
-}
-
-.cs-cards-grid--four {
-    grid-template-columns: repeat(4, 1fr);
-}
-
-/* Pagination */
+/* --------------------------------------------------------------------------
+   Pagination et bloc « les plus consultees »
+   -------------------------------------------------------------------------- */
 .cs-pagination {
     display: flex;
     justify-content: center;
@@ -6531,119 +7614,222 @@ product-card:hover {
     height: 16px;
 }
 
-/* Etat vide */
-.cs-empty {
-    border: 1px dashed var(--color-divider);
-    border-radius: var(--cs-radius-lg);
-    background: var(--color-grey-light);
-    padding: 52px 24px;
-    text-align: center;
-}
-
-.cs-empty--compact {
-    padding: 34px 20px;
-}
-
-.cs-empty-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 62px;
-    height: 62px;
-    border-radius: 50%;
-    background: var(--color-white);
-    border: 1px solid var(--color-divider);
-    color: var(--color-primary);
-    font-size: 24px;
-    margin-bottom: 16px;
-}
-
-.cs-empty-title {
-    font-size: 17px;
-    font-weight: 700;
-    margin: 0 0 8px;
-}
-
-.cs-empty-text {
-    font-size: 13.5px;
-    color: var(--color-grey-dark);
-    margin: 0 auto 18px;
-    max-width: 420px;
-}
-
-.cs-empty-btn {
-    display: inline-block;
-    background: var(--color-primary);
-    color: var(--color-white);
-    border-radius: var(--border-radius-round);
-    padding: 10px 22px;
-    font-size: 13px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: background var(--transition-speed) ease;
-}
-
-.cs-empty-btn:hover {
-    background: var(--color-primary-dark);
-    color: var(--color-white);
-}
-
-/* Annonces populaires */
 .cs-popular {
-    margin-bottom: 20px;
+    margin-bottom: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   Adaptations
+   -------------------------------------------------------------------------- */
+@media (max-width: 1100px) {
+    .cs-listings {
+        grid-template-columns: 248px minmax(0, 1fr);
+        gap: 20px;
+    }
+
+    .cs-facets {
+        padding: 14px;
+    }
+}
+
+@media (max-width: 900px) {
+    .cs-listings {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    /* Colle en haut, le rail deplie masquerait la grille : il redevient un
+       bloc ordinaire, replie par defaut. */
+    .cs-facets {
+        position: static;
+        max-height: none;
+        overflow: visible;
+        padding: 0;
+        border: none;
+        box-shadow: none;
+        background: transparent;
+    }
+
+    .cs-facets-head {
+        display: none;
+    }
+
+    .cs-facets-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        width: 100%;
+        height: 46px;
+        padding: 0 16px;
+        background: var(--color-white);
+        border: 1px solid var(--cs-line-strong);
+        border-radius: var(--cs-radius-sm);
+        font-family: var(--font-family);
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--color-black);
+        cursor: pointer;
+    }
+
+    .cs-facets-toggle span {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+    }
+
+    .cs-facets-toggle i:first-child {
+        color: var(--color-primary);
+    }
+
+    .cs-facets.is-unfolded .cs-facets-toggle .cs-facet-caret {
+        transform: rotate(180deg);
+    }
+
+    .cs-facets-body {
+        display: none;
+        margin-top: 12px;
+        padding: 16px;
+        background: var(--color-white);
+        border: 1px solid var(--cs-line);
+        border-radius: var(--cs-radius-lg);
+        box-shadow: var(--cs-shadow);
+    }
+
+    .cs-facets.is-unfolded .cs-facets-body {
+        display: block;
+    }
+
+    .cs-facets-foot {
+        position: static;
+    }
 }
 
 @media (max-width: 1024px) {
-    .cs-filters {
-        grid-template-columns: repeat(2, 1fr);
+    :root {
+        --cs-block: 44px;
     }
 
-    .cs-filter-actions {
-        grid-column: 1 / -1;
-    }
-
-    .cs-cards-grid--four {
-        grid-template-columns: repeat(2, 1fr);
+    .cs-map-canvas {
+        height: 280px;
     }
 }
 
 @media (max-width: 768px) {
-    .cs-section-head {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
+    :root {
+        --cs-pad: 16px;
+        --cs-block: 36px;
+        --cs-gap: 14px;
     }
 
-    .cs-filters {
-        grid-template-columns: 1fr;
+    .cs-page {
+        padding: 0 var(--cs-pad) 48px;
+    }
+
+    .cs-hero {
+        padding: 24px 0 26px;
+    }
+
+    .cs-hero-title {
+        font-size: 24px;
+    }
+
+    .cs-hero-subtitle {
+        font-size: 14px;
+    }
+
+    .cs-section-title,
+    .cs-listings-title {
+        font-size: 19px;
+    }
+
+    .cs-map-card {
         padding: 16px;
     }
 
-    .cs-empty {
-        padding: 38px 18px;
+    .cs-map-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .cs-map-title {
+        font-size: 15.5px;
+    }
+
+
+    /* La bascule passe sous le titre et occupe la largeur : deux cibles
+       tactiles pleines plutot que deux pastilles serrees dans un coin. */
+    .cs-view-switch {
+        width: 100%;
+    }
+
+    .cs-view-btn {
+        flex: 1 1 0;
+        justify-content: center;
+        padding: 0 12px;
+    }
+
+    .cs-cards-grid,
+    .cs-cards-grid--four {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     }
 }
 
 @media (max-width: 480px) {
+    .cs-hero-title {
+        font-size: 21px;
+    }
+
+    .cs-chips {
+        gap: 8px;
+    }
+
+    .cs-chip {
+        padding: 8px 13px;
+        font-size: 12px;
+    }
+
+    .cs-map-canvas {
+        height: 220px;
+    }
+
+    .cs-facet,
+    .cs-facet-btn {
+        flex: 1 1 auto;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .cs-facet-foot {
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .cs-facet-apply {
+        width: 100%;
+    }
+
+    .cs-cards-grid,
     .cs-cards-grid--four {
         grid-template-columns: 1fr;
     }
 
-    .cs-cat-count {
-        display: none;
-    }
-
-    .cs-filter-actions {
+    .cs-card-footer {
         flex-direction: column;
         align-items: stretch;
+        gap: 12px;
     }
 
-    .cs-btn-filter {
+    .cs-btn-details {
         width: 100%;
+        text-align: center;
     }
 
-    .cs-btn-reset {
-        text-align: center;
+    .cs-badge-delivery {
+        font-size: 10px;
+        padding: 4px 8px;
     }
 }
 
@@ -7004,17 +8190,73 @@ product-card:hover {
 /* Barre de filtres complete : deux rangees de champs, puis les actions.
    Ses regles responsives sont redefinies ici car elles arrivent apres
    celles de `.lv-search-form`, qui sinon reprendraient la main. */
+/* Huit champs sur deux rangees repoussaient les offres sous la ligne de
+   flottaison. Seuls les quatre criteres qu'on renseigne presque toujours
+   restent visibles, sur UNE rangee ; le reste vit dans un volet replie. */
 .lv-search-form--filters {
-    grid-template-columns: repeat(4, 1fr);
+    display: block;
 }
 
-.lv-search-actions {
-    grid-column: 1 / -1;
+.lv-search-row {
+    display: grid;
+    grid-template-columns: 1.6fr 1.1fr 1fr 1fr auto;
+    align-items: end;
+    gap: 14px;
+}
+
+.lv-search-foot {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: 16px;
-    margin-top: 4px;
+    margin-top: 14px;
+}
+
+.lv-search-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-family: var(--font-family);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-grey-dark);
+    cursor: pointer;
+    transition: color var(--transition-speed) ease;
+}
+
+.lv-search-more:hover {
+    color: var(--color-primary);
+}
+
+.lv-search-more i:first-child {
+    color: var(--color-primary);
+    font-size: 12px;
+}
+
+.lv-search-more-caret {
+    font-size: 10px;
+    transition: transform var(--transition-speed) ease;
+}
+
+.lv-search-more[aria-expanded="true"] .lv-search-more-caret {
+    transform: rotate(180deg);
+}
+
+.lv-search-extra {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: end;
+    gap: 14px;
+    margin-top: 14px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-divider);
+}
+
+.lv-search-extra[hidden] {
+    display: none;
 }
 
 .lv-search-reset {
@@ -7036,24 +8278,40 @@ product-card:hover {
     font-size: 11px;
 }
 
-/* Le bouton n'est plus une cellule de la grille : il vit dans les actions */
+/* Le bouton termine la rangee : il ne s'etire pas sur toute sa hauteur. */
 .lv-search-form--filters .lv-search-btn {
     grid-column: auto;
+    align-self: end;
+    height: 40px;
 }
 
-@media (max-width: 1024px) {
-    .lv-search-form--filters {
-        grid-template-columns: repeat(2, 1fr);
+/* Sous 1080px, quatre champs plus un bouton deviennent illisibles : la
+   rangee se scinde en deux, ce qui reste plus court que les deux rangees
+   pleines d'avant. */
+@media (max-width: 1080px) {
+    .lv-search-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .lv-search-form--filters .lv-search-btn {
+        grid-column: 1 / -1;
+        justify-self: end;
+        padding: 0 32px;
+    }
+
+    .lv-search-extra {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 768px) {
-    .lv-search-form--filters {
+    .lv-search-row,
+    .lv-search-extra {
         grid-template-columns: 1fr;
     }
 
-    .lv-search-actions {
-        justify-content: space-between;
+    .lv-search-form--filters .lv-search-btn {
+        justify-self: stretch;
     }
 }
 
@@ -7102,6 +8360,24 @@ product-card:hover {
 
 .lv-chip.is-active i {
     color: var(--color-white);
+}
+
+/* Categorie sans offre : elle reste cliquable, mais ne doit pas attirer
+   l'oeil autant qu'une categorie remplie. Meme traitement que sur la page
+   service standard (.cs-chip.is-empty). */
+.lv-chip.is-empty:not(.is-active) {
+    background: #fbfbfc;
+    border-color: #e7e9ec;
+    color: #6b7280;
+}
+
+.lv-chip.is-empty:not(.is-active) i {
+    color: #a2a8b0;
+}
+
+.lv-chip.is-empty:not(.is-active):hover {
+    border-color: var(--color-primary);
+    color: var(--color-black);
 }
 
 .lv-pagination {
@@ -7458,17 +8734,76 @@ product-card:hover {
 /* Barre de recherche etendue : deux rangees de criteres, puis les actions.
    Ses regles responsives sont redefinies ici car elles arrivent apres celles
    de `.cv-search-form`, qui sinon reprendraient la main. */
+/* Sept champs sur deux rangees repoussaient les trajets sous la ligne de
+   flottaison. Seuls les quatre criteres qu'on renseigne presque toujours
+   restent visibles, sur UNE rangee ; le reste vit dans un volet replie.
+   Meme montage que la barre de la page location (.lv-search-row).
+   Tout est porte par `--wide` : la page « Tous les trajets » garde sa
+   grille d'origine. */
 .cv-search-form--wide {
-    grid-template-columns: repeat(4, 1fr);
+    display: block;
 }
 
-.cv-search-actions {
-    grid-column: 1 / -1;
+.cv-search-row {
+    display: grid;
+    grid-template-columns: 1.2fr 1.2fr 1fr 1fr auto;
+    align-items: end;
+    gap: 14px;
+}
+
+.cv-search-foot {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: 16px;
-    margin-top: 4px;
+    margin-top: 14px;
+}
+
+.cv-search-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-family: var(--font-family);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-grey-dark);
+    cursor: pointer;
+    transition: color var(--transition-speed) ease;
+}
+
+.cv-search-more:hover {
+    color: var(--color-primary);
+}
+
+.cv-search-more i:first-child {
+    color: var(--color-primary);
+    font-size: 12px;
+}
+
+.cv-search-more-caret {
+    font-size: 10px;
+    transition: transform var(--transition-speed) ease;
+}
+
+.cv-search-more[aria-expanded="true"] .cv-search-more-caret {
+    transform: rotate(180deg);
+}
+
+.cv-search-extra {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: end;
+    gap: 14px;
+    margin-top: 14px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-divider);
+}
+
+.cv-search-extra[hidden] {
+    display: none;
 }
 
 .cv-search-reset {
@@ -7490,23 +8825,39 @@ product-card:hover {
     font-size: 11px;
 }
 
-.cv-search-form--wide .cv-search-btn {
+.cv-search-form--wide .cv-search-row .cv-search-btn {
     grid-column: auto;
+    align-self: end;
+    height: 40px;
 }
 
-@media (max-width: 1024px) {
-    .cv-search-form--wide {
-        grid-template-columns: repeat(2, 1fr);
+/* Sous 1080px, quatre champs plus un bouton deviennent illisibles : la
+   rangee se scinde en deux, ce qui reste plus court que les deux rangees
+   pleines d'avant. */
+@media (max-width: 1080px) {
+    .cv-search-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cv-search-form--wide .cv-search-row .cv-search-btn {
+        grid-column: 1 / -1;
+        justify-self: end;
+        padding: 0 32px;
+    }
+
+    .cv-search-extra {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 768px) {
-    .cv-search-form--wide {
+    .cv-search-row,
+    .cv-search-extra {
         grid-template-columns: 1fr;
     }
 
-    .cv-search-actions {
-        justify-content: space-between;
+    .cv-search-form--wide .cv-search-row .cv-search-btn {
+        justify-self: stretch;
     }
 }
 
@@ -9403,161 +10754,211 @@ product-card:hover {
 /* ==========================================================================
    PAGE « NOS SERVICES » (services/index.blade.php)
    Vitrine de tous les services, chacun avec ses categories.
+
+   Elle reprend le vocabulaire de la page service : meme banniere sombre,
+   memes pastilles de comptage, memes pastilles de categorie. La bande peche
+   d'origine reprenait le rose des cartes et le fil d'Ariane s'y noyait.
    ========================================================================== */
 .sv-page {
     --sv-max-width: 1180px;
+    --sv-pad: 20px;
     --sv-radius-lg: 16px;
     --sv-radius-md: 12px;
-    max-width: var(--sv-max-width);
-    margin: 0 auto;
-    padding: 0 20px 64px;
+    --sv-radius-sm: 10px;
+    --sv-line: #e7e9ec;
+    --sv-line-strong: #d8dbe0;
+    --sv-ink-soft: #6b7280;
+    --sv-tint: #fff5f1;
+    --sv-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+    --sv-shadow-hover: 0 12px 26px rgba(16, 24, 40, .10);
+
     font-family: var(--font-family);
-    font-size: var(--font-size-base);
     color: var(--color-black);
 }
 
-.sv-page * {
-    box-sizing: border-box;
+/* --------------------------------------------------------------------------
+   Banniere
+   -------------------------------------------------------------------------- */
+.sv-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: #12141a;
+    padding: 40px 0 46px;
+    margin-bottom: 52px;
 }
 
-/* En-tete pleine largeur */
-.sv-hero {
-    width: 100vw;
-    position: relative;
-    left: 50%;
-    right: 50%;
-    margin-left: -50vw;
-    margin-right: -50vw;
-    background: linear-gradient(90deg, #fdece0 0%, #fff9f5 100%);
-    padding: 30px 0 34px;
-    margin-bottom: 34px;
+.sv-hero-veil {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+        radial-gradient(110% 140% at 100% 0%, rgba(255, 60, 0, .40) 0%, rgba(255, 60, 0, 0) 60%),
+        linear-gradient(115deg, #12141a 0%, #1b1d25 55%, #241a17 100%);
 }
 
 .sv-hero-inner {
+    position: relative;
     max-width: var(--sv-max-width);
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0 var(--sv-pad);
 }
 
 .sv-breadcrumb {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     font-size: 13px;
-    color: var(--color-grey-dark);
-    margin-bottom: 14px;
+    color: rgba(255, 255, 255, .6);
+    margin-bottom: 18px;
 }
 
 .sv-breadcrumb-link {
-    color: var(--color-grey-dark);
+    color: rgba(255, 255, 255, .6);
     text-decoration: none;
     font-weight: 500;
     transition: color var(--transition-speed) ease;
 }
 
 .sv-breadcrumb-link:hover {
-    color: var(--color-primary);
+    color: var(--color-white);
 }
 
 .sv-breadcrumb-sep {
     font-size: 9px;
-    opacity: .7;
+    color: rgba(255, 255, 255, .38);
 }
 
 .sv-breadcrumb-current {
-    color: var(--color-primary);
+    color: #ff7a4d;
     font-weight: 600;
 }
 
 .sv-hero-title {
-    font-size: 28px;
-    font-weight: 700;
-    margin: 0 0 10px;
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    line-height: 1.12;
+    color: var(--color-white);
+    margin: 0 0 12px;
 }
 
 .sv-hero-subtitle {
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.6;
-    color: var(--color-grey-dark);
+    color: rgba(255, 255, 255, .74);
     margin: 0;
     max-width: 640px;
 }
 
-.sv-hero-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 28px;
-    margin-top: 22px;
+/* Les trois chiffres etaient empiles en colonnes muettes. Ils reprennent
+   les pastilles `.olten-count` du reste de la plateforme, retournees pour
+   un fond sombre. */
+.sv-hero .olten-count {
+    margin-top: 20px;
 }
 
-.sv-stat {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+.sv-hero .olten-count-pill {
+    background: rgba(255, 255, 255, .10);
+    border-color: rgba(255, 255, 255, .20);
+    color: var(--color-white);
+    backdrop-filter: blur(4px);
 }
 
-.sv-stat-value {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--color-primary);
-    line-height: 1;
+.sv-hero .olten-count-pill i {
+    color: #ff8b62;
 }
 
-.sv-stat-label {
-    font-size: 12px;
-    color: var(--color-grey-dark);
+.sv-hero .olten-count-note {
+    color: rgba(255, 255, 255, .6);
 }
 
-/* Grille de services */
+/* --------------------------------------------------------------------------
+   Grille des services
+   -------------------------------------------------------------------------- */
 .sv-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
     gap: 22px;
+    max-width: var(--sv-max-width);
+    margin: 0 auto;
+    padding: 0 var(--sv-pad) 72px;
 }
 
 .sv-card {
     display: flex;
     flex-direction: column;
     background: var(--color-white);
-    border: 1px solid var(--color-divider);
+    border: 1px solid var(--sv-line);
     border-radius: var(--sv-radius-lg);
     overflow: hidden;
+    box-shadow: var(--sv-shadow);
     transition: box-shadow var(--transition-speed) ease,
                 transform var(--transition-speed) ease,
                 border-color var(--transition-speed) ease;
 }
 
 .sv-card:hover {
-    box-shadow: 0 14px 28px rgba(16, 24, 40, .14);
-    border-color: var(--color-primary);
+    border-color: var(--sv-line-strong);
+    box-shadow: var(--sv-shadow-hover);
     transform: translateY(-3px);
 }
 
-/* Visuel : image du service si elle existe, sinon degrade teinte */
+/* Visuel : la photo du service quand il en a une, sinon un aplat sombre
+   teinte par son identifiant — stable d'une visite a l'autre — sur lequel
+   son glyphe se detache. Les degrades vifs d'origine juraient entre eux. */
 .sv-card-visual {
+    position: relative;
     display: block;
     height: 132px;
-    text-decoration: none;
-    /* 1. image du service (back-office), absente -> couche ignoree
-       2. degrade de repli, teinte stable par service */
-    background-image:
-        var(--tile-image, none),
-        linear-gradient(155deg,
-            hsl(var(--tile-hue, 20), 42%, 40%) 0%,
-            hsl(var(--tile-hue, 20), 32%, 22%) 100%);
+    background:
+        linear-gradient(135deg,
+            hsl(var(--tile-hue, 20) 28% 17%) 0%,
+            hsl(var(--tile-hue, 20) 34% 26%) 100%);
+    overflow: hidden;
+}
+
+.sv-card-visual::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: var(--tile-image, none);
     background-size: cover;
     background-position: center;
-    background-repeat: no-repeat;
+}
+
+/* Voile : sans lui, le glyphe et le titre se perdaient sur les photos
+   claires. */
+.sv-card-visual::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(12, 13, 17, .18) 0%, rgba(12, 13, 17, .62) 100%);
+}
+
+.sv-card-glyph {
+    position: absolute;
+    right: 18px;
+    bottom: 14px;
+    z-index: 1;
+    font-size: 46px;
+    line-height: 1;
+    color: rgba(255, 255, 255, .30);
+    pointer-events: none;
 }
 
 .sv-card-body {
     flex: 1 1 auto;
-    padding: 18px 18px 14px;
+    display: flex;
+    flex-direction: column;
+    padding: 18px;
 }
 
 .sv-card-title {
     font-size: 18px;
     font-weight: 700;
+    letter-spacing: -.01em;
     margin: 0 0 8px;
 }
 
@@ -9573,45 +10974,79 @@ product-card:hover {
 .sv-card-desc {
     font-size: 13.5px;
     line-height: 1.55;
-    color: var(--color-grey-dark);
+    color: var(--sv-ink-soft);
     margin: 0 0 14px;
+
+    /* Exactement deux lignes : les descriptions libres du back-office vont
+       d'un mot a un paragraphe. Le plafond seul ne suffisait pas — une
+       description d'une ligne remontait les pastilles de 20px par rapport
+       aux cartes voisines de la meme rangee. Le plancher les realigne. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 3.1em;
 }
 
 .sv-card-stats {
     display: flex;
+    align-items: center;
     flex-wrap: wrap;
-    gap: 16px;
-    font-size: 12px;
-    color: var(--color-grey-dark);
+    gap: 8px;
     margin: 0 0 14px;
 }
 
-.sv-card-stats i {
-    color: var(--color-primary);
-    margin-right: 5px;
+.sv-card-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 12px;
+    border: 1px solid var(--sv-line);
+    border-radius: var(--border-radius-round);
+    background: var(--color-grey-light);
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
-/* Categories cliquables */
+.sv-card-stat i {
+    font-size: 11px;
+    color: var(--color-primary);
+}
+
+/* Un service sans aucune offre le dit en gris, comme les pastilles de
+   categorie vides des pages service. */
+.sv-card-stat.is-empty {
+    background: #fbfbfc;
+    color: var(--sv-ink-soft);
+}
+
+.sv-card-stat.is-empty i {
+    color: #a2a8b0;
+}
+
+/* Categories : memes pastilles que sur les pages service (.cs-chip) */
 .sv-card-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    margin-top: auto;
 }
 
 .sv-tag {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    background: var(--color-grey-light);
-    border: 1px solid transparent;
+    gap: 7px;
+    padding: 7px 13px;
+    border: 1px solid var(--sv-line-strong);
     border-radius: var(--border-radius-round);
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 500;
+    background: var(--color-white);
     color: var(--color-black);
+    font-size: 12px;
+    font-weight: 600;
     text-decoration: none;
-    transition: background var(--transition-speed) ease,
-                border-color var(--transition-speed) ease,
+    white-space: nowrap;
+    transition: border-color var(--transition-speed) ease,
                 color var(--transition-speed) ease;
 }
 
@@ -9621,77 +11056,76 @@ product-card:hover {
 }
 
 .sv-tag:hover {
-    background: #fff6f2;
     border-color: var(--color-primary);
-    color: var(--color-primary);
+    color: var(--color-black);
 }
 
 .sv-tag--more {
-    font-weight: 700;
+    background: var(--sv-tint);
+    border-color: #ffd9c8;
     color: var(--color-primary);
 }
 
-/* Pied de carte */
 .sv-card-cta {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    border-top: 1px solid var(--color-divider);
     padding: 14px 18px;
-    font-size: 13.5px;
-    font-weight: 600;
+    border-top: 1px solid var(--sv-line);
     color: var(--color-primary);
+    font-size: 13px;
+    font-weight: 700;
     text-decoration: none;
-    transition: background var(--transition-speed) ease, gap var(--transition-speed) ease;
+    transition: background var(--transition-speed) ease;
 }
 
 .sv-card-cta:hover {
-    background: #fff6f2;
-    color: var(--color-primary-dark, #e13800);
+    background: var(--sv-tint);
+    color: var(--color-primary);
 }
 
 .sv-card-cta i {
-    font-size: 12px;
+    transition: transform var(--transition-speed) ease;
 }
 
-@media (max-width: 1024px) {
-    .sv-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
+.sv-card:hover .sv-card-cta i {
+    transform: translateX(4px);
 }
 
+/* --------------------------------------------------------------------------
+   Adaptations
+   -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
     .sv-page {
-        padding: 0 16px 48px;
+        --sv-pad: 16px;
     }
 
     .sv-hero {
-        padding: 22px 0 26px;
-    }
-
-    .sv-hero-inner {
-        padding: 0 16px;
+        padding: 24px 0 26px;
+        margin-bottom: 36px;
     }
 
     .sv-hero-title {
-        font-size: 22px;
+        font-size: 24px;
     }
 
     .sv-hero-subtitle {
-        font-size: 13px;
-    }
-
-    .sv-hero-stats {
-        gap: 20px;
+        font-size: 14px;
     }
 
     .sv-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         gap: 16px;
+        padding-bottom: 48px;
     }
 }
 
 @media (max-width: 560px) {
+    .sv-hero-title {
+        font-size: 21px;
+    }
+
     .sv-grid {
         grid-template-columns: 1fr;
     }

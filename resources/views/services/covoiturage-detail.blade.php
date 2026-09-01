@@ -99,18 +99,16 @@
                         <strong data-cvd-total>{{ number_format($total, 0, ',', ' ') }}€</strong>
                     </div>
 
-                    @auth
-                        <a href="{{ $driver ? route('messages.show', $driver) : route('contact') }}"
-                           class="cvd-recap-btn" data-cvd-book
-                           data-cvd-href="{{ $driver ? route('messages.show', $driver) : route('contact') }}">
-                            Réserver maintenant
-                        </a>
-                    @else
-                        <a href="{{ route('login') }}" class="cvd-recap-btn" data-cvd-book
-                           data-cvd-href="{{ route('login') }}">
-                            Réserver maintenant
-                        </a>
-                    @endauth
+                    {{-- La destination reste la meme pour tous : un visiteur non
+                         connecte voit la popin de connexion (data-auth-required,
+                         gere par assets/js/auth.js) et arrive ici une fois
+                         connecte, sens selectionnes compris. --}}
+                    @php $bookUrl = $driver ? route('messages.show', $driver) : route('contact'); @endphp
+
+                    <a href="{{ $bookUrl }}" class="cvd-recap-btn" data-cvd-book
+                       data-cvd-href="{{ $bookUrl }}" data-auth-required>
+                        Réserver maintenant
+                    </a>
 
                     <p class="cvd-recap-hint" data-cvd-hint hidden>
                         Sélectionnez au moins un sens pour réserver.

@@ -45,7 +45,25 @@
          Villes, places et prix viennent des trajets publiés : la barre ne
          propose que des critères qui ont des résultats. --}}
     <section class="cv-search-section">
+        @php
+            // Les criteres secondaires ouvrent le volet d'eux-memes quand ils
+            // sont poses : sinon le voyageur verrait des trajets filtres sans
+            // voir par quoi.
+            //
+            // On compare les valeurs plutot que d'appeler `filled()` :
+            // tripFilters() renvoie 0 pour un nombre de personnes ou un prix
+            // absent, et `filled(0)` vaut vrai — le volet s'ouvrait donc a
+            // chaque visite.
+            $extraOuvert = $filters['persons'] > 0
+                || $filters['max_price'] > 0
+                || $filters['sort'] !== '';
+        @endphp
+
         <form class="cv-search-form cv-search-form--wide" action="{{ route('services.show', 'covoiturage') }}" method="GET">
+
+            {{-- Rangee unique : ce qu'on renseigne presque toujours. --}}
+            <div class="cv-search-row">
+
             <div class="cv-search-field">
                 <label for="cvDeparture">Lieu de départ</label>
                 <div class="cv-search-input">
@@ -80,6 +98,28 @@
                            min="{{ $filters['start_date'] ?: now()->toDateString() }}">
                 </div>
             </div>
+
+                <button type="submit" class="cv-search-btn">Rechercher</button>
+            </div>{{-- /.cv-search-row --}}
+
+            {{-- Barre de service : deplier les criteres secondaires, et
+                 repartir de zero quand une recherche est en cours. --}}
+            <div class="cv-search-foot">
+                <button type="button" class="cv-search-more" data-cv-more
+                        aria-expanded="{{ $extraOuvert ? 'true' : 'false' }}" aria-controls="cvExtra">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Plus de filtres</span>
+                    <i class="fa-solid fa-chevron-down cv-search-more-caret"></i>
+                </button>
+
+                @if ($hasFilters)
+                    <a href="{{ route('services.show', 'covoiturage') }}#cv-trajets" class="cv-search-reset">
+                        <i class="fa-solid fa-rotate-left"></i> Réinitialiser
+                    </a>
+                @endif
+            </div>
+
+            <div class="cv-search-extra" id="cvExtra" data-cv-extra @unless($extraOuvert) hidden @endunless>
 
             <div class="cv-search-field">
                 <label for="cvPersons">Nombre de personnes</label>
@@ -120,15 +160,7 @@
                 </div>
             </div>
 
-            <div class="cv-search-actions">
-                @if ($hasFilters)
-                    <a href="{{ route('services.show', 'covoiturage') }}#cv-trajets" class="cv-search-reset">
-                        <i class="fa-solid fa-rotate-left"></i> Réinitialiser
-                    </a>
-                @endif
-
-                <button type="submit" class="cv-search-btn">Rechercher</button>
-            </div>
+            </div>{{-- /.cv-search-extra --}}
         </form>
 
         <datalist id="cvDepartureCities">
@@ -275,7 +307,7 @@
                     <span class="cv-driver-badge">Offre Conducteur</span>
                     <h2 class="cv-driver-title">Récupérez <span class="cv-driver-title-accent">90&nbsp;€</span> par trajet.</h2>
                     <p class="cv-driver-subtitle">Vous avez une voiture ? Faites-la travailler pour vous (et pas l'inverse). Récupérez jusqu'à 90&nbsp;€ en covoiturage sur un trajet de 300&nbsp;km avec 3 passagers.</p>
-                    <a href="{{ route('covoiturage.create') }}" class="cv-driver-btn">Publier un trajet</a>
+                    <a href="{{ route('covoiturage.create') }}" class="cv-driver-btn" data-auth-required>Publier un trajet</a>
                 </div>
             </div>
     </section>
@@ -308,3 +340,25 @@
 </div>
 
 @endsection
+
+@push('scripts')
+<script>
+    // Volet des criteres secondaires de la barre de recherche : la rangee
+    // visible reste sur une seule ligne, le reste se deplie a la demande.
+    document.addEventListener('DOMContentLoaded', function () {
+        const bouton = document.querySelector('[data-cv-more]');
+        const volet  = document.querySelector('[data-cv-extra]');
+
+        if (! bouton || ! volet) {
+            return;
+        }
+
+        bouton.addEventListener('click', function () {
+            const ouvrir = volet.hidden;
+
+            volet.hidden = ! ouvrir;
+            bouton.setAttribute('aria-expanded', String(ouvrir));
+        });
+    });
+</script>
+@endpush
