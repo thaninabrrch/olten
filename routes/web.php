@@ -306,7 +306,7 @@ Route::prefix('vendeur')
         Route::post('commandes-clients/{order}/cancel', [SellerOrderController::class, 'cancelOrder'])->name('orders.cancel');
         Route::post('commandes-clients/{order}/confirmer', [SellerOrderController::class, 'confirmOrder'])->name('orders.confirm');
     });
-Route::get('/produits/{product}', [ProductController::class, 'show'])->name('products.show');
+Route::get('/produit/{product}', [ProductController::class, 'show'])->name('products.show');
 
 Route::prefix('produits')
     ->name('products.')

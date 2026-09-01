@@ -208,17 +208,21 @@ class ProductController extends Controller
     public function purchase(Request $request, Product $product)
     {
         $request->validate([
-            'quantity' => 'required|integer|min:1'
+            'quantity' => 'required|integer|min:1',
         ]);
 
-        if ($product->stock < $request->quantity) {
+        $quantity = (int) $request->quantity;
+
+        if ($product->stock < $quantity) {
             return back()->with('error', 'Stock insuffisant');
         }
 
-        return redirect()->route('products.confirm')->with([
+        session([
             'product_id' => $product->id,
-            'quantity' => $request->quantity,
+            'quantity' => $quantity,
         ]);
+
+        return redirect()->route('products.confirm');
     }
 
     public function confirm()
@@ -242,12 +246,19 @@ class ProductController extends Controller
             'product_id'         => 'required|exists:products,id',
             'quantity'           => 'required|integer|min:1',
             'payment_method'     => 'required|string',
-            'address'            => 'required|string',
+            'address'            => 'nullable|string',
             'phone'              => 'required|string',
             'delivery_requested' => 'nullable|boolean',
             'delivery_distance'  => 'nullable|numeric|min:0',
             'delivery_address'   => 'nullable|string',
         ]);
+
+        if ($request->boolean('delivery_requested') && empty($request->address)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'L’adresse de livraison est obligatoire.',
+            ], 422);
+        }
 
         $user = Auth::user();
 
@@ -291,7 +302,7 @@ class ProductController extends Controller
 
                 $intent = $intent->confirm([
                     'payment_method' => $request->payment_method,
-                    'return_url' => route('products.confirm'),
+                    'return_url' => route('products.success'),
                 ]);
 
                 if ($intent->status !== 'succeeded') {
@@ -321,7 +332,7 @@ class ProductController extends Controller
 
                 return response()->json([
                     'success'  => true,
-                    'redirect' => route('products.confirm'),
+                    'redirect' => route('products.success'),
                 ]);
             });
 
