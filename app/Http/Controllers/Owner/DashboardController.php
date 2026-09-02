@@ -18,6 +18,7 @@ use App\Models\Ad;
 use App\Models\Booking;
 use App\Models\PointsFidelite;
 use App\Models\AdVisit;
+use App\Models\ProductVisit;
 use App\Models\Product;
 use App\Models\UserDocument;
 use Illuminate\Support\Facades\DB;
@@ -87,7 +88,7 @@ class DashboardController extends Controller
         if ($user->hasRole('locateur')) {
 
             $activeAds = Ad::where('user_id', $user->id)->count();
-            $totalViews = Ad::where('user_id', $user->id)->sum('views');
+            $totalViews += Ad::where('user_id', $user->id)->sum('views');
 
             $favoritesCount = $user->favorites()->count() + $user->productFavorites()->count();
             $recentActivities = [
@@ -102,6 +103,8 @@ class DashboardController extends Controller
         |--------------------------------------------------------------------------
         */
         if ($user->hasRole('vendeur')) {
+
+            $totalViews += Product::where('user_id', $user->id)->sum('views');
 
             $ventesTotal = ProductSale::whereHas('product', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
@@ -209,9 +212,17 @@ class DashboardController extends Controller
         $adIds     = Ad::where('user_id', $user->id)->pluck('id');
         $produitIds = Product::where('user_id', $user->id)->pluck('id');
 
-        $visites = $adIds->isEmpty()
+        $visitesAnnonces = $adIds->isEmpty()
             ? collect()
             : AdVisit::whereIn('ad_id', $adIds)->get(['user_id', 'created_at']);
+
+        $visitesProduits = $produitIds->isEmpty()
+            ? collect()
+            : ProductVisit::whereIn('product_id', $produitIds)->get(['user_id', 'created_at']);
+
+        // Annonces et produits alimentent la meme courbe : c'est le trafic de
+        // l'utilisateur, quel que soit le type d'offre consultee.
+        $visites = $visitesAnnonces->concat($visitesProduits);
 
         // -- Trafic : une barre par jour sur trente jours glissants --
         $parJour = [];
@@ -285,7 +296,8 @@ class DashboardController extends Controller
             ->count();
 
         $entonnoir = [
-            'Vues'         => (int) Ad::where('user_id', $user->id)->sum('views'),
+            'Vues'         => (int) Ad::where('user_id', $user->id)->sum('views')
+                              + (int) Product::where('user_id', $user->id)->sum('views'),
             'Favoris'      => ($adIds->isEmpty() && $produitIds->isEmpty()) ? 0 : $misesEnFavori,
             'Réservations' => $reservations->count(),
             'Payées'       => $reservations->filter(fn ($s) => $s === 'paid')->count(),

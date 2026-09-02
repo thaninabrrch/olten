@@ -439,6 +439,14 @@
     bindToggle('livreur-toggle', '{{ route('profile.toggleLivreur') }}',
         v => ({ is_livreur: v }),
         data => {
+            // Activation : meme parcours que le chauffeur VTC, on envoie
+            // directement sur les pieces a fournir. La page n'affiche que
+            // celles qu'exige le profil livreur.
+            if (data.is_livreur) {
+                window.location.href = '{{ route('livreur.carte.vtc') }}';
+                return;
+            }
+
             const el = document.getElementById('role-status');
             if (el) el.textContent = data.roles && data.roles.length ? data.roles.join(', ') : 'Aucun rôle actif';
         });

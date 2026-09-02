@@ -196,15 +196,22 @@ class ProfileController extends Controller
 
         } else {
 
+            // Le filtre sur l'utilisateur manquait : la desactivation retirait le
+            // role livreur a TOUS les comptes de la base, pas seulement au sien.
             DB::table('role_user')
+                ->where('user_id', $user->id)
                 ->where('role_id', $role->id)
+                ->where('user_type', 'App\Models\User')
                 ->delete();
         }
 
         $activeRoles = $user->roles()->pluck('display_name')->toArray();
 
+        // « is_livreur » est renvoye comme « is_vtc_driver » l'est pour le VTC :
+        // c'est ce drapeau qui declenche la redirection vers les documents.
         return response()->json([
-            'roles' => $activeRoles
+            'is_livreur' => $request->boolean('is_livreur'),
+            'roles'      => $activeRoles,
         ]);
     }
 }

@@ -31,6 +31,12 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail
     protected function casts(): array
     {
         return [
+            // $timestamps = false empeche Eloquent d'ecrire created_at/updated_at,
+            // mais il lui retire aussi la conversion en Carbon a la lecture : les
+            // lignes qui ont malgre tout une date la renvoyaient en chaine, et tout
+            // appel type ->translatedFormat() plantait. Le cast la retablit.
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_vtc_driver' => 'boolean',

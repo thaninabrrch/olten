@@ -12,6 +12,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductSale;
+use App\Models\ProductVisit;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
 use DB;
@@ -184,6 +185,22 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
+        /*
+        | Compteur de vues, aligne sur celui des annonces (Owner\AdController) :
+        | le proprietaire ne gonfle pas ses propres statistiques, et chaque
+        | consultation laisse une ligne dans product_visits pour alimenter les
+        | courbes de trafic du tableau de bord.
+        */
+        if (Auth::id() !== $product->user_id) {
+            ProductVisit::create([
+                'product_id' => $product->id,
+                'user_id'    => Auth::id(),
+                'ip'         => request()->ip(),
+            ]);
+
+            $product->increment('views');
+        }
+
         return view('pages.products.show', compact('product'));
     }
 
