@@ -1,51 +1,61 @@
 /* ==========================================================================
    ABONNEMENTS — page /abonnements (resources/views/subscriptions/index)
    --------------------------------------------------------------------------
-   Grille tarifaire de la plateforme : trois offres payantes comparees ligne
-   a ligne, plus le repli vers le compte gratuit.
+   Grille tarifaire de la plateforme : quatre offres cote a cote, reduites a
+   l'essentiel — nom, accroche, prix, bouton. La mise en page tient a
+   l'alignement : cartes de meme hauteur, prix au meme niveau, boutons cales
+   en bas.
 
    Les variables viennent de style.css et ont toutes un repli : cette feuille
    reste lisible si elle est chargee seule.
    ========================================================================== */
 
 .olten-plans {
+    /* Un fond legerement teinte detache les cartes blanches. Le halo orange
+       en haut a droite rappelle la charte sans peser sur la lecture. */
+    background:
+        radial-gradient(820px 460px at 88% -6%, rgba(255, 60, 0, .07), transparent 62%),
+        linear-gradient(180deg, #fffaf8 0%, var(--color-bg-body, #f8f9fa) 42%);
     font-family: var(--font-family, "Montserrat", sans-serif);
-    padding: 56px 0 72px;
-    background: var(--color-white, #fff);
+    padding: 56px 0 80px;
 }
 
 /* --------------------------------------------------------------------------
    En-tete
    -------------------------------------------------------------------------- */
 .olten-plans-head {
-    max-width: 720px;
+    max-width: 700px;
     margin: 0 auto 40px;
     text-align: center;
 }
 
 .olten-plans-eyebrow {
     display: inline-block;
-    font-size: 12px;
+    margin: 0 0 14px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(255, 60, 0, .1);
+    color: var(--color-primary, #ff3c00);
+    font-size: 11.5px;
     font-weight: 700;
     letter-spacing: .12em;
     text-transform: uppercase;
-    color: var(--color-primary, #ff3c00);
-    margin: 0 0 14px;
 }
 
 .olten-plans-title {
-    font-size: clamp(28px, 4vw, 40px);
-    font-weight: 800;
-    line-height: 1.2;
-    color: var(--color-black, #111);
     margin: 0 0 14px;
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 800;
+    letter-spacing: -.02em;
+    line-height: 1.15;
+    color: var(--color-black, #111);
 }
 
 .olten-plans-subtitle {
-    font-size: 16px;
-    line-height: 1.6;
-    color: var(--color-grey-dark, #555);
     margin: 0;
+    font-size: 15.5px;
+    line-height: 1.65;
+    color: var(--color-grey-dark, #555);
 }
 
 /* --------------------------------------------------------------------------
@@ -54,334 +64,256 @@
 .olten-plans-notice {
     display: flex;
     align-items: flex-start;
-    gap: 14px;
-    max-width: 760px;
-    margin: 28px auto 0;
-    padding: 16px 20px;
-    text-align: left;
-    background: var(--color-white, #fff);
-    border: 1px solid var(--color-divider, #ddd);
+    gap: 13px;
+    max-width: 640px;
+    margin: 26px auto 0;
+    padding: 15px 18px;
+    border: 1px solid #ffd9cb;
     border-left: 3px solid var(--color-primary, #ff3c00);
-    border-radius: 12px;
-    box-shadow: var(--shadow-light, 0 2px 5px rgba(0, 0, 0, .1));
+    border-radius: 14px;
+    background: #fff6f2;
+    text-align: left;
 }
 
 .olten-plans-notice i {
-    flex: none;
     margin-top: 2px;
-    font-size: 18px;
     color: var(--color-primary, #ff3c00);
+    font-size: 15px;
 }
 
 .olten-plans-notice strong {
     display: block;
-    font-size: 14.5px;
-    color: var(--color-black, #111);
-    margin-bottom: 3px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #8a2600;
 }
 
 .olten-plans-notice p {
-    font-size: 13.5px;
+    margin: 4px 0 0;
+    font-size: 12.5px;
     line-height: 1.6;
-    color: var(--color-grey-dark, #555);
-    margin: 0;
+    color: #a04a25;
 }
 
 .olten-plans-alert {
     display: flex;
     align-items: center;
-    gap: 12px;
-    max-width: 760px;
-    margin: 0 auto 28px;
-    padding: 14px 20px;
-    font-size: 14px;
-    text-align: left;
+    gap: 11px;
+    max-width: 640px;
+    margin: 0 auto 26px;
+    padding: 13px 17px;
+    border: 1px solid;
     border-radius: 12px;
-    border: 1px solid #f1aeae;
-    background: #fdf2f2;
-    color: #a33a3a;
+    font-size: 13.5px;
+    font-weight: 600;
 }
 
-.olten-plans-alert i {
-    flex: none;
-    font-size: 17px;
-}
+.olten-plans-alert.is-error   { border-color: #f3bdb6; background: #fdf1ef; color: #b42318; }
+.olten-plans-alert.is-success { border-color: #a8d8bd; background: #eef8f2; color: #1f7a4d; }
 
 /* --------------------------------------------------------------------------
-   Grille des offres
+   Grille
+   --------------------------------------------------------------------------
+   Quatre offres. `1fr` par colonne plutot qu'un `auto-fit` : les colonnes
+   restent de largeur egale, condition pour que les lignes se comparent d'une
+   carte a l'autre. `align-items: stretch` (defaut) donne des cartes de meme
+   hauteur, et `min-width: 0` empeche un libelle long de pousser la colonne.
    -------------------------------------------------------------------------- */
 .olten-plans-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    align-items: stretch;
-    gap: 24px;
-    max-width: 1080px;
-    margin: 0 auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 44px;
 }
 
+/* --------------------------------------------------------------------------
+   Carte
+   -------------------------------------------------------------------------- */
 .olten-plan {
-    position: relative;
     display: flex;
     flex-direction: column;
-    padding: 32px 28px;
+    min-width: 0;
+    padding: 26px 22px;
+    border: 1px solid var(--color-divider, #e6e8eb);
+    border-radius: 18px;
     background: var(--color-white, #fff);
-    border: 1px solid var(--color-divider, #ddd);
-    border-radius: 16px;
-    box-shadow: var(--shadow-light, 0 2px 5px rgba(0, 0, 0, .1));
-    transition: transform var(--transition-speed, .3s) ease,
-                box-shadow var(--transition-speed, .3s) ease,
-                border-color var(--transition-speed, .3s) ease;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
 }
 
 .olten-plan:hover {
-    transform: translateY(-6px);
-    border-color: #c9c9c9;
-    box-shadow: 0 14px 34px rgba(0, 0, 0, .09);
+    transform: translateY(-3px);
+    border-color: #d8dbe0;
+    box-shadow: 0 16px 34px rgba(16, 24, 40, .09);
 }
 
-/* L'offre mise en avant : bordure de marque et ombre coloree. */
+/* L'offre mise en avant se distingue par un filet et un halo, pas par une
+   echelle differente : agrandir la carte desalignerait les lignes. */
 .olten-plan.is-featured {
-    border: 2px solid var(--color-primary, #ff3c00);
-    box-shadow: 0 14px 38px rgba(255, 60, 0, .14);
-}
-
-.olten-plan.is-featured:hover {
+    position: relative;
     border-color: var(--color-primary, #ff3c00);
-    box-shadow: 0 20px 46px rgba(255, 60, 0, .2);
+    box-shadow: 0 0 0 3px rgba(255, 60, 0, .1), 0 16px 34px rgba(255, 60, 0, .14);
 }
 
 .olten-plan-flag {
     position: absolute;
-    top: 0;
+    top: -13px;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 16px;
-    font-size: 11.5px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: var(--color-primary, #ff3c00);
+    color: #fff;
+    font-size: 10.5px;
     font-weight: 700;
-    letter-spacing: .05em;
+    letter-spacing: .07em;
     text-transform: uppercase;
     white-space: nowrap;
-    color: var(--color-white, #fff);
-    background: var(--color-primary, #ff3c00);
-    border-radius: var(--border-radius-round, 50px);
-    box-shadow: 0 4px 12px rgba(255, 60, 0, .32);
+    box-shadow: 0 6px 14px rgba(255, 60, 0, .3);
 }
 
+.olten-plan-flag i { font-size: 9px; }
+
+/* En-tete de carte : hauteur reservee pour deux lignes d'accroche, sinon les
+   prix ne tomberaient pas au meme niveau d'une carte a l'autre. */
+.olten-plan-head { min-height: 88px; }
+
 .olten-plan-name {
-    font-size: 20px;
+    margin: 0 0 7px;
+    font-size: 19px;
     font-weight: 800;
+    letter-spacing: -.01em;
     color: var(--color-black, #111);
-    margin: 6px 0 6px;
 }
 
 .olten-plan-desc {
-    font-size: 13.5px;
+    margin: 0;
+    font-size: 12.5px;
     line-height: 1.55;
-    color: var(--color-grey-dark, #555);
-    margin: 0 0 22px;
-    min-height: 42px;
+    color: #8a9099;
 }
 
+/* --------------------------------------------------------------------------
+   Prix
+   -------------------------------------------------------------------------- */
 .olten-plan-price {
     display: flex;
     align-items: baseline;
     gap: 6px;
-    padding-bottom: 22px;
-    margin-bottom: 22px;
-    border-bottom: 1px solid var(--color-divider, #ddd);
+    padding: 16px 0 18px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--color-divider, #eceef0);
 }
 
 .olten-plan-amount {
-    font-size: 40px;
+    font-size: 30px;
     font-weight: 800;
+    letter-spacing: -.03em;
     line-height: 1;
-    letter-spacing: -.02em;
     color: var(--color-black, #111);
 }
 
 .olten-plan-period {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--color-grey-dark, #555);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #8a9099;
 }
 
 /* --------------------------------------------------------------------------
-   Liste des fonctionnalites
-   --------------------------------------------------------------------------
-   Les trois cartes affichent les memes lignes, dans le meme ordre : la
-   comparaison se lit horizontalement, d'une carte a l'autre.
+   Bouton
    -------------------------------------------------------------------------- */
-.olten-plan-features {
-    flex: 1 0 auto;
-    list-style: none;
-    padding: 0;
-    margin: 0 0 26px;
-}
+/* Pousse le bouton en bas de carte : les quatre boutons restent alignes
+   quelle que soit la longueur de l'accroche. */
+.olten-plan-action { margin-top: auto; }
 
-.olten-plan-features li {
-    display: flex;
-    align-items: flex-start;
-    gap: 11px;
-    font-size: 13.5px;
-    line-height: 1.5;
-    color: var(--color-black, #111);
-    padding: 7px 0;
-}
-
-.olten-plan-features li.is-off {
-    color: #9a9a9a;
-}
-
-.olten-plan-features i {
-    flex: none;
-    width: 18px;
-    height: 18px;
-    margin-top: 1px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 9px;
-    border-radius: 50%;
-    color: #1f7a4d;
-    background: #e4f4ea;
-}
-
-.olten-plan-features li.is-off i {
-    color: #9a9a9a;
-    background: var(--color-grey-light, #f5f5f5);
-}
-
-/* --------------------------------------------------------------------------
-   Appels a l'action
-   -------------------------------------------------------------------------- */
 .olten-plan-btn {
     display: block;
     width: 100%;
-    padding: 14px 20px;
-    font-family: inherit;
-    font-size: 15px;
-    font-weight: 700;
-    text-align: center;
-    color: var(--color-white, #fff);
-    background: var(--color-primary, #ff3c00);
+    padding: 13px 16px;
     border: 1px solid var(--color-primary, #ff3c00);
-    border-radius: var(--border-radius-round, 50px);
+    border-radius: 12px;
+    background: var(--color-primary, #ff3c00);
+    color: #fff;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
     cursor: pointer;
-    transition: background var(--transition-speed, .3s) ease,
-                transform var(--transition-speed, .3s) ease;
+    transition: background .2s ease, color .2s ease, box-shadow .2s ease;
 }
 
 .olten-plan-btn:hover {
     background: var(--color-primary-dark, #e13800);
     border-color: var(--color-primary-dark, #e13800);
-    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(255, 60, 0, .24);
 }
 
-/* Variante sobre : offres non mises en avant et renouvellement. */
 .olten-plan-btn.is-ghost {
+    background: transparent;
     color: var(--color-primary, #ff3c00);
-    background: var(--color-white, #fff);
 }
 
 .olten-plan-btn.is-ghost:hover {
-    color: var(--color-white, #fff);
     background: var(--color-primary, #ff3c00);
+    color: #fff;
 }
 
+.olten-plan-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 60, 0, .28);
+}
+
+/* --------------------------------------------------------------------------
+   Pied de page : reperes de confiance
+   -------------------------------------------------------------------------- */
 .olten-plans-footer {
-    max-width: 1080px;
-    margin: 36px auto 0;
-    text-align: center;
-}
-
-.olten-plans-free {
-    display: inline-block;
-    padding: 13px 34px;
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--color-grey-dark, #555);
-    background: transparent;
-    border: 1px solid var(--color-divider, #ddd);
-    border-radius: var(--border-radius-round, 50px);
-    cursor: pointer;
-    transition: border-color var(--transition-speed, .3s) ease,
-                color var(--transition-speed, .3s) ease;
-}
-
-.olten-plans-free:hover {
-    color: var(--color-black, #111);
-    border-color: #9a9a9a;
+    padding-top: 30px;
+    border-top: 1px solid var(--color-divider, #e6e8eb);
 }
 
 .olten-plans-trust {
     display: flex;
-    align-items: center;
-    justify-content: center;
     flex-wrap: wrap;
-    gap: 10px 22px;
-    margin-top: 22px;
-    font-size: 12.5px;
-    color: var(--color-grey-dark, #555);
+    justify-content: center;
+    gap: 12px 26px;
 }
 
 .olten-plans-trust span {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--color-grey-dark, #555);
 }
 
-/* --------------------------------------------------------------------------
-   Accessibilite
-   -------------------------------------------------------------------------- */
-.olten-plan-btn:focus-visible,
-.olten-plans-free:focus-visible {
-    outline: 2px solid var(--color-primary, #ff3c00);
-    outline-offset: 3px;
+.olten-plans-trust i { color: var(--color-primary, #ff3c00); font-size: 12px; }
+
+.olten-plans-trust a {
+    color: var(--color-primary, #ff3c00);
+    font-weight: 600;
+    text-decoration: none;
 }
+
+.olten-plans-trust a:hover { text-decoration: underline; }
 
 /* --------------------------------------------------------------------------
    Responsive
+   --------------------------------------------------------------------------
+   Quatre colonnes deviennent deux, puis une. A deux colonnes la comparaison
+   horizontale tient encore ; a une seule elle disparait, d'ou la liste
+   complete conservee dans chaque carte.
    -------------------------------------------------------------------------- */
-@media (max-width: 991px) {
-    .olten-plans {
-        padding-top: 40px;
-    }
-
-    /* En colonne, les cartes se suivent : la pastille a besoin d'air. */
-    .olten-plans-grid {
-        grid-template-columns: minmax(0, 1fr);
-        gap: 34px;
-        max-width: 440px;
-    }
+@media (max-width: 1099.98px) {
+    .olten-plans-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+    .olten-plan.is-featured { margin-top: 8px; }
 }
 
-@media (max-width: 575px) {
-    .olten-plan {
-        padding: 28px 22px;
-    }
-
-    .olten-plan-desc {
-        min-height: 0;
-    }
-
-    .olten-plan-amount {
-        font-size: 34px;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .olten-plan,
-    .olten-plan-btn,
-    .olten-plans-free {
-        transition: none;
-    }
-
-    .olten-plan:hover,
-    .olten-plan-btn:hover {
-        transform: none;
-    }
+@media (max-width: 639.98px) {
+    .olten-plans { padding: 40px 0 60px; }
+    .olten-plans-grid { grid-template-columns: minmax(0, 1fr); }
+    .olten-plan { padding: 22px 18px; }
+    .olten-plan-head { min-height: 0; }
+    .olten-plans-trust { flex-direction: column; align-items: center; gap: 10px; }
 }

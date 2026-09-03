@@ -9,7 +9,7 @@
 
         <span class="hero-badge">
             <i class="fas fa-bolt"></i>
-            On l'out tout entre nous • Le réflexe collaboratif de proximité
+             On loue tout entre nous • Le réflexe collaboratif de proximité.
         </span>
 
         <h1>
