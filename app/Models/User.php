@@ -158,4 +158,9 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail
     {
         return $this->belongsTo(Subscription::class);
     }
+
+    public function hasPremiumSubscription(): bool
+    {
+        return $this->subscription?->slug === 'premium';
+    }
 }

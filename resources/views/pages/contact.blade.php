@@ -73,7 +73,10 @@
                         <input type="text" id="firstname" name="firstname" value="{{ old('firstname') }}">
                     </div>
                 </div>
-
+                <div class="form-group">
+                    <label for="email">Votre E-Mail</label>
+                    <input type="email" id="email" name="email" value="{{ old('email') }}" required>
+                </div>
                 <div class="form-group">
                     <label for="subject">Sujet</label>
                     <input type="text" id="subject" name="subject" value="{{ old('subject') }}" required>

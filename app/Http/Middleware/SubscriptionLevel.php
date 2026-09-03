@@ -21,7 +21,10 @@ class SubscriptionLevel
         if (!in_array($user->subscription->slug, $levels)) {
             return redirect()
                 ->route('subscriptions.index')
-                ->with('error', 'Votre abonnement ne permet pas d’accéder à cette fonctionnalité.');
+                ->with(
+                    'error',
+                    'Votre abonnement ne permet pas d’accéder à cette fonctionnalité.'
+                );
         }
 
         return $next($request);

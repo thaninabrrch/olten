@@ -11,6 +11,7 @@ use Stripe\Refund;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\BookingRejectedMail;
 use App\Mail\BookingAcceptedMail;
+use App\Notifications\NewBookingNotification;
 
 class BookingController extends Controller
 {
@@ -190,6 +191,10 @@ class BookingController extends Controller
 
             $booking->calculateTotalPrice();
             $booking->save();
+            $owner = $ad->user;
+            if ($owner && $owner->hasPremiumSubscription()) {
+                $owner->notify(new NewBookingNotification($booking)); 
+            }
         }
 
         return response()->json([

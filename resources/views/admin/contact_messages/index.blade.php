@@ -63,7 +63,12 @@
                 <tbody class="divide-y divide-gray-200">
                     @foreach ($messages as $message)
                         <tr>
-                            <td class="px-6 py-4 font-semibold">{{ $message->name }}</td>
+                            <td class="px-6 py-4 font-semibold">
+                                @if($message->user?->subscription?->slug === 'premium')
+                                    <span class="text-orange-500 mr-1" title="Abonné Premium">👑</span>
+                                @endif    
+                                {{ $message->name }}
+                            </td>
                             <td class="px-6 py-4 text-gray-600">{{ $message->email }}</td>
                             <td class="px-6 py-4">{{ $message->subject }}</td>
 

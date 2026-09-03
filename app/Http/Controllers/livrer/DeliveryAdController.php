@@ -13,6 +13,7 @@ use App\Models\ProductSale;
 use App\Models\DeliveryRequest;
 use App\Models\Delivery;
 use App\Models\DeliveryReview;
+use App\Notifications\NewDeliveryRequestNotification;
 
 class DeliveryAdController extends Controller
 {
@@ -86,13 +87,51 @@ class DeliveryAdController extends Controller
     
     public function sendRequest(Request $request, $ad, $type)
     {
-        DeliveryRequest::create([
-                                'delivery_person_id' => auth()->id(),
-                                'booking_id' => $type == 'ad' ? $ad : null,
-                                'product_sale_id' => $type == 'product' ? $ad : null,
-                                'status' => 'pending',
-                            ]);
-        return back()->with('success', 'Demande envoyée avec succès');
+        if (!in_array($type, ['ad', 'product'])) {
+            return back()->with('error', 'Type de demande invalide.');
+        }
+
+        if ($type === 'ad') {
+
+            $booking = Booking::with('ad.user.subscription')->findOrFail($ad);
+
+            $deliveryRequest = DeliveryRequest::create([
+                                    'delivery_person_id' => auth()->id(),
+                                    'booking_id' => $booking->id,
+                                    'product_sale_id' => null,
+                                    'status' => 'pending',
+                                ]);
+
+            $owner = $booking->ad->user;
+
+        } else {
+
+            $sale = ProductSale::with('seller.subscription')->findOrFail($ad);
+
+            $deliveryRequest = DeliveryRequest::create([
+                                    'delivery_person_id' => auth()->id(),
+                                    'booking_id' => null,
+                                    'product_sale_id' => $sale->id,
+                                    'status' => 'pending',
+                                ]);
+
+            $owner = $sale->seller;
+        }
+
+        if ($owner && $owner->hasPremiumSubscription()) {
+
+            $deliveryRequest->load([
+                'booking.ad',
+                'productSale.product',
+            ]);
+
+            $owner->notify(new NewDeliveryRequestNotification($deliveryRequest));
+        }
+
+        return back()->with(
+                            'success',
+                            'Demande envoyée avec succès'
+                        );
     }
     
     public function pickupDelivery(Delivery $delivery)

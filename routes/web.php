@@ -162,9 +162,6 @@ Route::middleware('auth', 'verified', 'approved')->group(function () {
         Route::get('/livreur/carte-vtc', [CarteVtcController::class, 'index'])->name('livreur.carte.vtc');
     });
     Route::get('/demandes-de-livraison', [AdsLivreurController::class, 'index'])->name('livreur.ads.index');
-    Route::post('/demandes/{demande}/accept', [AdsLivreurController::class, 'acceptDemande'])->name('delivery.request.accept');
-    Route::post('/demandes/{demande}/refuse', [AdsLivreurController::class, 'refuseDemande'])->name('delivery.request.refuse');
-    Route::post('/demandes/{demande}/annuler', [AdsLivreurController::class, 'annulerMission'])->name('demande.annuler');
     // « Mes trajets » du conducteur. L'URL /covoiturage est reservee a la
     // page publique du service (voir `services.show`), qui doit rester
     // accessible aux visiteurs non connectes.
@@ -303,8 +300,6 @@ Route::prefix('vendeur')
         Route::post('ventes/{sale}/paid', [SellerController::class, 'markAsPaid'])->name('sales.paid');
         Route::get('orders/{order}', [SellerOrderController::class, 'showOrder'])->name('orders.show');
         Route::get('commandes-clients', [SellerOrderController::class, 'clientOrders'])->name('clientOrders');
-        Route::post('commandes-clients/{order}/cancel', [SellerOrderController::class, 'cancelOrder'])->name('orders.cancel');
-        Route::post('commandes-clients/{order}/confirmer', [SellerOrderController::class, 'confirmOrder'])->name('orders.confirm');
     });
 Route::get('/produit/{product}', [ProductController::class, 'show'])->name('products.show');
 
@@ -319,6 +314,17 @@ Route::prefix('produits')
         })->name('success');
         Route::post('{product}/acheter', [ProductController::class, 'purchase'])->name('purchase')->middleware('auth');
     });
+
+// route accessibles uniquement avec abonnments (premium et standard)
+Route::middleware(['auth', 'verified', 'approved', 'subscription:standard,premium'])->group(function () {
+    Route::post('/demandes/{demande}/accept', [AdsLivreurController::class, 'acceptDemande'])->name('delivery.request.accept');
+    Route::post('/demandes/{demande}/refuse', [AdsLivreurController::class, 'refuseDemande'])->name('delivery.request.refuse');
+    Route::post('/demandes/{demande}/annuler', [AdsLivreurController::class, 'annulerMission'])->name('demande.annuler');
+    Route::patch('/bookings/{booking}/accept', [BookingController::class, 'accept'])->name('bookings.accept');
+    Route::patch('/bookings/{booking}/reject', [BookingController::class, 'reject'])->name('bookings.reject');
+    Route::post('/vendeur/commandes-clients/{order}/cancel', [SellerOrderController::class, 'cancelOrder'])->name('orders.cancel');
+    Route::post('/vendeur/commandes-clients/{order}/confirmer', [SellerOrderController::class, 'confirmOrder'])->name('orders.confirm');
+});
 /*
 |--------------------------------------------------------------------------
 | Pages service (catch-all : a garder en dernier)

@@ -14,10 +14,38 @@ class HomeController extends Controller
     {
         $categories = Category::orderBy('id', 'asc')->get();
 
-        // Les "piliers de services" affiches sur l'accueil viennent du modele Service
+        // Les "piliers de services" affichés sur l'accueil viennent du modèle Service
         $services = Service::orderBy('id', 'asc')->get();
 
-        $query = Ad::with(['images', 'category'])->where('is_approved', true);
+        /*
+        |--------------------------------------------------------------------------
+        | Score de visibilité selon l'abonnement
+        |--------------------------------------------------------------------------
+        | Premium  = 2 → meilleure visibilité
+        | Standard = 1 → visibilité améliorée
+        | Aucun    = 0 → visibilité normale
+        |
+        | Important : aucun élément n'est filtré selon l'abonnement.
+        |--------------------------------------------------------------------------
+        */
+        $visibilityScore = function ($item) {
+            return match ($item->user?->subscription?->slug) {
+                'premium' => 2,
+                'standard' => 1,
+                default => 0,
+            };
+        };
+
+        /*
+        |--------------------------------------------------------------------------
+        | Annonces
+        |--------------------------------------------------------------------------
+        */
+        $query = Ad::with([
+            'images',
+            'category',
+            'user.subscription'
+        ])->where('is_approved', true);
 
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
@@ -30,55 +58,83 @@ class HomeController extends Controller
         }
 
         if ($request->filled('location')) {
-            $query->where('address', 'like', '%' . $request->location . '%');
+            $query->where(
+                'address',
+                'like',
+                '%' . $request->location . '%'
+            );
         }
 
         if ($request->filled('category')) {
             $query->where('category_id', $request->category);
         }
 
-        // Le selecteur de la barre de recherche porte desormais sur les services :
-        // une annonce correspond si sa categorie appartient au service choisi.
+        // Une annonce correspond si sa catégorie appartient au service sélectionné.
         if ($request->filled('service')) {
             $query->whereHas('category', function ($q) use ($request) {
                 $q->where('service_id', $request->input('service'));
             });
         }
 
-        $ads = $query->latest()->get();
+        $ads = $query
+            ->latest()
+            ->get()
+            ->sortByDesc($visibilityScore)
+            ->values();
 
-        $products = Product::with(['images', 'category'])
-                            ->active()
-                            ->inStock()
-                            ->latest()
-                            ->get();
+        /*
+        |--------------------------------------------------------------------------
+        | Produits
+        |--------------------------------------------------------------------------
+        */
+        $products = Product::with([
+            'images',
+            'category',
+            'user.subscription'
+        ])
+            ->active()
+            ->inStock()
+            ->latest()
+            ->get()
+            ->sortByDesc($visibilityScore)
+            ->values();
 
-        $latestItems = $ads->map(function ($ad) {
-                                return (object) [
-                                    'type' => 'ad',
-                                    'item' => $ad,
-                                    'created_at' => $ad->created_at,
-                                ];
-                            })->concat(
-                                $products->map(function ($product) {
-                                    return (object) [
-                                        'type' => 'product',
-                                        'item' => $product,
-                                        'created_at' => $product->created_at,
-                                    ];
-                                })
-                            )
-                            ->sortByDesc('created_at')
-                            ->take(10)
-                            ->values();
+        /*
+        |--------------------------------------------------------------------------
+        | Derniers éléments
+        |--------------------------------------------------------------------------
+        | Ici on garde volontairement le classement chronologique.
+        | L'abonnement ne modifie pas la sélection des 10 derniers éléments.
+        |--------------------------------------------------------------------------
+        */
+        $latestItems = $ads
+            ->map(function ($ad) {
+                return (object) [
+                    'type' => 'ad',
+                    'item' => $ad,
+                    'created_at' => $ad->created_at,
+                ];
+            })
+            ->concat(
+                $products->map(function ($product) {
+                    return (object) [
+                        'type' => 'product',
+                        'item' => $product,
+                        'created_at' => $product->created_at,
+                    ];
+                })
+            )
+            ->sortByDesc('created_at')
+            ->take(10)
+            ->values();
 
         return view('home', compact(
-                                'categories',
-                                'services',
-                                'ads',
-                                'products',
-                                'latestItems'
-                            ));
+            'categories',
+            'services',
+            'ads',
+            'products',
+            'latestItems'
+        ));
     }
 
     public function show($slug)

@@ -16,6 +16,7 @@ use App\Models\ProductVisit;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
 use DB;
+use App\Notifications\NewOrderNotification;
 
 class ProductController extends Controller
 {
@@ -204,24 +205,6 @@ class ProductController extends Controller
         return view('pages.products.show', compact('product'));
     }
 
-    // public function purchase(Request $request, Product $product)
-    // {
-    //     $request->validate([
-    //         'quantity' => 'required|integer|min:1|max:' . $product->stock,
-    //     ]);
-
-    //     $sale = $product->sales()->create([
-    //         'user_id' => auth()->id(),
-    //         'quantity' => $request->quantity,
-    //         'total_price' => $product->price * $request->quantity,
-    //         'status' => 'pending',
-    //     ]);
-
-    //     $product->decrement('stock', $request->quantity);
-
-    //     return redirect()->route('products.show', $product)->with('success', 'Achat effectué avec succès !');
-    // }
-
     public function purchase(Request $request, Product $product)
     {
         $request->validate([
@@ -346,6 +329,12 @@ class ProductController extends Controller
                     'delivery_distance_km' => (float) $request->delivery_distance,
                     'delivery_address'     => $request->delivery_address,
                 ]);
+
+                $seller = $product->user;
+                if ($seller && $seller->hasPremiumSubscription()) {
+                    $sale->load('product');
+                    $seller->notify( new NewOrderNotification($sale) );
+                }
 
                 return response()->json([
                     'success'  => true,

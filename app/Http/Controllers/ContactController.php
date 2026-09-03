@@ -13,23 +13,22 @@ class ContactController extends Controller
         return view('pages.contact');
     }
 
-public function store(Request $request)
-{
-    $validated = $request->validate([
-        'name'    => 'required|string|max:255',
-        'email'   => 'required|email|max:255',
-        'subject' => 'required|string|max:255',
-        'message' => 'nullable|string',
-    ]);
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name'    => 'required|string|max:255',
+            'email'   => 'required|email|max:255',
+            'subject' => 'required|string|max:255',
+            'message' => 'nullable|string',
+        ]);
+        $validated['user_id'] = auth()->id();
+        // Stockage dans la base
+        ContactMessage::create($validated);
+        // Envoi du mail
+        Mail::to($validated['email'])->send(new ContactMessageMail($validated));
 
-    // Stockage dans la base
-    ContactMessage::create($validated);
-
-    // Envoi du mail
-    Mail::to($validated['email'])->send(new ContactMessageMail($validated));
-
-    return redirect()
-        ->route('contact')
-        ->with('success', 'Votre message a été envoyé avec succès.');
-}
+        return redirect()
+            ->route('contact')
+            ->with('success', 'Votre message a été envoyé avec succès.');
+    }
 }
