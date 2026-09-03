@@ -54,7 +54,7 @@
             Messages Contact
         </a>
 
-        <a href="{{ route('admin.vtc_cards.index') }}"
+        <a href="{{ route('admin.documents.index') }}"
             class="sidebar-link flex items-center p-3 rounded-xl text-sm font-medium hover:text-primary-accent hover:bg-gray-100">
             <i class="bi bi-card-checklist mr-3 w-5 h-5"></i>
             Documents requis

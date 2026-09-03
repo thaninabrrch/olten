@@ -434,7 +434,7 @@
 
     bindToggle('vtc-toggle', '{{ route('profile.toggleVtc') }}',
         v => ({ is_vtc_driver: v }),
-        data => { if (data.is_vtc_driver) window.location.href = '{{ route('livreur.carte.vtc') }}'; });
+        data => { if (data.is_vtc_driver) window.location.href = '{{ route('livreur.documents') }}'; });
 
     bindToggle('livreur-toggle', '{{ route('profile.toggleLivreur') }}',
         v => ({ is_livreur: v }),
@@ -443,7 +443,7 @@
             // directement sur les pieces a fournir. La page n'affiche que
             // celles qu'exige le profil livreur.
             if (data.is_livreur) {
-                window.location.href = '{{ route('livreur.carte.vtc') }}';
+                window.location.href = '{{ route('livreur.documents') }}';
                 return;
             }
 

@@ -8,18 +8,17 @@ use Illuminate\Http\Request;
 
 /**
  * Verrouille une activite tant que les pieces qu'elle exige n'ont pas ete
- * validees par l'administrateur (back-office /admin/vtc-cards).
+ * validees par l'administrateur (back-office /admin/documents).
  *
  * Deux activites aujourd'hui, declarees ci-dessous :
- *   documents.approved:publish  -> publier un trajet   (permis + carte VTC)
+ *   documents.approved:publish  -> publier un trajet   (permis)
  *   documents.approved:deliver  -> espace livraison    (permis)
  *
  * Tant qu'une piece manque, est en cours d'examen ou a ete refusee, la page
  * demandee est remplacee par une page d'attente et les endpoints d'ecriture
  * sont refuses : le blocage ne doit pas etre seulement visuel.
  *
- * Remplace EnsureVtcCardApproved puis EnsureDriverDocumentsApproved, qui ne
- * couvraient que le covoiturage.
+ * Remplace les anciens filtres propres au covoiturage.
  */
 class EnsureDocumentsApproved
 {
@@ -60,7 +59,7 @@ class EnsureDocumentsApproved
             return response()->json([
                 'success'  => false,
                 'message'  => $this->message($bloquants, $documents, $config['action']),
-                'redirect' => route('livreur.carte.vtc'),
+                'redirect' => route('livreur.documents'),
             ], 403);
         }
 

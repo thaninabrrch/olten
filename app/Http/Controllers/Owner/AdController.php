@@ -98,6 +98,7 @@ class AdController extends Controller
         // Les categories sont des sous-parties d'un service : on les charge
         // avec leur service pour pouvoir les regrouper dans le selecteur.
         $categories = Category::with('service')
+                              ->publishable()
                               ->orderBy('service_id')
                               ->orderBy('id')
                               ->get();
@@ -124,6 +125,15 @@ class AdController extends Controller
 
     public function store(Request $request)
     {
+        /*
+        | Une categorie de vente n'a pas de periode de location : le formulaire
+        | masque le bloc « Disponibilites », et la validation cesse de l'exiger.
+        | Le controle est refait ici, cote serveur : masquer un champ dans la
+        | page ne prouve rien sur ce qui arrive dans la requete.
+        */
+        $estVente = Category::with('service')
+            ->find($request->input('category_id'))?->isVente() ?? false;
+
         $messages = [
             'title.required' => 'Le titre est obligatoire.',
             'title.max' => 'Le titre ne peut pas dépasser :max caractères.',
@@ -160,11 +170,13 @@ class AdController extends Controller
             'summary' => 'nullable|string|max:500',
             'description' => 'nullable|string',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
-            'available_from'  => 'required|date',
-            'available_until' => 'required|date|after_or_equal:available_from',
+            'available_from'  => $estVente ? 'nullable|date' : 'required|date',
+            'available_until' => $estVente ? 'nullable|date' : 'required|date|after_or_equal:available_from',
         ], $messages);
 
-        $validated['expires_at'] = $validated['available_until'];
+        // Une vente ne se perime pas a une fin de location : sans periode,
+        // expires_at reste vide et l'annonce est comptee comme active.
+        $validated['expires_at'] = $validated['available_until'] ?? null;
         $validated['delivery_active'] = $request->has('delivery_active');
         $validated['user_id'] = Auth::id();
 
@@ -188,6 +200,7 @@ class AdController extends Controller
         // Les categories sont des sous-parties d'un service : on les charge
         // avec leur service pour pouvoir les regrouper dans le selecteur.
         $categories = Category::with('service')
+                              ->publishable()
                               ->orderBy('service_id')
                               ->orderBy('id')
                               ->get();
@@ -197,6 +210,15 @@ class AdController extends Controller
     public function update(Request $request, Ad $ad)
     {
         $this->authorize('update', $ad);
+        /*
+        | Une categorie de vente n'a pas de periode de location : le formulaire
+        | masque le bloc « Disponibilites », et la validation cesse de l'exiger.
+        | Le controle est refait ici, cote serveur : masquer un champ dans la
+        | page ne prouve rien sur ce qui arrive dans la requete.
+        */
+        $estVente = Category::with('service')
+            ->find($request->input('category_id'))?->isVente() ?? false;
+
         $messages = [
             'title.required' => 'Le titre est obligatoire.',
             'title.max'      => 'Le titre ne peut pas dépasser :max caractères.',
@@ -229,11 +251,13 @@ class AdController extends Controller
             'summary' => 'nullable|string|max:500',
             'description' => 'nullable|string',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
-            'available_from'  => 'required|date',
-            'available_until' => 'required|date|after_or_equal:available_from',
+            'available_from'  => $estVente ? 'nullable|date' : 'required|date',
+            'available_until' => $estVente ? 'nullable|date' : 'required|date|after_or_equal:available_from',
         ], $messages);
 
-        $validated['expires_at'] = $validated['available_until'];
+        // Une vente ne se perime pas a une fin de location : sans periode,
+        // expires_at reste vide et l'annonce est comptee comme active.
+        $validated['expires_at'] = $validated['available_until'] ?? null;
         $deliveryActive = $request->has('delivery_active');
         $validated['delivery_active'] = $deliveryActive;
         if (! $deliveryActive) {

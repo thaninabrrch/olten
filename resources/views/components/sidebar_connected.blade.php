@@ -84,7 +84,7 @@
            ici que s'il n'est pas aussi chauffeur VTC, auquel cas elle figure
            deja dans la section « Chauffeur VTC ». */
         if (! ($user->hasRole('chauffeur_vtc'))) {
-            $livraison[] = ['Documents requis', 'fa-id-card', route('livreur.carte.vtc'), request()->routeIs('livreur.carte.vtc'), false];
+            $livraison[] = ['Documents requis', 'fa-id-card', route('livreur.documents'), request()->routeIs('livreur.documents'), false];
         }
     }
 
@@ -92,10 +92,10 @@
 
     if ($user->hasRole('chauffeur_vtc')) {
         $sections[] = [
-            'label' => 'Chauffeur VTC',
+            'label' => 'Covoiturage',
             'icon'  => 'fa-car-side',
             'items' => [
-                ['Documents requis',         'fa-id-card',          route('livreur.carte.vtc'),  request()->routeIs('livreur.carte.vtc'), false],
+                ['Documents requis',         'fa-id-card',          route('livreur.documents'),  request()->routeIs('livreur.documents'), false],
                 ['Mes trajets',       'fa-map-location-dot', route('covoiturage.index'),  request()->routeIs('covoiturage.index'), false],
                 ['Ajouter un trajet', 'fa-circle-plus',      route('covoiturage.create'), request()->routeIs('covoiturage.create'), false],
             ],

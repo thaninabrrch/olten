@@ -530,10 +530,10 @@
                 ],
             ],
             [
-                'titre' => '10 — Cartes VTC',
+                'titre' => '10 — Documents conducteurs',
                 'cas' => [
-                    ['GET', 'Liste des demandes VTC', 'Documents en attente de validation', 'HTTP 200 OK', '10_01'],
-                    ['POST', 'Approuver un document VTC', 'Statut "approuvé"', '302 Redirect', '10_02'],
+                    ['GET', 'Liste des demandes', 'Documents en attente de validation', 'HTTP 200 OK', '10_01'],
+                    ['POST', 'Approuver un document', 'Statut "approuvé"', '302 Redirect', '10_02'],
                     ['POST', 'Rejeter un document VTC', 'Statut "refusé" + raison', '302 Redirect', '10_03'],
                 ],
             ],

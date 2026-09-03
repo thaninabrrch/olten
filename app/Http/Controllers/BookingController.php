@@ -97,7 +97,14 @@ class BookingController extends Controller
             'end_date.after_or_equal' => 'La date de fin doit être égale ou après la date de début.',
         ]);
 
-        if ($validated['start_date'] < $ad->available_from->format('Y-m-d') || 
+        // Une annonce de vente n'a pas de periode de location : ses dates sont
+        // nulles. Sans ce garde-fou, l'appel a format() sur null casserait la
+        // page ; une annonce sans periode ne se reserve simplement pas.
+        if (!$ad->available_from || !$ad->available_until) {
+            return back()->withErrors(['dates' => "Cette annonce ne se réserve pas : elle n'a pas de période de location."]);
+        }
+
+        if ($validated['start_date'] < $ad->available_from->format('Y-m-d') ||
             $validated['end_date'] > $ad->available_until->format('Y-m-d')) {
             return back()->withErrors(['dates' => 'Les dates choisies ne sont pas disponibles pour cette annonce.']);
         }

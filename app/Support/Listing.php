@@ -23,6 +23,10 @@ class Listing
 
     public static function fromAd(Ad $ad): array
     {
+        // Une annonce de vente n'a pas de tarif journalier : le prix affiche
+        // est ferme, et l'accroche « A partir de » n'a plus de sens.
+        $vente = $ad->category?->isVente() ?? false;
+
         return [
             'type'         => self::ANNONCE,
             'type_label'   => 'Annonce',
@@ -36,8 +40,8 @@ class Listing
             'views'        => (int) $ad->views,
             'created_at'   => $ad->created_at,
             'price'        => (float) $ad->price_per_day,
-            'price_label'  => 'À partir de',
-            'price_suffix' => '/ jour',
+            'price_label'  => $vente ? 'Prix' : 'À partir de',
+            'price_suffix' => $vente ? '' : '/ jour',
             'delivery'     => (bool) $ad->delivery_active,
             'stock'        => null,
             'latitude'     => $ad->latitude,

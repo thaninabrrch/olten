@@ -18,11 +18,11 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\CovoiturageAdminController;
 use App\Http\Controllers\Admin\ServiceController;
-use App\Http\Controllers\Admin\VtcAdminController;
+use App\Http\Controllers\Admin\DocumentAdminController;
 use App\Http\Controllers\Admin\SubCategoryController;
 use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\livrer\CarteVtcController;
+use App\Http\Controllers\livrer\DocumentController as LivreurDocumentController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ServicePageController;
 use App\Http\Controllers\ContactController;
@@ -158,8 +158,8 @@ Route::middleware('auth', 'verified', 'approved')->group(function () {
     Route::post('/ads/{ad}/report', [AdReportController::class, 'store'])->middleware('auth')->name('ads.report');
     Route::get('/portefeuille', [WalletController::class, 'index'])->name('walt.index');
     Route::prefix('livreur')->group(function () {
-        Route::post('/documents/upload', [CarteVtcController::class, 'store'])->name('documents.upload');
-        Route::get('/livreur/carte-vtc', [CarteVtcController::class, 'index'])->name('livreur.carte.vtc');
+        Route::post('/documents/upload', [LivreurDocumentController::class, 'store'])->name('documents.upload');
+        Route::get('/documents', [LivreurDocumentController::class, 'index'])->name('livreur.documents');
     });
     Route::get('/demandes-de-livraison', [AdsLivreurController::class, 'index'])->name('livreur.ads.index');
     // « Mes trajets » du conducteur. L'URL /covoiturage est reservee a la
@@ -167,9 +167,9 @@ Route::middleware('auth', 'verified', 'approved')->group(function () {
     // accessible aux visiteurs non connectes.
     Route::get('/mes-trajets', [CovoiturageController::class, 'index'])
         ->name('covoiturage.index');
-    // Publier un trajet exige une carte VTC validee par l'administrateur :
-    // sans validation, le formulaire est remplace par une page d'attente et
-    // l'endpoint de publication est refuse.
+    // Publier un trajet exige un permis de conduire valide par l'administrateur
+    // (et plus de carte VTC) : sans validation, le formulaire est remplace par
+    // une page d'attente et l'endpoint de publication est refuse.
     Route::get('/covoiturage/create', [CovoiturageController::class, 'create'])
         ->middleware('documents.approved:publish')
         ->name('covoiturage.create');
@@ -273,9 +273,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
     // carte VTC
-    Route::get('vtc-cards', [VtcAdminController::class, 'index'])->name('vtc_cards.index');
-    Route::post('vtc-cards/{document}/approve', [VtcAdminController::class, 'approve'])->name('vtc_cards.approve');
-    Route::post('vtc-cards/{document}/reject', [VtcAdminController::class, 'reject'])->name('vtc_cards.reject');
+    Route::get('documents', [DocumentAdminController::class, 'index'])->name('documents.index');
+    Route::post('documents/{document}/approve', [DocumentAdminController::class, 'approve'])->name('documents.approve');
+    Route::post('documents/{document}/reject', [DocumentAdminController::class, 'reject'])->name('documents.reject');
     // annonce
     Route::get('/ads/admin', [AdadController::class, 'index'])->name('admin.ads.index');
     Route::patch('ads/{ad}/approve', [AdadController::class, 'approve'])->name('ads.approve');

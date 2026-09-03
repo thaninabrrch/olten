@@ -7,7 +7,13 @@
     $images   = $ad->images;
     $expired  = $ad->expires_at && \Carbon\Carbon::parse($ad->expires_at)->toDateString() < now()->toDateString();
     $isOwner  = auth()->check() && auth()->id() === $ad->user_id;
-    $bookable = ! $expired && ! $isOwner;
+
+    /* Une annonce de vente ne se loue pas : ni periode de disponibilite, ni
+       reservation par dates, ni tarif journalier. Le formulaire de depot ne
+       lui demande deja plus de dates ; l'affichage suit la meme regle. */
+    $estVente = $ad->category?->isVente() ?? false;
+
+    $bookable = ! $expired && ! $isOwner && ! $estVente;
     $favorited = auth()->check() && auth()->user()->hasFavorited($ad);
 
     $avatar = $owner?->profile_photo ? asset('storage/' . $owner->profile_photo) : null;
@@ -73,7 +79,7 @@
 
             <div class="dt-head-price">
                 <strong>{{ number_format((float) $ad->price_per_day, 2, ',', ' ') }} €</strong>
-                <small>par jour</small>
+                <small>{{ $estVente ? 'prix de vente' : 'par jour' }}</small>
             </div>
         </header>
 
@@ -135,11 +141,21 @@
                             <i class="fa-solid fa-circle-info"></i>
                             <span>Vous consultez votre propre annonce, telle que la voient les visiteurs.</span>
                         </div>
+                    @elseif ($estVente)
+                        {{-- Sans reservation par dates, l'encart resterait sans
+                             action : on renvoie vers le contact du vendeur, qui
+                             est juste en dessous. --}}
+                        <div class="dt-note is-info">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <span>Bien proposé à la vente : contactez le vendeur pour convenir de l'achat.</span>
+                        </div>
                     @endif
 
                     <div class="dt-box-price">
                         <strong>{{ number_format((float) $ad->price_per_day, 2, ',', ' ') }} €</strong>
-                        <small>/ jour</small>
+                        @unless ($estVente)
+                            <small>/ jour</small>
+                        @endunless
                     </div>
 
                     @if ($bookable)
@@ -210,23 +226,25 @@
                         <span class="dt-fact-icon"><i class="fa-solid fa-euro-sign"></i></span>
                         <span class="dt-fact-text">
                             <strong>{{ number_format((float) $ad->price_per_day, 2, ',', ' ') }} €</strong>
-                            <small>par jour de location</small>
+                            <small>{{ $estVente ? 'prix de vente' : 'par jour de location' }}</small>
                         </span>
                     </div>
 
-                    <div class="dt-fact">
-                        <span class="dt-fact-icon is-blue"><i class="fa-regular fa-calendar-check"></i></span>
-                        <span class="dt-fact-text">
-                            <strong>
-                                @if ($ad->available_from && $ad->available_until)
-                                    {{ $ad->available_from->translatedFormat('d M') }} → {{ $ad->available_until->translatedFormat('d M Y') }}
-                                @else
-                                    Sur demande
-                                @endif
-                            </strong>
-                            <small>période de disponibilité</small>
-                        </span>
-                    </div>
+                    @unless ($estVente)
+                        <div class="dt-fact">
+                            <span class="dt-fact-icon is-blue"><i class="fa-regular fa-calendar-check"></i></span>
+                            <span class="dt-fact-text">
+                                <strong>
+                                    @if ($ad->available_from && $ad->available_until)
+                                        {{ $ad->available_from->translatedFormat('d M') }} → {{ $ad->available_until->translatedFormat('d M Y') }}
+                                    @else
+                                        Sur demande
+                                    @endif
+                                </strong>
+                                <small>période de disponibilité</small>
+                            </span>
+                        </div>
+                    @endunless
 
                     <div class="dt-fact">
                         <span class="dt-fact-icon {{ $ad->delivery_active ? 'is-green' : 'is-grey' }}">

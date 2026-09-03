@@ -77,7 +77,9 @@
                         @forelse($categories->groupBy(fn ($c) => $c->service->display_name ?? 'Autres') as $serviceName => $group)
                             <optgroup label="{{ $serviceName }}">
                                 @foreach($group as $category)
-                                    <option value="{{ $category->id }}" @selected(old('category_id', $ad->category_id) == $category->id)>
+                                    <option value="{{ $category->id }}"
+                                            data-service="{{ $category->service->slug ?? '' }}"
+                                            @selected(old('category_id', $ad->category_id) == $category->id)>
                                         {{ $category->nom }}
                                     </option>
                                 @endforeach
@@ -122,8 +124,8 @@
             @endif
         </section>
 
-        {{-- 2. Disponibilites --}}
-        <section class="sp-form-section">
+        {{-- 2. Disponibilites — masquee pour une categorie de vente --}}
+        <section class="sp-form-section" id="section-disponibilites">
             <div class="sp-form-head">
                 <span class="sp-step">2</span>
                 <div>
@@ -192,21 +194,23 @@
                 <span class="sp-step">4</span>
                 <div>
                     <h2>Tarif et livraison</h2>
-                    <p>Le prix affiché aux locataires, et la possibilité de faire livrer le bien.</p>
+                    <p id="tarif-intro">Le prix affiché aux locataires, et la possibilité de faire livrer le bien.</p>
                 </div>
             </div>
 
             <div class="sp-form-grid">
                 <div class="sp-box">
                     <div class="sp-box-head">
-                        <label class="sp-label" for="price_per_day">Prix par jour <span class="sp-req">*</span></label>
-                        <span class="sp-help">Le tarif journalier affiché aux locataires.</span>
+                        <label class="sp-label" for="price_per_day">
+                            <span id="price-label">Prix par jour</span> <span class="sp-req">*</span>
+                        </label>
+                        <span class="sp-help" id="price-help">Le tarif journalier affiché aux locataires.</span>
                     </div>
 
                     <div class="sp-input-group">
                         <input type="number" name="price_per_day" id="price_per_day" class="sp-input"
                                step="0.01" min="0" value="{{ old('price_per_day', $ad->price_per_day) }}" required>
-                        <span class="sp-input-suffix">€ / jour</span>
+                        <span class="sp-input-suffix" id="price-suffix">€ / jour</span>
                     </div>
                 </div>
 
@@ -237,4 +241,75 @@
 </div>
 
 <script src="{{ asset('assets/js/deleteAdsImgs.js') }}"></script>
+
+{{-- Bascule location / vente.
+     Une categorie de vente n'a pas de periode de location : le bloc
+     « Disponibilites » disparait et ses champs cessent d'etre exiges, sinon le
+     navigateur bloquerait l'envoi sur un champ invisible. Le prix passe de
+     tarif journalier a prix ferme. La meme regle est rejouee cote serveur
+     dans AdController. --}}
+<script>
+(function () {
+    const categorie   = document.getElementById('category_id');
+    const dispos      = document.getElementById('section-disponibilites');
+    const libellePrix = document.getElementById('price-label');
+    const aidePrix    = document.getElementById('price-help');
+    const suffixePrix = document.getElementById('price-suffix');
+
+    if (!categorie || !dispos) return;
+
+    const champsDates = dispos.querySelectorAll('input[type="date"]');
+
+    function appliquer() {
+        const option = categorie.selectedOptions[0];
+        const vente  = option ? option.dataset.service === 'vente' : false;
+
+        dispos.hidden = vente;
+
+        champsDates.forEach(champ => {
+            champ.required = !vente;
+            if (vente) champ.value = '';
+        });
+
+        libellePrix.textContent = vente ? 'Prix' : 'Prix par jour';
+        suffixePrix.textContent = vente ? '€' : '€ / jour';
+        aidePrix.textContent    = vente
+            ? 'Le prix de vente affiché aux acheteurs.'
+            : 'Le tarif journalier affiché aux locataires.';
+
+        // Deux textes de presentation parlaient de location : ils suivent.
+        const intro = document.getElementById('tarif-intro');
+        if (intro) {
+            intro.textContent = vente
+                ? "Le prix affiché aux acheteurs, et la possibilité de faire livrer le bien."
+                : "Le prix affiché aux locataires, et la possibilité de faire livrer le bien.";
+        }
+
+        const chapeau = document.getElementById('page-subtitle');
+        if (chapeau) {
+            chapeau.textContent = vente
+                ? "Décrivez votre bien et fixez son prix : votre annonce part en validation."
+                : "Décrivez votre bien, indiquez vos disponibilités et votre tarif : votre annonce part en validation.";
+        }
+
+        renumeroter();
+    }
+
+    // Les etapes sont numerotees a la main dans le balisage : masquer la
+    // deuxieme laisserait la suite en 1, 3, 4. On renumerote ce qui reste.
+    function renumeroter() {
+        const sections = document.querySelectorAll('.sp-form-section');
+        let numero = 0;
+
+        sections.forEach(section => {
+            if (section.hidden) return;
+            const puce = section.querySelector('.sp-step');
+            if (puce) puce.textContent = ++numero;
+        });
+    }
+
+    categorie.addEventListener('change', appliquer);
+    appliquer();
+})();
+</script>
 @endsection

@@ -82,7 +82,7 @@
                                     </button>
 
                                     <div class="dropdown-menu-white absolute right-9 w-36 divide-y divide-gray-200">
-                                        <form action="{{ route('admin.vtc_cards.approve', $doc) }}" method="POST">
+                                        <form action="{{ route('admin.documents.approve', $doc) }}" method="POST">
                                             @csrf
                                             <button type="submit"
                                                 class="w-full flex items-center px-4 py-3 text-green-600 hover:bg-gray-100">Approuver</button>
@@ -145,7 +145,7 @@
         let rejectForm = document.getElementById('rejectForm');
 
         function openRejectModal(id) {
-            rejectForm.action = `/admin/vtc-cards/${id}/reject`;
+            rejectForm.action = `/admin/documents/${id}/reject`;
             rejectModal.classList.remove('hidden');
             rejectModal.classList.add('flex');
         }

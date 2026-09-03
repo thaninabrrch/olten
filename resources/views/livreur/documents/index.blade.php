@@ -13,7 +13,7 @@
      |
      | L'envoi passe par route('documents.upload') : un champ radio
      | « document_type » et un champ fichier « file », comme attendu par
-     | CarteVtcController::store().
+     | DocumentController::store().
      */
     use App\Models\UserDocument;
 
@@ -44,8 +44,6 @@
     })->count();
 
     $complet  = $valides === count($types);
-    $carteVtc = $documents->firstWhere('name', 'vtc_card');
-
     /* Pieces qui verrouillent encore une activite : elles sont signalees comme
        telles pour que l'on sache ce qui bloque, sans avoir a se heurter au
        refus pour le decouvrir. */
@@ -105,12 +103,6 @@
             </span>
         </div>
 
-        @if($carteVtc && $carteVtc->identifier)
-            <div class="sp-balance-side">
-                <span>Identifiant de carte</span>
-                <strong>{{ $carteVtc->identifier }}</strong>
-            </div>
-        @endif
     </div>
 
     {{-- Documents --}}

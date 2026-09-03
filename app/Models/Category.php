@@ -39,6 +39,31 @@ class Category extends Model
         return $this->belongsTo(Service::class);
     }
 
+    /**
+     * Categories proposables au depot d'une offre (annonce ou produit).
+     *
+     * Le covoiturage a son propre parcours — on publie un trajet depuis
+     * « Mes trajets », avec ses places, son itineraire et ses horaires — et
+     * n'a donc rien a faire dans le selecteur d'une annonce ou d'un produit.
+     * Les categories sans service restent proposees : les exclure ferait
+     * disparaitre le groupe « Autres ».
+     */
+    public function scopePublishable($query)
+    {
+        return $query->whereDoesntHave('service', function ($q) {
+            $q->where('slug', 'covoiturage');
+        });
+    }
+
+    /**
+     * Une categorie de vente ne se loue pas : pas de periode de disponibilite,
+     * et un prix ferme au lieu d'un tarif journalier.
+     */
+    public function isVente(): bool
+    {
+        return $this->service?->slug === 'vente';
+    }
+
     public function objets()
     {
         return $this->hasMany(Objet::class, 'categorie_id');

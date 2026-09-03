@@ -213,7 +213,10 @@
 
                                 <div class="sp-price">
                                     {{ number_format((float) $ad->price_per_day, 2, ',', ' ') }} €
-                                    <small>/ jour</small>
+                                    {{-- Une annonce de vente affiche un prix ferme --}}
+                                    @unless ($ad->category?->isVente())
+                                        <small>/ jour</small>
+                                    @endunless
                                 </div>
                             </div>
 

@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\UserDocument;
 use Illuminate\Http\Request;
 
-class VtcAdminController extends Controller
+class DocumentAdminController extends Controller
 {
     public function index(Request $request)
     {
@@ -26,7 +26,7 @@ class VtcAdminController extends Controller
         }
 
         $documents = $query->paginate(15);
-        return view('admin.vtc_cards.index', compact('documents'));
+        return view('admin.documents.index', compact('documents'));
     }
     public function approve(UserDocument $document)
     {
@@ -35,8 +35,7 @@ class VtcAdminController extends Controller
             'rejection_reason' => null,
         ]);
 
-        // Le libelle suit la piece : le message annoncait « Carte VTC » y
-        // compris en validant une piece d'identite ou un permis.
+        // Le libelle suit la piece validee : piece d'identite, permis...
         return redirect()->back()->with(
             'success',
             UserDocument::label($document->name) . ' validé(e) avec succès.'

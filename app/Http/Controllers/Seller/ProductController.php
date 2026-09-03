@@ -49,6 +49,7 @@ class ProductController extends Controller
     private function categories()
     {
         return Category::with('service')
+                       ->publishable()
                        ->orderBy('service_id')
                        ->orderBy('id')
                        ->get();

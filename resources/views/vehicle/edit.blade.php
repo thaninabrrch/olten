@@ -25,7 +25,7 @@
     <nav class="sp-crumbs" aria-label="Fil d'ariane">
         <a href="{{ url('/') }}">Accueil</a>
         <i class="fa-solid fa-chevron-right"></i>
-        <a href="{{ route('livreur.carte.vtc') }}">Documents requis</a>
+        <a href="{{ route('livreur.documents') }}">Documents requis</a>
         <i class="fa-solid fa-chevron-right"></i>
         <span class="is-current">Mon véhicule</span>
     </nav>
@@ -41,7 +41,7 @@
             </p>
         </div>
 
-        <a href="{{ route('livreur.carte.vtc') }}" class="sp-btn-primary">
+        <a href="{{ route('livreur.documents') }}" class="sp-btn-primary">
             Ma carte VTC
         </a>
     </header>
@@ -177,7 +177,7 @@
 
         {{-- Barre d'action --}}
         <div class="sp-form-actions">
-            <a href="{{ route('livreur.carte.vtc') }}" class="sp-act is-ghost">Annuler</a>
+            <a href="{{ route('livreur.documents') }}" class="sp-act is-ghost">Annuler</a>
             <button type="submit" class="sp-btn-primary">
                 {{ $vehicle ? 'Enregistrer les modifications' : 'Enregistrer le véhicule' }}
             </button>

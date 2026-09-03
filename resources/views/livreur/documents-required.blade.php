@@ -526,7 +526,7 @@
 
                     {{-- Actions --}}
                     <div class="vtcw-actions">
-                        <a href="{{ route('livreur.carte.vtc') }}" class="btn-vtcw">
+                        <a href="{{ route('livreur.documents') }}" class="btn-vtcw">
                             <i class="fa-solid {{ $absent ? 'fa-arrow-up-from-bracket' : 'fa-id-card' }}"></i>
                             @if ($rejected)
                                 Renvoyer {{ $pluriel ? 'mes pièces' : 'ma pièce' }}

@@ -30,8 +30,9 @@ class UserDocument extends Model
     |
     | L'ordre du tableau est celui de l'affichage.
     |
-    | La cle « for » dit a quels profils la piece est demandee : un livreur
-    | n'a pas a transmettre une carte VTC, un chauffeur VTC si.
+    | La cle « for » dit a quels profils la piece est demandee. Les deux
+    | profils demandent aujourd'hui les memes pieces ; la cle reste pour
+    | pouvoir en distinguer a nouveau.
     */
     public const TYPES = [
         'identity_card' => [
@@ -46,23 +47,22 @@ class UserDocument extends Model
             'icon'  => 'fa-id-card-clip',
             'for'   => ['livreur', 'vtc'],
         ],
-        'vtc_card' => [
-            'label' => 'Carte VTC',
-            'desc'  => 'Carte VTC délivrée par la préfecture.',
-            'icon'  => 'fa-address-card',
-            'for'   => ['vtc'],
-        ],
     ];
 
     /*
     | Pieces qui doivent etre validees par l'administrateur avant d'ouvrir une
     | activite. La piece d'identite reste collectee sans rien conditionner.
     */
-    public const REQUIRED_TO_PUBLISH = ['driver_license', 'vtc_card']; // publier un trajet
+    // Publier un trajet ne demande plus la carte VTC : le covoiturage entre
+    // particuliers n'est pas du transport professionnel. Seul le permis reste
+    // exige, un conducteur devant pouvoir conduire.
+    public const REQUIRED_TO_PUBLISH = ['driver_license']; // publier un trajet
     public const REQUIRED_TO_DELIVER = ['driver_license'];             // accepter des livraisons
 
-    /* Une reference n'est generee que pour la carte professionnelle */
-    public const IDENTIFIED_TYPES = ['vtc_card'];
+    /* Pieces recevant une reference OLT-XXXX. La carte VTC etait la seule
+       concernee ; depuis son retrait, plus aucune piece n'en recoit. Le
+       mecanisme reste en place pour une future piece professionnelle. */
+    public const IDENTIFIED_TYPES = [];
 
     public static function types(): array
     {

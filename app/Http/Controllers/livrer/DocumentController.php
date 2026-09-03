@@ -5,11 +5,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Models\UserDocument;
-class CarteVtcController extends Controller
+class DocumentController extends Controller
 {
     public function index()
     {
-        return view('livreur.carte.index');
+        return view('livreur.documents.index');
     }
 
     public function store(Request $request)
