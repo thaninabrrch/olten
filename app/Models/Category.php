@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use App\Models\User;
 
 class Category extends Model
 {
@@ -97,5 +98,13 @@ class Category extends Model
     public function activeProducts()
     {
         return $this->products()->where('is_active', true);
+    }
+
+    public function notificationUsers()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'notification_preferences'
+        );
     }
 }

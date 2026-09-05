@@ -17,6 +17,9 @@ use Stripe\Stripe;
 use Stripe\PaymentIntent;
 use DB;
 use App\Notifications\NewOrderNotification;
+use App\Mail\NewProductNotification;
+use Illuminate\Support\Facades\Mail;
+use App\Models\User;
 
 class ProductController extends Controller
 {
@@ -94,6 +97,19 @@ class ProductController extends Controller
             }
         }
 
+        $users = User::where('notifications_enabled', true)
+                    ->whereHas('subscription', function ($query) {
+                        $query->where('slug', 'premium');
+                    })
+                    ->whereHas('notificationCategories', function ($query) use ($product) {
+                        $query->where('categories.id', $product->category_id);
+                    })
+                    ->where('id', '!=', $product->user_id)
+                    ->get();
+
+        foreach ($users as $user) {
+            Mail::to($user->email)->send(new NewProductNotification($product));
+        }
         return redirect()->route('seller.produits.index') ->with('success', 'Produit ajouté avec succès');
     }
 

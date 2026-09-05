@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 use App\Models\AdVisit;
+use App\Mail\NewAdNotification;
+use Illuminate\Support\Facades\Mail;
+use App\Models\User;
 
 class AdController extends Controller
 {
@@ -191,6 +194,23 @@ class AdController extends Controller
                 ]);
             }
         }
+
+        $users = User::where('notifications_enabled', true)
+                    ->whereHas('subscription', function ($query) {
+                        $query->where('slug', 'premium');
+                    })
+                    ->whereHas('notificationCategories', function ($query) use ($ad) {
+                        $query->where('categories.id', $ad->category_id);
+                    })
+                    ->where('id', '!=', $ad->user_id)
+                    ->get();
+
+        foreach ($users as $user) {
+            Mail::to($user->email)->send(
+                new NewAdNotification($ad)
+            );
+        }
+
         return redirect()->route('ads.index')->with('success', 'Annonce créée avec succès !');
     }
 

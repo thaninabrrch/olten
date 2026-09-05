@@ -11,6 +11,8 @@ use Laratrust\Traits\HasRolesAndPermissions;
 use App\Models\Role;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Notifications\VerifyEmailCustom;
+use App\Models\Category;
+use App\Models\Subscription;
 
 class User extends Authenticatable implements LaratrustUser, MustVerifyEmail
 {
@@ -162,5 +164,13 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail
     public function hasPremiumSubscription(): bool
     {
         return $this->subscription?->slug === 'premium';
+    }
+
+    public function notificationCategories()
+    {
+        return $this->belongsToMany(
+            Category::class,
+            'notification_preferences'
+        );
     }
 }

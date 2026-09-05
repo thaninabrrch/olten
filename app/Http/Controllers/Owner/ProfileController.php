@@ -12,13 +12,16 @@ use Illuminate\View\View;
 use App\Models\Role;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 
 class ProfileController extends Controller
 {
     public function profile(Request $request)
     {
+        $categories = Category::all();
         return view('pages.locateur.profile', [
             'user' => $request->user(),
+            'categories' => $categories
         ]);
     }
     /**

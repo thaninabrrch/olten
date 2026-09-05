@@ -140,6 +140,7 @@
                 </div>
 
                 <div class="sp-opt-list">
+
                     <div class="sp-opt-row">
                         <div>
                             <label for="vtc-toggle" class="sp-label">Chauffeur VTC</label>
@@ -163,7 +164,41 @@
                             <label for="livreur-toggle" class="toggle-label"></label>
                         </div>
                     </div>
+
+                    @if($user->subscription?->slug === 'premium')
+                        {{-- Notifications Premium --}}
+                        <div class="sp-opt-row">
+                            <div>
+                                <label class="sp-label">
+                                    Notifications d'offres
+                                </label>
+
+                                <span class="sp-help">
+                                    Recevez les nouvelles offres correspondant à vos catégories
+                                </span>
+                            </div>
+
+                            <div class="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    id="notifications-toggle"
+                                    @checked($user->notifications_enabled)
+                                    @disabled($user->subscription?->slug !== 'premium')
+                                >
+
+                                <label
+                                    for="notifications-toggle"
+                                    class="toggle-label"
+                                    @if($user->subscription?->slug === 'premium')
+                                        onclick="openNotificationModal()"
+                                    @endif
+                                ></label>
+                            </div>
+                        </div>
+                    @endif
+
                 </div>
+
             </div>
         </aside>
 
@@ -362,6 +397,136 @@
     </div>
 </div>
 
+@if($user->subscription?->slug === 'premium')
+
+    <div id="notificationModal" class="notification-modal">
+
+        <div class="notification-modal-overlay"
+             onclick="closeNotificationModal()"></div>
+
+        <div class="notification-modal-content">
+
+            <button
+                type="button"
+                class="notification-modal-close"
+                onclick="closeNotificationModal()"
+            >
+                &times;
+            </button>
+
+            <div class="notification-modal-header">
+                <div class="notification-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+
+                <div>
+                    <h3>Notifications d'offres</h3>
+                    <p>
+                        Choisissez les catégories qui vous intéressent.
+                    </p>
+                </div>
+            </div>
+
+            <form
+                method="POST"
+                action="{{ route('profile.notifications.update') }}"
+            >
+                @csrf
+
+                {{-- Activation --}}
+                <div class="notification-enable">
+                    <div>
+                        <strong>Activer les notifications</strong>
+                        <span>
+                            Recevez automatiquement les nouvelles offres
+                            correspondant à vos choix.
+                        </span>
+                    </div>
+
+                    <div class="toggle-switch">
+                        <input
+                            type="checkbox"
+                            id="modal-notifications-toggle"
+                            name="notifications_enabled"
+                            value="1"
+                            @checked($user->notifications_enabled)
+                        >
+
+                        <label
+                            for="modal-notifications-toggle"
+                            class="toggle-label"
+                        ></label>
+                    </div>
+                </div>
+
+                <div class="notification-categories">
+
+                    <h4>Catégories qui vous intéressent</h4>
+
+                    <p class="notification-categories-help">
+                        Sélectionnez une ou plusieurs catégories.
+                    </p>
+
+                    <div class="notification-category-grid">
+
+                        @foreach($categories as $category)
+
+                            <label class="notification-category">
+
+                                <input
+                                    type="checkbox"
+                                    name="category_ids[]"
+                                    value="{{ $category->id }}"
+                                    @checked(
+                                        $user->notificationCategories
+                                            ->contains($category->id)
+                                    )
+                                >
+
+                                <span class="notification-category-check">
+                                    <i class="fas fa-check"></i>
+                                </span>
+
+                                <span class="notification-category-name">
+                                    {{ $category->nom }}
+                                </span>
+
+                            </label>
+
+                        @endforeach
+
+                    </div>
+
+                </div>
+
+                <div class="notification-modal-actions">
+
+                    <button
+                        type="button"
+                        class="notification-btn-cancel"
+                        onclick="closeNotificationModal()"
+                    >
+                        Annuler
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="notification-btn-save"
+                    >
+                        <i class="fas fa-save"></i>
+                        Enregistrer
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+@endif
+
 <script>
     // ── Onglets ──
     const TABS = ['informations', 'securite', 'reseaux'];
@@ -450,5 +615,16 @@
             const el = document.getElementById('role-status');
             if (el) el.textContent = data.roles && data.roles.length ? data.roles.join(', ') : 'Aucun rôle actif';
         });
+    function openNotificationModal() {
+        document
+            .getElementById('notificationModal')
+            .classList.add('active');
+    }
+
+    function closeNotificationModal() {
+        document
+            .getElementById('notificationModal')
+            .classList.remove('active');
+    }
 </script>
 @endsection

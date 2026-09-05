@@ -38,6 +38,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\NotificationPreferenceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -142,6 +143,7 @@ Route::middleware('auth', 'verified', 'approved')->group(function () {
     Route::get('/profile/modifer', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile/modifer', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile/supprimer', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/profile/notifications', [NotificationPreferenceController::class, 'update'])->name('profile.notifications.update');
 });
 
 Route::middleware('auth', 'verified', 'approved')->group(function () {
