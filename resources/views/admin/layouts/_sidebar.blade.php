@@ -38,6 +38,10 @@
                     class="sidebar-link flex items-center p-2 rounded-lg text-xs font-normal hover:text-primary-accent hover:bg-gray-100">
                     Services
                 </a>
+                <a href="{{ route('admin.subscriptions.index') }}"
+                    class="sidebar-link flex items-center p-2 rounded-lg text-xs font-normal hover:text-primary-accent hover:bg-gray-100">
+                    Abonnements
+                </a>
             </div>
         </div>
 

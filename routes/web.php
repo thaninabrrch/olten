@@ -39,6 +39,7 @@ use App\Models\User;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\NotificationPreferenceController;
+use App\Http\Controllers\Admin\SubscriptionsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -284,6 +285,23 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::patch('ads/{ad}/reject', [AdadController::class, 'reject'])->name('ads.reject');
     // Rapport de test PDF
 
+    // gestion des abonnements
+    Route::get('/subscriptions', 
+        [SubscriptionsController::class, 'index']
+    )->name('subscriptions.index');
+
+    Route::get('/subscriptions/create', 
+        [SubscriptionsController::class, 'create']
+    )->name('subscriptions.create');
+
+    Route::get('/subscriptions/users-search', 
+        [SubscriptionsController::class, 'searchUsers']
+    )->name('subscriptions.users.search');
+
+    Route::post('/subscriptions/gift', 
+        [SubscriptionsController::class, 'gift']
+    )->name('subscriptions.gift');
+    
     // Logout admin
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
 });
