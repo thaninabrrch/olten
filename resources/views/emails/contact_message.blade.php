@@ -1,133 +1,63 @@
-<!DOCTYPE html>
-<html lang="fr">
+{{--
+    Accuse de reception du formulaire de contact.
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background-color: #f8f9fa;
-            color: #333;
-            margin: 0;
-            padding: 0;
-        }
+    Envoye par App\Mail\ContactMessageMail, qui recoit le tableau valide par
+    ContactController::store() : name, email, subject, message, user_id.
+    Ce n'est PAS un modele ContactMessage — ni `id`, ni `created_at` ne sont
+    disponibles ici, donc pas de lien profond vers le message en base.
 
-        .wrapper {
-            width: 100%;
-            padding: 40px 0;
-        }
+    Attention au destinataire : le controleur fait
+    `Mail::to($validated['email'])`, c'est-a-dire le visiteur lui-meme. Cette
+    vue s'adresse donc a lui. L'ancienne version lui envoyait la notification
+    interne de l'administrateur (« Nouveau Message de Contact », « notification
+    automatique envoyee par votre plateforme »), ce qui n'avait aucun sens
+    pour un visiteur.
+--}}
+@php
+    $expediteur = $contact['name'] ?? '';
+    $prenom = trim(explode(' ', trim($expediteur))[0] ?? '');
+@endphp
 
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: #ffffff;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            border: 1px solid #eee;
-        }
+<x-email.layout
+    title="Votre message a bien été reçu"
+    :preheader="'Nous avons bien reçu votre message : ' . ($contact['subject'] ?? '')"
+    eyebrow="Contact"
+    heading="Votre message est bien arrivé"
+    subheading="Notre équipe vous répond dans les meilleurs délais.">
 
-        .header {
-            background-color: #ff3c00;
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
+    <x-email.text>Bonjour {{ $prenom !== '' ? $prenom : 'et merci' }},</x-email.text>
 
-        .header h2 {
-            margin: 0;
-            font-size: 22px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+    <x-email.text>
+        Nous avons bien reçu votre message et il a été transmis à l'équipe Olten.
+        Vous recevrez une réponse à l'adresse <strong style="color:#1f2328;">{{ $contact['email'] ?? '' }}</strong>.
+    </x-email.text>
 
-        .content {
-            padding: 30px;
-            line-height: 1.6;
-        }
+    <x-email.panel title="Récapitulatif de votre message">
+        <x-email.row label="Nom" :value="$contact['name'] ?? '—'" />
+        <x-email.row label="Adresse e-mail" :value="$contact['email'] ?? '—'" />
+        <x-email.row label="Objet" :value="$contact['subject'] ?? '—'" />
+    </x-email.panel>
 
-        .field {
-            margin-bottom: 25px;
-        }
+    <x-email.panel tone="plain" title="Contenu envoyé">
+        <tr>
+            <td style="font-family:{{ config('olten.email.font') }}; font-size:14px; line-height:23px; mso-line-height-rule:exactly; color:#4a5057;">
+                {!! nl2br(e($contact['message'] ?? 'Aucun contenu fourni.')) !!}
+            </td>
+        </tr>
+    </x-email.panel>
 
-        .label {
-            font-weight: bold;
-            color: #ff3c00;
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 1.2px;
-            display: block;
-            margin-bottom: 5px;
-        }
+    <x-email.text>
+        En attendant notre réponse, vous pouvez continuer à explorer les annonces,
+        les produits et les trajets publiés sur la plateforme.
+    </x-email.text>
 
-        .value {
-            font-size: 16px;
-            color: #2d2d2d;
-            padding: 5px 0;
-            border-bottom: 1px solid #f0f0f0;
-        }
+    <x-email.button :url="route('search')">
+        Explorer la plateforme
+    </x-email.button>
 
-        .message-title {
-            font-weight: bold;
-            color: #ff3c00;
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 1.2px;
-            margin-top: 25px;
-            display: block;
-        }
+    <x-email.note>
+        Vous recevez cet e-mail parce qu'un message de contact a été envoyé depuis
+        Olten.fr avec cette adresse. Si ce n'est pas vous, ignorez ce message.
+    </x-email.note>
 
-        .message-box {
-            background: #fff5f2;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 1px solid #ff3c00;
-            color: #444;
-            margin-top: 10px;
-            line-height: 1.5;
-        }
-
-        .footer {
-            text-align: center;
-            padding: 25px;
-            font-size: 11px;
-            color: #aaa;
-            background-color: #fafafa;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="wrapper">
-        <div class="container">
-            <div class="header">
-                <h2>Nouveau Message de Contact</h2>
-            </div>
-
-            <div class="content">
-                <div class="field">
-                    <span class="label">Expéditeur</span>
-                    <div class="value"><strong>{{ $contact['name'] }}</strong> — {{ $contact['email'] }}</div>
-                </div>
-
-                <div class="field">
-                    <span class="label">Objet du message</span>
-                    <div class="value">{{ $contact['subject'] }}</div>
-                </div>
-
-                <span class="message-title">Contenu du message</span>
-                <div class="message-box">
-                    {!! nl2br(e($contact['message'] ?? 'Aucun contenu fourni.')) !!}
-                </div>
-            </div>
-
-            <div class="footer">
-                Ceci est une notification automatique envoyée par votre plateforme.
-            </div>
-        </div>
-    </div>
-</body>
-
-</html>
+</x-email.layout>

@@ -1,34 +1,57 @@
-<div style="max-width:600px;margin:auto;font-family:Arial,sans-serif;background:#f9fafb;padding:20px;border-radius:12px;border:1px solid #e5e7eb;">
+{{--
+    L'administrateur a change le mot de passe d'un membre : on le previent.
+    Envoye par App\Mail\PasswordUpdatedByAdmin, qui expose `user`.
 
-    <div style="text-align:center;padding-bottom:20px;border-bottom:1px solid #e5e7eb;">
-        <h1 style="margin:0;color:#111827;font-size:22px;">Olten</h1>
-        <p style="margin:5px 0 0;color:#6b7280;font-size:14px;">
-            Plateforme de location & vente
-        </p>
-    </div>
+    C'est un e-mail de securite : il doit dire ce qui a change, quand, et
+    donner un chemin immediat pour reprendre la main. L'ancienne version
+    n'avait aucun lien — le membre apprenait qu'il ne pouvait plus se
+    connecter sans savoir quoi faire.
+--}}
+@php
+    $prenom = $user->firstname ?: $user->name;
+@endphp
 
-    <div style="padding:20px 0;color:#111827;">
+<x-email.layout
+    title="Votre mot de passe a été modifié"
+    preheader="Votre mot de passe Olten a été modifié par un administrateur."
+    eyebrow="Sécurité"
+    heading="Votre mot de passe a été modifié"
+    subheading="Un administrateur Olten vient de le réinitialiser.">
 
-        <h2 style="font-size:18px;margin-bottom:10px;">
-            Bonjour {{ $user->firstname }},
-        </h2>
+    <x-email.text>Bonjour {{ $prenom }},</x-email.text>
 
-        <p style="font-size:15px;line-height:1.6;color:#374151;">
-            Nous vous informons que votre mot de passe a été <strong>modifié par l’administrateur</strong> de la plateforme Olten.
-        </p>
+    <x-email.text>
+        Le mot de passe du compte associé à
+        <strong style="color:#1f2328;">{{ $user->email }}</strong>
+        a été modifié par un administrateur de la plateforme.
+        Votre ancien mot de passe ne fonctionne plus.
+    </x-email.text>
 
-        <p style="font-size:15px;color:#374151;line-height:1.6;">
-            Pour toute assistance, vous pouvez contacter l’administrateur ou le support Olten.
-        </p>
+    <x-email.panel title="Détail de l'opération">
+        <x-email.row label="Compte" :value="$user->email" />
+        <x-email.row label="Modification" value="Mot de passe réinitialisé" />
+        <x-email.row label="Effectuée le" :value="now()->translatedFormat('j F Y à H\\hi')" />
+    </x-email.panel>
 
-        <p style="margin-top:20px;font-size:15px;">
-            Cordialement,<br>
-            <strong>Équipe Olten</strong>
-        </p>
-    </div>
+    <x-email.text>
+        Le nouveau mot de passe vous est communiqué séparément par l'administrateur.
+        Si vous ne l'avez pas reçu, ou si vous préférez en choisir un vous-même,
+        lancez une réinitialisation depuis la page de connexion.
+    </x-email.text>
 
-    <div style="text-align:center;padding-top:15px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;">
-        © {{ date('Y') }} Olten. Tous droits réservés.
-    </div>
+    <x-email.button :url="route('login')">
+        Me connecter
+    </x-email.button>
 
-</div>
+    <x-email.button :url="route('password.request')" variant="ghost">
+        Choisir un nouveau mot de passe
+    </x-email.button>
+
+    <x-email.note tone="warning">
+        <strong>Vous n'êtes pas à l'origine de cette demande ?</strong>
+        Contactez-nous immédiatement à
+        <a href="mailto:{{ config('olten.email.contact') }}" style="color:#7a5a12; text-decoration:underline;">{{ config('olten.email.contact') }}</a>
+        afin que nous sécurisions votre compte.
+    </x-email.note>
+
+</x-email.layout>

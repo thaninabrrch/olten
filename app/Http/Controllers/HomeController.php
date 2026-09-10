@@ -69,10 +69,17 @@ class HomeController extends Controller
             $query->where('category_id', $request->category);
         }
 
-        // Une annonce correspond si sa catégorie appartient au service sélectionné.
+        // Une annonce correspond si sa catégorie appartient au service
+        // sélectionné. Le service est désigné par son slug depuis que la
+        // barre du header écrit des URLs lisibles ; les anciens liens qui
+        // portent encore un identifiant continuent de fonctionner.
         if ($request->filled('service')) {
-            $query->whereHas('category', function ($q) use ($request) {
-                $q->where('service_id', $request->input('service'));
+            $service = $request->input('service');
+
+            $serviceId = Service::where('slug', $service)->value('id') ?? $service;
+
+            $query->whereHas('category', function ($q) use ($serviceId) {
+                $q->where('service_id', $serviceId);
             });
         }
 

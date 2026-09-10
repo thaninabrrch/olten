@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\livrer\DocumentController as LivreurDocumentController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ServicePageController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\WalletController;
@@ -52,6 +53,17 @@ use App\Http\Controllers\Admin\SubscriptionsController;
 Route::redirect('/service-standard', '/vente');
 Route::redirect('/location-voiture', '/location');
 Route::redirect('/covoiturage-service', '/covoiturage');
+
+/*
+|--------------------------------------------------------------------------
+| Recherche globale
+|--------------------------------------------------------------------------
+| La barre du header poste ici. A declarer avant la route catch-all
+| `/{slug}` de fin de fichier, qui prendrait sinon « recherche » pour le
+| slug d'un service.
+*/
+Route::get('/recherche', [SearchController::class, 'index'])->name('search');
+Route::get('/recherche/suggestions', [SearchController::class, 'suggest'])->name('search.suggest');
 
 // Vitrine « Nos services » : tous les services de la plateforme.
 // A declarer avant la route catch-all `/{slug}` de fin de fichier.

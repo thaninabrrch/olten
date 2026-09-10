@@ -1,28 +1,53 @@
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Réservation refusée</title>
-</head>
-<body>
+{{--
+    Le proprietaire a refuse la reservation : on previent le locataire.
+    Envoye par App\Mail\BookingRejectedMail, qui expose `booking`.
+--}}
+@php
+    $prenom = $booking->user?->firstname ?: ($booking->user?->name ?? '');
 
-    <h2>Bonjour {{ $booking->user->firstname ?? '' }},</h2>
+    $du = $booking->start_date?->format('d/m/Y');
+    $au = $booking->end_date?->format('d/m/Y');
+@endphp
 
-    <p>
-        Votre demande de réservation pour l’annonce :
-        <strong>{{ $booking->ad->title }}</strong>
-        a été refusée.
-    </p>
+<x-email.layout
+    title="Réservation refusée"
+    :preheader="'Votre demande pour ' . ($booking->ad->title ?? 'cette annonce') . ' n\'a pas été retenue.'"
+    eyebrow="Réservation"
+    heading="Votre demande n'a pas été retenue"
+    subheading="Le propriétaire n'a pas pu donner suite à cette réservation.">
 
-    <p>
-        📅 Du {{ $booking->start_date->format('d/m/Y') }}
-        au {{ $booking->end_date->format('d/m/Y') }}
-    </p>
+    <x-email.text>Bonjour {{ $prenom }},</x-email.text>
 
-    <p>
-        💳 Si un paiement a été effectué, le remboursement sera traité automatiquement.
-    </p>
+    <x-email.text>
+        Votre demande de réservation pour
+        <strong style="color:#1f2328;">{{ $booking->ad->title ?? 'cette annonce' }}</strong>
+        a été refusée par le propriétaire.
+    </x-email.text>
 
-    <p>Merci pour votre compréhension.</p>
+    <x-email.panel title="Demande concernée">
+        <x-email.row label="Annonce" :value="$booking->ad->title ?? '—'" />
 
-</body>
-</html>
+        @if($du)
+            <x-email.row label="Début souhaité" :value="$du" />
+        @endif
+
+        @if($au)
+            <x-email.row label="Fin souhaitée" :value="$au" />
+        @endif
+    </x-email.panel>
+
+    <x-email.note tone="warning">
+        Si un paiement a été effectué, le remboursement est traité automatiquement.
+        Comptez quelques jours ouvrés pour le voir apparaître sur votre relevé.
+    </x-email.note>
+
+    <x-email.text>
+        D'autres biens similaires sont disponibles sur la plateforme : la recherche vous permet
+        de filtrer par ville, par dates et par budget.
+    </x-email.text>
+
+    <x-email.button :url="route('search', array_filter(['category' => $booking->ad?->category?->slug]))">
+        Voir des annonces similaires
+    </x-email.button>
+
+</x-email.layout>

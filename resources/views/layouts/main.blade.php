@@ -28,6 +28,10 @@
     {{-- Etat vide unique de la plateforme (<x-empty-state />) --}}
     <link rel="stylesheet" href="{{ asset('assets/css/empty-state.css') }}?v={{ @filemtime(public_path('assets/css/empty-state.css')) ?: 1 }}">
     <link rel="stylesheet" href="{{ asset('assets/css/pagination.css') }}?v={{ @filemtime(public_path('assets/css/pagination.css')) ?: 1 }}">
+    {{-- Recherche : le menu d'autocompletion est pose sous la barre du
+         header, donc present sur toutes les pages publiques. La feuille
+         porte aussi la page de resultats (/recherche). --}}
+    <link rel="stylesheet" href="{{ asset('assets/css/search.css') }}?v={{ @filemtime(public_path('assets/css/search.css')) ?: 1 }}">
 
     {{-- Feuilles de style poussees par les vues (@push('styles')) --}}
     @stack('styles')
@@ -51,6 +55,15 @@
          recherche s'ouvrait et se refermait aussitot. --}}
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
+
+    {{-- Autocompletion de la barre de recherche. Les deux adresses sont
+         passees au script plutot que codees en dur : les noms de route
+         restent la seule source de verite des URLs. --}}
+    <script>
+        const SEARCH_URL = "{{ route('search') }}";
+        const SEARCH_SUGGEST_URL = "{{ route('search.suggest') }}";
+    </script>
+    <script src="{{ asset('assets/js/search-suggest.js') }}?v={{ @filemtime(public_path('assets/js/search-suggest.js')) ?: 1 }}"></script>
 
     {{-- Scripts pousses par les vues : joues apres Leaflet et flatpickr --}}
     @stack('scripts')

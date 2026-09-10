@@ -12,14 +12,24 @@
          .search-bar ne porte plus que la largeur ; la capsule visuelle est le
          <form>. Les deux portaient la meme classe, ce qui dessinait un fond
          gris dans un fond gris et ecrasait le relief. Les champs, eux, sont
-         inchanges. --}}
+         inchanges.
+
+         Elle poste sur /recherche et non plus sur l'accueil : celui-ci
+         rejouait sa liste d'annonces sans annoncer ce qui avait ete cherche,
+         sans compter les resultats et sans moyen de les affiner.
+
+         Les deux champs libres portent `data-search-input` : c'est ce que
+         cherche assets/js/search-suggest.js pour y brancher l'autocompletion
+         (annonces, produits, trajets, categories, services et villes). Sans
+         ce script, la barre reste un formulaire GET parfaitement utilisable. --}}
     <div class="search-bar">
-        <form method="GET" action="{{ route('home') }}" class="search-form w-100">
+        <form method="GET" action="{{ route('search') }}" class="search-form w-100" data-search-form>
 
             <div class="search-field">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" name="search" placeholder="Que recherchez-vous ?" class="search-input"
-                    value="{{ request('search') }}">
+                    value="{{ request('search') }}" autocomplete="off"
+                    data-search-input data-search-field="search">
             </div>
 
             <div class="divider"></div>
@@ -27,7 +37,8 @@
             <div class="search-field">
                 <i class="fa-solid fa-location-dot"></i>
                 <input type="text" name="location" placeholder="Emplacement" class="location-input"
-                    value="{{ request('location') }}">
+                    value="{{ request('location') }}" autocomplete="off"
+                    data-search-input data-search-field="location">
             </div>
 
             <div class="divider"></div>
@@ -37,9 +48,13 @@
                     <option value="">Tous les services</option>
 
                     @foreach ($footerServices as $service)
-                        <option value="{{ $service->id }}"
-                            {{ request('service') == $service->id ? 'selected' : '' }}>
-                            {{ $service->nom }}
+                        {{-- Le slug plutot que l'identifiant : l'URL partagee
+                             se lit (/recherche?service=location). Le
+                             controleur accepte encore les identifiants, pour
+                             les liens deja dans la nature. --}}
+                        <option value="{{ $service->slug }}"
+                            @selected(in_array((string) request('service'), [$service->slug, (string) $service->id], true))>
+                            {{ $service->display_name }}
                         </option>
                     @endforeach
 
@@ -74,18 +89,20 @@
     <div class="mobile-search" id="mobileSearch">
         <div class="mobile-search-content">
 
-            <form method="GET" action="{{ route('home') }}">
+            <form method="GET" action="{{ route('search') }}" data-search-form>
 
                 <div class="search-field">
                     <i class="fa-solid fa-magnifying-glass"></i>
                     <input type="text" name="search" placeholder="Que recherchez-vous ?" class="search-input"
-                        value="{{ request('search') }}">
+                        value="{{ request('search') }}" autocomplete="off"
+                        data-search-input data-search-field="search">
                 </div>
 
                 <div class="search-field">
                     <i class="fa-solid fa-location-dot"></i>
                     <input type="text" name="location" placeholder="Emplacement" class="location-input"
-                        value="{{ request('location') }}">
+                        value="{{ request('location') }}" autocomplete="off"
+                        data-search-input data-search-field="location">
                 </div>
 
                 <div class="search-field">
@@ -93,9 +110,9 @@
                         <option value="">Tous les services</option>
 
                         @foreach ($footerServices as $service)
-                            <option value="{{ $service->id }}"
-                                {{ request('service') == $service->id ? 'selected' : '' }}>
-                                {{ $service->nom }}
+                            <option value="{{ $service->slug }}"
+                                @selected(in_array((string) request('service'), [$service->slug, (string) $service->id], true))>
+                                {{ $service->display_name }}
                             </option>
                         @endforeach
 

@@ -201,9 +201,14 @@ document.addEventListener('DOMContentLoaded', function () {
         minuteur = setTimeout(compter, 280);
     }
 
+    // Le nom compte ce qui est compte : des « offres » sur une page service,
+    // des « resultats » sur la recherche globale, qui melange trois familles.
+    // Sans lui, le bouton changeait de mot des le premier reglage.
+    const nom = rail.dataset.csNoun || 'offre';
+
     function ecrireTotal(nombre) {
         const chiffre = new Intl.NumberFormat('fr-FR').format(nombre);
-        const mot = nombre > 1 ? 'offres' : 'offre';
+        const mot = nombre > 1 ? nom + 's' : nom;
 
         rail.querySelectorAll('[data-cs-apply]').forEach(function (bouton) {
             bouton.textContent = 'Afficher ' + chiffre + ' ' + mot;

@@ -25,7 +25,11 @@ class ContactMessageMail extends Mailable
      */
     public function build()
     {
-        return $this->subject('Nouveau message de contact')
+        // Le controleur envoie ce message a l'auteur du formulaire
+        // (Mail::to($validated['email'])) : c'est donc un accuse de
+        // reception, pas la notification interne que laissait croire
+        // l'ancien objet « Nouveau message de contact ».
+        return $this->subject('Nous avons bien reçu votre message - Olten')
                     ->view('emails.contact_message')
                     ->with([
                         'contact' => $this->contact

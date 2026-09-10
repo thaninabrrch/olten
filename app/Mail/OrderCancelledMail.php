@@ -24,7 +24,7 @@ class OrderCancelledMail extends Mailable
     public function build()
     {
         return $this->subject('Votre commande a été annulée')
-                    ->markdown('emails.orders.cancelled');
+                    ->view('emails.orders.cancelled');
     }
 
     /**
@@ -33,7 +33,7 @@ class OrderCancelledMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "Email d'annulation de commande",
+            subject: 'Votre commande a été annulée',
         );
     }
 
@@ -43,7 +43,7 @@ class OrderCancelledMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.orders.cancelled',
+            view: 'emails.orders.cancelled',
         );
     }
 

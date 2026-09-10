@@ -21,7 +21,11 @@ class ResetPassword extends Notification
 
     public function toMail($notifiable)
     {
-        return (new ResetPasswordMail($this->token, $notifiable->email, $notifiable->name))
+        // Le prenom plutot que l'identifiant : `name` porte souvent le nom
+        // de compte (« akhettar »), qui sonne froid en tete d'un e-mail.
+        $prenom = $notifiable->firstname ?: $notifiable->name;
+
+        return (new ResetPasswordMail($this->token, $notifiable->email, $prenom))
                     ->to($notifiable->email);
     }
 }

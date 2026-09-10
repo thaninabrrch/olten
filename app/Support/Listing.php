@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Ad;
+use App\Models\Covoiturage;
 use App\Models\Product;
 use App\Models\User;
 
@@ -20,6 +21,14 @@ class Listing
     public const ANNONCE = 'annonce';
 
     public const PRODUIT = 'produit';
+
+    /**
+     * Un trajet de covoiturage. Il ne vit ni dans `ads` ni dans `products`
+     * mais remonte dans la recherche globale, qui balaie toute la
+     * plateforme : sans lui, chercher « Lyon » ne trouvait rien alors que
+     * des conducteurs y partent demain.
+     */
+    public const TRAJET = 'trajet';
 
     public static function fromAd(Ad $ad): array
     {
@@ -79,6 +88,47 @@ class Listing
             'owner'        => $product->user?->name,
             'owner_photo'  => self::photo($product->user),
             'favorite'     => 'product',
+        ];
+    }
+
+    /**
+     * Un trajet de covoiturage, ramene au meme jeu de champs.
+     *
+     * Il n'a ni categorie, ni stock, ni compteur de vues : ces champs restent
+     * presents mais vides, la carte s'appuyant sur `type` pour savoir quoi
+     * afficher. Le prix montre est celui d'une place — c'est ce que paie le
+     * passager.
+     */
+    public static function fromTrip(Covoiturage $trip): array
+    {
+        return [
+            'type'         => self::TRAJET,
+            'type_label'   => 'Trajet',
+            'id'           => $trip->covoiturage_id,
+            'title'        => $trip->depart_ville . ' → ' . $trip->destination_ville,
+            'image'        => RouteImage::for($trip->depart_ville, $trip->destination_ville),
+            'category'     => null,
+            'address'      => $trip->depart_ville,
+            'views'        => 0,
+            // La table `covoiturages` ne date pas ses lignes : c'est la date
+            // de depart qui situe le trajet dans le temps.
+            'created_at'   => $trip->date_depart,
+            'price'        => (float) ($trip->prix_total_affiche ?: $trip->prix_place),
+            'price_label'  => 'Par place',
+            'price_suffix' => '',
+            'delivery'     => false,
+            'stock'        => null,
+            'latitude'     => null,
+            'longitude'    => null,
+            'url'          => route('covoiturage.trip', $trip),
+            'owner'        => $trip->conducteur?->name,
+            'owner_photo'  => self::photo($trip->conducteur),
+            // Un trajet ne se met pas en favori : le bouton coeur ne sait
+            // traiter que les annonces et les produits.
+            'favorite'     => null,
+            'trip_date'    => $trip->date_depart,
+            'trip_time'    => $trip->heure_depart,
+            'seats'        => (int) $trip->nb_places,
         ];
     }
 

@@ -1,87 +1,63 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nouveau produit</title>
-</head>
+{{--
+    Un produit vient d'etre mis en vente dans une categorie suivie.
+    Envoye par App\Mail\NewProductNotification, qui expose `product`.
+--}}
+@php
+    $photo = $product->images->first()?->image
+        ? asset('storage/' . $product->images->first()->image)
+        : null;
+@endphp
 
-<body style="margin:0; padding:0; background:#f5f5f5; font-family:Arial, sans-serif;">
+<x-email.layout
+    title="Nouveau produit"
+    :preheader="($product->name) . ' — ' . (number_format($product->price, 2, ',', ' ')) . ' €'"
+    :eyebrow="$product->category?->nom ?? 'Nouveau produit'"
+    heading="Un nouveau produit pour vous"
+    subheading="Il vient d'être mis en vente dans une catégorie que vous suivez.">
 
-<div style="max-width:600px; margin:30px auto; background:#ffffff; border-radius:10px; overflow:hidden;">
+    @if($photo)
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px;">
+            <tr>
+                <td class="ol-photo" align="center" style="border-radius:12px; overflow:hidden;">
+                    <img src="{{ $photo }}" width="536" alt="{{ $product->name }}"
+                         style="display:block; width:100%; max-width:536px; height:auto; border-radius:12px;" />
+                </td>
+            </tr>
+        </table>
+    @endif
 
-    <div style="background:#ff5a1f; padding:25px; text-align:center;">
-        <h1 style="margin:0; color:#ffffff;">
-            Olten
-        </h1>
-    </div>
+    <x-email.text tone="lead">{{ $product->name }}</x-email.text>
 
-    <div style="padding:30px;">
+    @if($product->description)
+        <x-email.text>{{ \Illuminate\Support\Str::limit(strip_tags($product->description), 200) }}</x-email.text>
+    @endif
 
-        <h2 style="color:#333;">
-            Nouveau produit disponible 🎉
-        </h2>
+    <x-email.panel title="En résumé">
+        @if($product->category)
+            <x-email.row label="Catégorie" :value="$product->category->nom" />
+        @endif
 
-        <p style="color:#555; font-size:15px;">
-            Bonjour,
-        </p>
+        @if($product->address)
+            <x-email.row label="Localisation" :value="$product->address" />
+        @endif
 
-        <p style="color:#555; font-size:15px;">
-            Un nouveau produit correspondant à l'une de vos catégories
-            de notification vient d'être publié sur Olten.
-        </p>
+        <x-email.row label="Stock" :value="$product->stock > 0 ? $product->stock . ' disponible' . ($product->stock > 1 ? 's' : '') : 'Rupture'" />
 
-        <div style="margin:25px 0; padding:20px; background:#f8f8f8; border-radius:8px;">
+        @if($product->delivery_available)
+            <x-email.row label="Livraison" value="Possible" />
+        @endif
 
-            <h3 style="margin-top:0; color:#333;">
-                {{ $product->name }}
-            </h3>
+        <x-email.row label="Prix" :value="(number_format($product->price, 2, ',', ' ')) . ' €'" total />
+    </x-email.panel>
 
-            @if($product->description)
-                <p style="color:#666;">
-                    {{ Str::limit($product->description, 200) }}
-                </p>
-            @endif
+    <x-email.button :url="route('products.show', $product)">
+        Voir le produit
+    </x-email.button>
 
-            <p style="font-size:18px; font-weight:bold; color:#ff5a1f;">
-                {{ number_format($product->price, 2, ',', ' ') }} €
-            </p>
+    <x-email.note>
+        Vous recevez cet e-mail parce que vous suivez cette catégorie sur Olten.
+        Vous pouvez couper ces notifications depuis
+        <a href="{{ route('profile') }}" style="color:#ff3c00; text-decoration:underline;">votre profil</a>.
+    </x-email.note>
 
-        </div>
-
-        <div style="text-align:center; margin:30px 0;">
-
-            <a href="{{ route('products.show', $product->id) }}"
-               style="display:inline-block;
-                      padding:12px 25px;
-                      background:#ff5a1f;
-                      color:#ffffff;
-                      text-decoration:none;
-                      border-radius:6px;
-                      font-weight:bold;">
-                Voir le produit
-            </a>
-
-        </div>
-
-        <p style="color:#888; font-size:13px;">
-            Vous recevez cet email car vous avez activé les notifications
-            pour cette catégorie.
-        </p>
-
-        <p style="color:#555;">
-            À bientôt sur Olten 👋
-        </p>
-
-    </div>
-
-    <div style="padding:15px; background:#f5f5f5; text-align:center;">
-        <p style="margin:0; color:#999; font-size:12px;">
-            © {{ date('Y') }} Olten — Tous droits réservés.
-        </p>
-    </div>
-
-</div>
-
-</body>
-</html>
+</x-email.layout>

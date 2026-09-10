@@ -1,0 +1,754 @@
+/* ==========================================================================
+   RECHERCHE
+   Deux morceaux dans ce fichier :
+
+     1. `.sg-*`  le menu d'autocompletion. Il est pose sous les champs de la
+                 barre du header, donc present sur TOUTES les pages publiques :
+                 la feuille est chargee par le layout, pas par la page de
+                 resultats.
+
+     2. `.sr-*`  la page de resultats (/recherche). Elle emprunte la grammaire
+                 des pages service (`.cs-*`, deja dans style.css) — meme
+                 gouttiere, memes filets, meme rail de filtres — et n'ajoute
+                 ici que ce qui lui est propre : le bandeau de recherche, les
+                 onglets par famille d'offres et la barre d'outils.
+
+   Les variables (--cs-line, --cs-radius-*, --color-primary...) viennent de
+   style.css, charge avant celle-ci.
+   ========================================================================== */
+
+
+/* ==========================================================================
+   1. Menu d'autocompletion
+   ========================================================================== */
+
+/* Le champ devient le repere du menu : celui-ci suit donc le champ, y compris
+   quand la barre mobile coulisse ou que le header se reduit. */
+.sg-anchor {
+    position: relative;
+}
+
+.sg-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: -6px;
+    right: -6px;
+    z-index: 1400;
+    max-height: min(64vh, 460px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 6px;
+    background: var(--color-white);
+    border: 1px solid #e4e7ea;
+    border-radius: 14px;
+    box-shadow: 0 18px 44px rgba(16, 24, 40, .16), 0 2px 6px rgba(16, 24, 40, .06);
+    text-align: left;
+}
+
+.sg-menu[hidden] {
+    display: none;
+}
+
+/* Un menu large sous un champ etroit : les libelles d'annonce sont longs,
+   les tronquer des 200px les rendait indistinguables les uns des autres. */
+.sg-menu {
+    min-width: 320px;
+}
+
+.sg-group + .sg-group {
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px solid #f0f1f3;
+}
+
+.sg-group-title {
+    margin: 0;
+    padding: 8px 12px 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #9aa1a8;
+}
+
+.sg-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    font-family: var(--font-family);
+    text-align: left;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+.sg-item:hover,
+.sg-item.is-active {
+    background: var(--cs-tint, #fff5f1);
+}
+
+.sg-thumb,
+.sg-glyph {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    overflow: hidden;
+}
+
+.sg-thumb {
+    background: #f1f2f4;
+}
+
+.sg-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.sg-glyph {
+    background: #f6f7f8;
+    color: var(--color-primary);
+    font-size: 14px;
+}
+
+.sg-item:hover .sg-glyph,
+.sg-item.is-active .sg-glyph {
+    background: rgba(255, 60, 0, .12);
+}
+
+.sg-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.sg-label {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #1f2328;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* La portion saisie est soulignee dans le libelle : le visiteur voit du
+   premier coup d'oeil pourquoi la ligne lui est proposee. */
+.sg-label mark {
+    background: none;
+    color: var(--color-primary);
+    font-weight: 800;
+}
+
+.sg-sub {
+    display: block;
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: #8b929a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sg-price {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-primary);
+    white-space: nowrap;
+}
+
+.sg-empty {
+    margin: 0;
+    padding: 16px 14px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #8b929a;
+}
+
+/* Panneau de recherche mobile : le menu reste en absolu et recouvre les
+   champs suivants, comme sur le bureau. Le passer en flux le rangeait dans
+   la rangee du champ — .search-field est une ligne flex — ou il occupait la
+   moitie de la largeur, a cote de la saisie.
+
+   Le panneau n'a pas d'`overflow` : le menu peut donc en deborder vers le
+   bas sans etre coupe. Sa hauteur est reduite pour rester dans l'ecran
+   d'un telephone. */
+@media (max-width: 900px) {
+    .mobile-search .sg-menu {
+        left: -8px;
+        right: -8px;
+        min-width: 0;
+        max-height: min(56vh, 380px);
+    }
+}
+
+
+/* ==========================================================================
+   2. Page de resultats
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Bandeau
+   Meme registre que le hero des pages service — charcoal, lueur orange — mais
+   sans photo : ici il n'y a pas de service a illustrer, seulement une
+   recherche a reformuler. Le bloc porte donc la barre plutot qu'une image.
+   -------------------------------------------------------------------------- */
+/* Ni `overflow: hidden` ni `isolation` ici, contrairement au hero des pages
+   service : le menu d'autocompletion descend SOUS la barre, donc hors du
+   bandeau — les deux le decoupaient en plein milieu. La lueur est empilee
+   au-dessus du fond plutot que derriere (z-index positif), ce qui evite le
+   z-index negatif qui reclamait justement un contexte d'empilement.
+
+   Le z-index du bandeau le place au-dessus du rail de filtres, qui suit le
+   defilement et serait sinon peint par-dessus le menu ouvert. */
+.sr-hero {
+    position: relative;
+    z-index: 5;
+    background: linear-gradient(115deg, #12141a 0%, #1b1d25 52%, #241a17 100%);
+    padding: 34px 0 38px;
+    margin-bottom: 34px;
+}
+
+.sr-hero-glow {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background:
+        radial-gradient(90% 130% at 100% 0%, rgba(255, 60, 0, .38) 0%, rgba(255, 60, 0, 0) 58%),
+        radial-gradient(70% 120% at 0% 100%, rgba(255, 122, 77, .14) 0%, rgba(255, 122, 77, 0) 60%);
+}
+
+.sr-hero-inner {
+    position: relative;
+    z-index: 1;
+    max-width: var(--cs-max-width);
+    margin: 0 auto;
+    padding: 0 var(--cs-pad);
+}
+
+.sr-hero-title {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    line-height: 1.14;
+    color: var(--color-white);
+    margin: 0 0 8px;
+}
+
+/* Le mot cherche est la seule chose que le visiteur relit : il se detache. */
+.sr-hero-term {
+    color: #ff8b62;
+}
+
+.sr-hero-subtitle {
+    margin: 0 0 22px;
+    font-size: 14.5px;
+    color: rgba(255, 255, 255, .72);
+}
+
+/* --------------------------------------------------------------------------
+   Barre de recherche du bandeau
+   La meme capsule que le header, en plus grand : sur une page de resultats,
+   reformuler est le geste principal, il ne doit pas obliger a remonter dans
+   la barre du header.
+   -------------------------------------------------------------------------- */
+.sr-bar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    max-width: 900px;
+    padding: 6px 6px 6px 8px;
+    background: var(--color-white);
+    border-radius: var(--border-radius-round);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
+}
+
+.sr-bar-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    padding: 10px 16px;
+    border-radius: var(--border-radius-round);
+    transition: background .18s ease;
+}
+
+.sr-bar-field:hover {
+    background: #f6f7f8;
+}
+
+.sr-bar-field--wide {
+    flex: 1.7;
+}
+
+.sr-bar-field > i {
+    flex-shrink: 0;
+    width: 15px;
+    text-align: center;
+    color: #9aa1a8;
+    font-size: 14px;
+    transition: color .18s ease;
+}
+
+.sr-bar-field:focus-within > i {
+    color: var(--color-primary);
+}
+
+.sr-bar-field input,
+.sr-bar-field select {
+    width: 100%;
+    min-width: 0;
+    border: none;
+    background: none;
+    outline: none;
+    padding: 0;
+    color: #1f2328;
+    font-family: var(--font-family);
+    font-size: 14.5px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+}
+
+.sr-bar-field input::placeholder {
+    color: #9aa1a8;
+    font-weight: 400;
+}
+
+/* Le chevron natif du systeme jurait avec le reste : celui-ci est dessine,
+   aligne sur la couleur des icones. */
+.sr-bar-field select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 20px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath fill='none' stroke='%239aa1a8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 5 5.5 9 1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right center;
+}
+
+.sr-bar-divider {
+    flex-shrink: 0;
+    width: 1px;
+    height: 24px;
+    background: #e8eaed;
+}
+
+.sr-bar-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    height: 46px;
+    margin-left: 6px;
+    padding: 0 26px;
+    border: none;
+    border-radius: var(--border-radius-round);
+    background: var(--color-primary);
+    color: var(--color-white);
+    font-family: var(--font-family);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+}
+
+.sr-bar-btn:hover {
+    background: var(--color-primary-dark);
+    box-shadow: 0 6px 16px rgba(255, 60, 0, .34);
+}
+
+/* --------------------------------------------------------------------------
+   Recherches recentes et pistes associees
+   Deux rangees de pastilles sous la barre. Les premieres viennent du
+   navigateur du visiteur, les secondes du catalogue.
+   -------------------------------------------------------------------------- */
+.sr-recent,
+.sr-related {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.sr-recent[hidden] {
+    display: none;
+}
+
+.sr-recent-label,
+.sr-related-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, .48);
+    margin-right: 4px;
+}
+
+.sr-recent-list,
+.sr-related-list {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sr-recent-chip,
+.sr-related-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border-radius: var(--border-radius-round);
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .16);
+    color: rgba(255, 255, 255, .88);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background var(--transition-speed) ease,
+                border-color var(--transition-speed) ease,
+                color var(--transition-speed) ease;
+}
+
+.sr-recent-chip i,
+.sr-related-chip i {
+    font-size: 11px;
+    color: #ff8b62;
+}
+
+.sr-recent-chip:hover,
+.sr-related-chip:hover {
+    background: rgba(255, 60, 0, .22);
+    border-color: rgba(255, 122, 77, .55);
+    color: var(--color-white);
+}
+
+/* Le volume de la piste : une precision, pas un argument. */
+.sr-related-chip em {
+    font-style: normal;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, .5);
+}
+
+.sr-recent-clear {
+    padding: 0;
+    border: none;
+    background: none;
+    color: rgba(255, 255, 255, .5);
+    font-family: var(--font-family);
+    font-size: 12px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    transition: color var(--transition-speed) ease;
+}
+
+.sr-recent-clear:hover {
+    color: var(--color-white);
+}
+
+/* --------------------------------------------------------------------------
+   Onglets par famille d'offres
+   Annonces, produits et trajets vivent dans trois tables : la recherche les
+   melange, ces onglets permettent de n'en regarder qu'une. Chacun annonce
+   son propre volume, calcule sans le filtre en cours.
+   -------------------------------------------------------------------------- */
+.sr-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding-bottom: 14px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--cs-line);
+}
+
+.sr-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 18px;
+    border-radius: var(--border-radius-round);
+    color: var(--cs-ink-soft);
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+}
+
+.sr-tab i {
+    font-size: 12px;
+}
+
+/* Le compteur est la vraie information de l'onglet : il reste lisible meme
+   sur l'onglet inactif. */
+.sr-tab em {
+    font-style: normal;
+    min-width: 20px;
+    padding: 2px 7px;
+    border-radius: var(--border-radius-round);
+    background: #f1f2f4;
+    color: var(--cs-ink-soft);
+    font-size: 11.5px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.sr-tab:hover {
+    background: var(--color-grey-light);
+    color: var(--color-black);
+}
+
+.sr-tab.is-active {
+    background: #16181d;
+    color: var(--color-white);
+}
+
+.sr-tab.is-active em {
+    background: rgba(255, 255, 255, .16);
+    color: var(--color-white);
+}
+
+.sr-tab.is-active i {
+    color: #ff8b62;
+}
+
+/* Un onglet vide reste cliquable : il dit « il n'y a rien de ce type ici »,
+   ce qui est une reponse. Il s'efface simplement. */
+.sr-tab.is-empty:not(.is-active) {
+    color: #b3b8bd;
+}
+
+.sr-tab.is-empty:not(.is-active) em {
+    color: #b3b8bd;
+}
+
+/* --------------------------------------------------------------------------
+   Barre d'outils au-dessus de la grille
+   -------------------------------------------------------------------------- */
+.sr-tools {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.sr-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 14px;
+    background: var(--color-white);
+    border: 1px solid var(--cs-line);
+    border-radius: var(--border-radius-round);
+}
+
+.sr-sort-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--cs-ink-soft);
+    margin: 0;
+}
+
+.sr-sort select {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    outline: none;
+    background: none;
+    padding-right: 18px;
+    color: var(--color-black);
+    font-family: var(--font-family);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath fill='none' stroke='%236b7280' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 5 5.5 9 1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right center;
+}
+
+
+/* ==========================================================================
+   3. Complements au rail de filtres
+   Le rail est celui des pages service (`.cs-facets`, style.css). La recherche
+   globale y ajoute trois choses : des volumes a cote de chaque choix, une
+   liste de categories qui defile, et une case a cocher.
+   ========================================================================== */
+
+/* Volume annonce a cote d'un service ou d'une categorie. Pousse a droite
+   pour que les libelles restent alignes entre eux. */
+.cs-facet-count {
+    margin-left: auto;
+    font-style: normal;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #9aa1a8;
+}
+
+.cs-facet-radio:has(input:checked) .cs-facet-count {
+    color: var(--color-primary);
+}
+
+/* Une plateforme peut porter des dizaines de categories : la liste defile
+   dans son panneau au lieu de pousser le reste du rail hors de l'ecran. */
+.cs-facet-radios--scroll {
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.cs-facet-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: var(--cs-radius-sm);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background var(--transition-speed) ease;
+}
+
+.cs-facet-check:hover {
+    background: var(--color-grey-light);
+}
+
+.cs-facet-check input {
+    accent-color: var(--color-primary);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}
+
+.cs-facet-check span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cs-facet-check span i {
+    color: var(--color-primary);
+    font-size: 12px;
+}
+
+.cs-facet-check:has(input:checked) span {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+/* Consequence d'un critere, ecrite sous lui : le visiteur qui coche
+   « livrable » perd les trajets, autant le lui dire avant. */
+.cs-facet-note {
+    margin: 10px 0 0;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: #9aa1a8;
+}
+
+/* Bandeau de type sur la carte d'offre : les trajets n'existaient pas quand
+   il a ete dessine, ils prennent le vert du covoiturage. */
+.cs-badge-type.is-trip {
+    background: rgba(16, 122, 87, .92);
+}
+
+
+/* ==========================================================================
+   4. Adaptations petits ecrans
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+    .sr-hero-title {
+        font-size: 27px;
+    }
+}
+
+@media (max-width: 860px) {
+    .sr-hero {
+        padding: 26px 0 30px;
+        margin-bottom: 26px;
+    }
+
+    /* La capsule ne tient plus sur une ligne : les champs s'empilent et
+       chacun garde toute la largeur, comme dans le panneau mobile du
+       header. */
+    .sr-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        padding: 10px;
+        border-radius: 20px;
+    }
+
+    .sr-bar-field {
+        border: 1px solid #eceef0;
+        border-radius: 12px;
+    }
+
+    .sr-bar-divider {
+        display: none;
+    }
+
+    .sr-bar-btn {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+    }
+
+    .sg-menu {
+        min-width: 0;
+        left: 0;
+        right: 0;
+    }
+
+    .sr-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .sr-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .sr-tab {
+        flex-shrink: 0;
+    }
+
+    .sr-tools {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 520px) {
+    .sr-hero-title {
+        font-size: 22px;
+    }
+
+    .sr-recent-label,
+    .sr-related-label {
+        width: 100%;
+    }
+
+    .sr-sort {
+        height: 40px;
+        padding: 0 12px;
+    }
+
+    .sr-sort-label {
+        display: none;
+    }
+}
