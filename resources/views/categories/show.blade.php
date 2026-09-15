@@ -75,7 +75,7 @@
                                         @endif                            
                                     </div>
                                     
-                                    <p class="card-price">Commence à partir de {{ number_format($ad->price_per_day, 2) }} € / jour</p>
+                                    <p class="card-price">{{ $ad->isVente() ? 'Prix' : 'Commence à partir de' }} {{ number_format($ad->price_per_day, 2) }} € {{ $ad->priceSuffix() }}</p>
                                 </div>
                             </a>
                         @endif

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -75,6 +76,31 @@ class Covoiturage extends Model
         static::creating(function (Covoiturage $covoiturage) {
             $covoiturage->service_id ??= Service::where('slug', self::SERVICE_SLUG)->value('id');
         });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Trajets a venir et archives
+    |--------------------------------------------------------------------------
+    | Un trajet reste en ligne jusqu'au soir de son jour de depart. Des le
+    | lendemain il est passe : il quitte la plateforme et rejoint les
+    | archives du conducteur. La regle etait recopiee dans chaque requete
+    | publique ; elle n'existe plus qu'ici.
+    */
+
+    public function scopeUpcoming(Builder $query): Builder
+    {
+        return $query->whereDate($query->qualifyColumn('date_depart'), '>=', today()->toDateString());
+    }
+
+    public function scopePast(Builder $query): Builder
+    {
+        return $query->whereDate($query->qualifyColumn('date_depart'), '<', today()->toDateString());
+    }
+
+    public function isPast(): bool
+    {
+        return $this->date_depart !== null && $this->date_depart->copy()->startOfDay()->lt(today());
     }
 
     public function service()

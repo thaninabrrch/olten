@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\livrer\DocumentController as LivreurDocumentController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ArchiveController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ServicePageController;
 use App\Http\Controllers\ContactController;
@@ -152,6 +153,8 @@ Route::middleware('auth', 'verified', 'approved')->group(function () {
     Route::post('/profile/toggle-vtc', [ProfileController::class, 'toggleVtc'])->name('profile.toggleVtc');
     Route::post('/profile/toggleLivreur', [ProfileController::class, 'toggleLivreur'])->name('profile.toggleLivreur');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // Archives : annonces expirees, produits epuises ou hors ligne, trajets passes
+    Route::get('/archives', [ArchiveController::class, 'index'])->name('archives');
     Route::get('/profile', [ProfileController::class, 'profile'])->name('profile');
     Route::get('/profile/modifer', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile/modifer', [ProfileController::class, 'update'])->name('profile.update');

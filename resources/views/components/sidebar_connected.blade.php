@@ -20,12 +20,16 @@
     $user     = auth()->user();
     $approved = (bool) $user->is_approved;
 
-    /* Liens de premier niveau : les trois destinations les plus frequentes
-       restent accessibles en un clic, sans avoir a deplier quoi que ce soit. */
+    /* Liens de premier niveau : les destinations les plus frequentes, et
+       celles qui couvrent plusieurs sections, restent accessibles en un clic,
+       sans avoir a deplier quoi que ce soit. */
     $raccourcis = [
         ['Tableau de bord', 'fa-gauge-high',   url('/dashboard'),    request()->is('dashboard')],
         ['Messages',        'fa-comment-dots', route('messages'),    request()->routeIs('messages*')],
         ['Portefeuille',    'fa-wallet',       url('/portefeuille'), request()->routeIs('walt.index')],
+        // Annonces expirees, produits epuises ou hors ligne, trajets passes :
+        // les archives couvrent plusieurs sections, elles n'en rejoignent aucune.
+        ['Archives',        'fa-box-archive',  route('archives'),    request()->routeIs('archives')],
     ];
 
     /* Sections repliables. Chaque entree : [libelle, icone, url, actif, verrouille] */

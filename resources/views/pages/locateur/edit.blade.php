@@ -9,6 +9,11 @@
 
     // Une annonce deja commencee garde sa date de debut comme minimum
     $minFrom = ($availableFrom && $availableFrom < $today) ? $availableFrom : $today;
+
+    // Une annonce expiree est modifiee depuis les archives : on y ramene
+    // l'utilisateur, et on lui dit comment la remettre en ligne.
+    $expired = $ad->isExpired();
+    $retour  = $expired ? route('archives', ['type' => 'annonce']) : route('ads.index');
 @endphp
 
 @section('content')
@@ -20,6 +25,10 @@
         <i class="fa-solid fa-chevron-right"></i>
         <a href="{{ route('ads.index') }}">Mes annonces</a>
         <i class="fa-solid fa-chevron-right"></i>
+        @if ($expired)
+            <a href="{{ $retour }}">Archives</a>
+            <i class="fa-solid fa-chevron-right"></i>
+        @endif
         <span class="is-current">Modifier</span>
     </nav>
 
@@ -41,6 +50,15 @@
     <form action="{{ route('ads.update', $ad) }}" method="POST" enctype="multipart/form-data" id="annonceForm">
         @csrf
         @method('PUT')
+
+        @if ($expired)
+            <div class="sp-note">
+                <i class="fa-solid fa-box-archive"></i>
+                Cette annonce est archivée depuis la fin de sa disponibilité, le
+                {{ $ad->expires_at->format('d/m/Y') }}. Choisissez de nouvelles dates dans
+                « Disponibilités » pour la remettre en ligne.
+            </div>
+        @endif
 
         @if ($errors->any())
             <div class="sp-alert">
@@ -231,7 +249,7 @@
 
         {{-- Barre d'action --}}
         <div class="sp-form-actions">
-            <a href="{{ route('ads.index') }}" class="sp-act is-ghost">Annuler</a>
+            <a href="{{ $retour }}" class="sp-act is-ghost">Annuler</a>
             <button type="submit" class="sp-btn-primary">Enregistrer les modifications</button>
         </div>
 

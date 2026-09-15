@@ -18,7 +18,7 @@ class FavoriteController extends Controller
         }
 
         $adFavorites = $user->favorites()
-                            ->with('category')
+                            ->with('category.service')
                             ->get()
                             ->map(function ($ad) {
                                 $ad->favorite_type = 'ad';

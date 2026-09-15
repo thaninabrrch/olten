@@ -104,6 +104,12 @@ class BookingController extends Controller
             return back()->withErrors(['dates' => "Cette annonce ne se réserve pas : elle n'a pas de période de location."]);
         }
 
+        // La page masque deja le formulaire d'une annonce expiree ; le
+        // controle est refait ici pour une requete envoyee sans passer par elle.
+        if ($ad->isExpired()) {
+            return back()->withErrors(['dates' => "Cette annonce a expiré : elle n'est plus réservable."]);
+        }
+
         if ($validated['start_date'] < $ad->available_from->format('Y-m-d') ||
             $validated['end_date'] > $ad->available_until->format('Y-m-d')) {
             return back()->withErrors(['dates' => 'Les dates choisies ne sont pas disponibles pour cette annonce.']);

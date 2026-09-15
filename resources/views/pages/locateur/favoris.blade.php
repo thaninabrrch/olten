@@ -104,9 +104,15 @@
                         ? route('products.show', $favorite->id)
                         : route('ads.show', $favorite->id);
                     $price     = $isProduct ? $favorite->price : $favorite->price_per_day;
+
+                    // Une annonce expiree ou un produit archive (epuise, hors
+                    // ligne) a quitte la plateforme : on le garde dans les
+                    // favoris, mais signale, pour que sa disparition des
+                    // resultats ne surprenne pas.
+                    $expired   = $isProduct ? $favorite->isArchived() : $favorite->isExpired();
                 @endphp
 
-                <article class="sp-card favori-card"
+                <article class="sp-card favori-card {{ $expired ? 'is-out' : '' }}"
                          data-id="{{ $favorite->id }}"
                          data-type="{{ $favorite->favorite_type }}">
 
@@ -116,6 +122,9 @@
 
                         <div class="sp-media-badges">
                             <span class="sp-badge is-type">{{ $isProduct ? 'Produit' : 'Annonce' }}</span>
+                            @if ($expired)
+                                <span class="sp-badge is-out"><i class="fa-solid fa-clock"></i> {{ $isProduct ? 'Indisponible' : 'Expirée' }}</span>
+                            @endif
                         </div>
                     </a>
 
@@ -130,7 +139,8 @@
 
                             <div class="sp-fav-price">
                                 {{ number_format((float) $price, 2, ',', ' ') }} €
-                                <small>{{ $isProduct ? "l'unité" : '/ jour' }}</small>
+                                {{-- Une annonce de vente affiche un prix ferme, sans « / jour » --}}
+                                <small>{{ $isProduct ? "l'unité" : $favorite->priceSuffix() }}</small>
                             </div>
                         </div>
                     </div>

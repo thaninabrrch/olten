@@ -8,6 +8,7 @@ use App\Models\Booking;
 use App\Models\Category;
 use App\Models\Message;
 use App\Models\Service;
+use App\Support\Archive;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\View;
 use Illuminate\Pagination\Paginator;
@@ -54,9 +55,10 @@ class AppServiceProvider extends ServiceProvider
                  ->with('footerServices', $footerServices);
         });
 
-        // Compteurs affiches dans le menu utilisateur du header (annonces,
-        // reservations recues en attente, messages non lus). Memorises pour
-        // ne faire qu'une requete par modele et par requete HTTP.
+        // Compteurs affiches dans le menu utilisateur du header (annonces en
+        // cours, elements archives tous types confondus, reservations recues
+        // en attente, messages non lus). Memorises pour ne faire qu'une
+        // requete par modele et par requete HTTP.
         View::composer('components.user-dropdown', function ($view) {
             static $counts = null;
 
@@ -64,7 +66,8 @@ class AppServiceProvider extends ServiceProvider
                 $id = auth()->id();
 
                 $counts = [
-                    'menuAdsCount' => Ad::where('user_id', $id)->count(),
+                    'menuAdsCount' => Ad::where('user_id', $id)->notExpired()->count(),
+                    'menuArchivedCount' => Archive::counts(auth()->user())['total'],
                     'menuReceivedCount' => Booking::where('booking_status', 'pending')
                         ->whereHas('ad', fn ($q) => $q->where('user_id', $id))
                         ->count(),

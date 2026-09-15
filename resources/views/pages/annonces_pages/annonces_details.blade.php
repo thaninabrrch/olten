@@ -5,13 +5,13 @@
 @php
     $owner    = $ad->user;
     $images   = $ad->images;
-    $expired  = $ad->expires_at && \Carbon\Carbon::parse($ad->expires_at)->toDateString() < now()->toDateString();
+    $expired  = $ad->isExpired();
     $isOwner  = auth()->check() && auth()->id() === $ad->user_id;
 
     /* Une annonce de vente ne se loue pas : ni periode de disponibilite, ni
        reservation par dates, ni tarif journalier. Le formulaire de depot ne
        lui demande deja plus de dates ; l'affichage suit la meme regle. */
-    $estVente = $ad->category?->isVente() ?? false;
+    $estVente = $ad->isVente();
 
     $bookable = ! $expired && ! $isOwner && ! $estVente;
     $favorited = auth()->check() && auth()->user()->hasFavorited($ad);

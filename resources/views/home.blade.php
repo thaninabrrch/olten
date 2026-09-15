@@ -208,10 +208,11 @@
                             @endif
 
                             <div class="card-footer">
+                                {{-- Une annonce de vente affiche un prix ferme, sans « / jour » --}}
                                 <span class="card-price-block">
-                                    <span class="card-price-label">à partir de</span>
+                                    <span class="card-price-label">{{ \Illuminate\Support\Str::lower($ad->priceLabel()) }}</span>
                                     <span class="card-price">
-                                        {{ number_format($ad->price_per_day, 2) }} €<small>/ jour</small>
+                                        {{ number_format($ad->price_per_day, 2) }} €@if($ad->priceSuffix())<small>{{ $ad->priceSuffix() }}</small>@endif
                                     </span>
                                 </span>
 

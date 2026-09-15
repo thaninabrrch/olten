@@ -76,11 +76,11 @@ class Category extends Model
     }
 
     /**
-     * Annonces publiees (visibles par les visiteurs).
+     * Annonces publiees (visibles par les visiteurs) : validees et non expirees.
      */
     public function approvedAds()
     {
-        return $this->ads()->where('is_approved', true);
+        return $this->ads()->published();
     }
 
     /**
@@ -93,11 +93,11 @@ class Category extends Model
     }
 
     /**
-     * Produits en ligne (visibles par les visiteurs).
+     * Produits visibles par les visiteurs : en ligne et en stock.
      */
     public function activeProducts()
     {
-        return $this->products()->where('is_active', true);
+        return $this->products()->available();
     }
 
     public function notificationUsers()

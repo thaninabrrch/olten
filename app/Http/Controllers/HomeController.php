@@ -41,11 +41,13 @@ class HomeController extends Controller
         | Annonces
         |--------------------------------------------------------------------------
         */
+        // `category.service` : le libelle de prix depend du service (une
+        // vente n'affiche pas « / jour »), autant le charger en une requete.
         $query = Ad::with([
             'images',
-            'category',
+            'category.service',
             'user.subscription'
-        ])->where('is_approved', true);
+        ])->published();
 
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
@@ -99,8 +101,7 @@ class HomeController extends Controller
             'category',
             'user.subscription'
         ])
-            ->active()
-            ->inStock()
+            ->available()
             ->latest()
             ->get()
             ->sortByDesc($visibilityScore)
@@ -149,11 +150,12 @@ class HomeController extends Controller
         $category = Category::where('slug', $slug)->firstOrFail();
 
         $ads = Ad::where('category_id', $category->id)
-                 ->where('is_approved', true)
+                 ->published()
                  ->latest()
                  ->paginate(12);
 
         $products = Product::where('category_id', $category->id)
+                           ->available()
                            ->latest()
                            ->paginate(12);
         return view('categories.show', compact('category', 'ads', 'products'));
@@ -162,7 +164,7 @@ class HomeController extends Controller
     public function index(Request $request)
     {
         $categories = Category::latest()->get();
-        $query = Ad::query()->where('is_approved', true);
+        $query = Ad::query()->published();
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('title', 'like', '%' . $request->search . '%')
@@ -182,7 +184,7 @@ class HomeController extends Controller
         }
 
         $ads = $query->latest()->get();
-        $products = Product::active()->inStock()->latest()->get();
+        $products = Product::available()->latest()->get();
 
         return view('homeLocation', compact('categories', 'ads', 'products'));
     }

@@ -31,6 +31,7 @@
         'ads.index'                 => ['Mes annonces', 'Annonces'],
         'ads.create'                => ['Déposer une annonce', 'Annonces'],
         'ads.edit'                  => ['Modifier une annonce', 'Annonces'],
+        'archives'                  => ['Archives', 'Mon activité'],
         'statistiques'              => ['Statistiques', 'Annonces'],
         'favoris'                   => ['Favoris', 'Mes envies'],
         'messages'                  => ['Messages', 'Échanges'],

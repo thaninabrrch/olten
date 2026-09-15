@@ -12,11 +12,15 @@ class CovoiturageController extends Controller
 {
     public function index()
     {
+        // Les trajets passes ont quitte la plateforme : ils vivent dans les archives
         $trajets = Covoiturage::where('conducteur_id', auth()->id())
+            ->upcoming()
             ->orderBy('date_depart', 'desc')
             ->get();
 
-        return view('livreur.covoiturage.index', compact('trajets'));
+        $archivedCount = Covoiturage::where('conducteur_id', auth()->id())->past()->count();
+
+        return view('livreur.covoiturage.index', compact('trajets', 'archivedCount'));
     }
     public function show($covoiturage_id)
     {
@@ -128,11 +132,14 @@ class CovoiturageController extends Controller
             \Storage::disk('public')->delete($covoiturage->photo_conducteur);
         }
 
+        // On revient sur la liste d'ou la suppression a ete lancee
+        $liste = $covoiturage->isPast()
+            ? route('archives', ['type' => 'trajet'])
+            : route('covoiturage.index');
+
         $covoiturage->delete();
 
-        return redirect()
-         ->route('covoiturage.index')
-         ->with('success', 'Trajet supprimé avec succès');
+        return redirect($liste)->with('success', 'Trajet supprimé avec succès');
     }
     public function edit($id)
     {

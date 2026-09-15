@@ -7,9 +7,10 @@
      | controleur. Le total est celui de la requete complete ; les autres
      | indicateurs portent sur les annonces affichees (« sur cette page »).
      |
-     | Le statut d'une annonce se lit sur trois colonnes : is_approved,
-     | rejected_at et expires_at. Les memes regles que le filtre serveur
-     | sont reprises ici pour l'affichage.
+     | Le statut d'une annonce se lit sur deux colonnes : is_approved et
+     | rejected_at. Les memes regles que le filtre serveur sont reprises ici
+     | pour l'affichage. Les annonces expirees ne figurent plus dans cette
+     | liste : elles sont rangees dans les archives (route archives).
      */
     $onPage     = $ads->getCollection();
     $search     = trim((string) request('search'));
@@ -18,7 +19,6 @@
 
     $adStatus = function ($ad) {
         if ($ad->rejected_at) return 'rejected';
-        if ($ad->expires_at && $ad->expires_at->isPast()) return 'expired';
         return $ad->is_approved ? 'approved' : 'pending';
     };
 
@@ -32,14 +32,12 @@
         'approved' => 'Approuvées',
         'pending'  => 'En attente',
         'rejected' => 'Refusées',
-        'expired'  => 'Expirées',
     ];
 
     $statusMeta = [
         'approved' => ['Approuvée',  'is-online', 'fa-circle-check'],
         'pending'  => ['En attente', 'is-draft',  'fa-hourglass-half'],
         'rejected' => ['Refusée',    'is-out',    'fa-circle-xmark'],
-        'expired'  => ['Expirée',    'is-draft',  'fa-clock'],
     ];
 
     // Les filtres actifs suivent l'utilisateur d'un onglet a l'autre
@@ -170,6 +168,14 @@
                 <a href="{{ route('ads.index', array_filter($keep + ['status' => $value])) }}"
                    class="sp-tab {{ $status === $value ? 'is-active' : '' }}">{{ $label }}</a>
             @endforeach
+
+            {{-- Les annonces expirees ne sont plus en ligne : elles ont leur page --}}
+            <a href="{{ route('archives', ['type' => 'annonce']) }}" class="sp-tab">
+                <i class="fa-solid fa-box-archive"></i> Archives
+                @if ($archivedCount)
+                    <span class="sp-tab-count">{{ $archivedCount }}</span>
+                @endif
+            </a>
         </div>
 
         @if($ads->count())
@@ -184,7 +190,7 @@
                             : asset('assets/images/no-image.jpg');
                     @endphp
 
-                    <article class="sp-card {{ in_array($state, ['rejected', 'expired']) ? 'is-out' : '' }}">
+                    <article class="sp-card {{ $state === 'rejected' ? 'is-out' : '' }}">
 
                         <a href="{{ route('ads.show', $ad) }}" class="sp-media" title="Voir l'annonce">
                             <img src="{{ $cover }}" alt="{{ $ad->title }}" loading="lazy">
@@ -214,9 +220,9 @@
                                 <div class="sp-price">
                                     {{ number_format((float) $ad->price_per_day, 2, ',', ' ') }} €
                                     {{-- Une annonce de vente affiche un prix ferme --}}
-                                    @unless ($ad->category?->isVente())
-                                        <small>/ jour</small>
-                                    @endunless
+                                    @if ($ad->priceSuffix())
+                                        <small>{{ $ad->priceSuffix() }}</small>
+                                    @endif
                                 </div>
                             </div>
 
@@ -226,7 +232,7 @@
                                     {{ $ad->views ?? 0 }} vue{{ ($ad->views ?? 0) > 1 ? 's' : '' }}
                                 </span>
 
-                                <span class="sp-tag {{ $state === 'expired' ? 'is-danger' : '' }}">
+                                <span class="sp-tag">
                                     <i class="fa-regular fa-calendar"></i>
                                     {{ $ad->expires_at ? 'Jusqu\'au ' . $ad->expires_at->format('d/m/Y') : 'Sans échéance' }}
                                 </span>

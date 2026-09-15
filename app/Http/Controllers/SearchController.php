@@ -253,7 +253,7 @@ class SearchController extends Controller
      */
     private function adQuery(Request $request, ?array $ids): Builder
     {
-        $query = Ad::query()->where('is_approved', true);
+        $query = Ad::query()->published();
 
         if ($ids !== null) {
             $query->whereIn('category_id', $ids);
@@ -296,7 +296,7 @@ class SearchController extends Controller
      */
     private function productQuery(Request $request, ?array $ids): Builder
     {
-        $query = Product::query()->where('is_active', true);
+        $query = Product::query()->available();
 
         if ($ids !== null) {
             $query->whereIn('category_id', $ids);
@@ -354,7 +354,7 @@ class SearchController extends Controller
 
         $query = Covoiturage::query()
             ->where('statut', '!=', 'inactif')
-            ->whereDate('date_depart', '>=', now()->startOfDay());
+            ->upcoming();
 
         if ($search = $this->term($request)) {
             $query->where(function (Builder $q) use ($search) {
@@ -571,12 +571,12 @@ class SearchController extends Controller
      */
     private function cities(): Collection
     {
-        $villes = Ad::where('is_approved', true)->whereNotNull('address')->pluck('address')
-            ->merge(Product::where('is_active', true)->whereNotNull('address')->pluck('address'))
+        $villes = Ad::published()->whereNotNull('address')->pluck('address')
+            ->merge(Product::available()->whereNotNull('address')->pluck('address'))
             ->map(fn (string $address) => $this->cityOf($address))
             ->merge(
                 Covoiturage::where('statut', '!=', 'inactif')
-                    ->whereDate('date_depart', '>=', now()->startOfDay())
+                    ->upcoming()
                     ->get(['covoiturage_id', 'depart', 'destination'])
                     ->flatMap(fn (Covoiturage $t) => [$t->depart_ville, $t->destination_ville])
             );
@@ -617,8 +617,8 @@ class SearchController extends Controller
     private function priceBounds(): array
     {
         $max = max(
-            (float) (Ad::where('is_approved', true)->max('price_per_day') ?? 0),
-            (float) (Product::where('is_active', true)->max('price') ?? 0),
+            (float) (Ad::published()->max('price_per_day') ?? 0),
+            (float) (Product::available()->max('price') ?? 0),
         );
 
         return [
@@ -713,8 +713,8 @@ class SearchController extends Controller
      */
     private function popular(): Collection
     {
-        $ads = Ad::with(['images', 'category', 'user'])
-            ->where('is_approved', true)
+        $ads = Ad::with(['images', 'category.service', 'user'])
+            ->published()
             ->where('views', '>', 0)
             ->orderByDesc('views')
             ->limit(self::POPULAR_LIMIT)
@@ -722,7 +722,7 @@ class SearchController extends Controller
             ->map(fn (Ad $ad) => Listing::fromAd($ad));
 
         $products = Product::with(['images', 'category', 'user'])
-            ->where('is_active', true)
+            ->available()
             ->where('views', '>', 0)
             ->orderByDesc('views')
             ->limit(self::POPULAR_LIMIT)
@@ -753,7 +753,7 @@ class SearchController extends Controller
         // Annonces ET produits : le bloc annonce « les plus consultees » de la
         // plateforme, il ne peut pas n'en montrer qu'une moitie.
         $vues = Ad::with(['images', 'category'])
-            ->where('is_approved', true)
+            ->published()
             ->where('views', '>', 0)
             ->orderByDesc('views')
             ->limit(self::SUGGEST_LIMIT)
@@ -761,7 +761,7 @@ class SearchController extends Controller
             ->map(fn (Ad $ad) => ['views' => (int) $ad->views] + $this->adItem($ad))
             ->merge(
                 Product::with(['images', 'category'])
-                    ->where('is_active', true)
+                    ->available()
                     ->where('views', '>', 0)
                     ->orderByDesc('views')
                     ->limit(self::SUGGEST_LIMIT)
@@ -817,7 +817,7 @@ class SearchController extends Controller
             ])->all();
 
         $ads = Ad::with(['images', 'category'])
-            ->where('is_approved', true)
+            ->published()
             ->where(fn (Builder $q) => $q->where('title', 'like', $like)->orWhere('summary', 'like', $like))
             ->orderByDesc('views')
             ->limit(self::SUGGEST_LIMIT)
@@ -826,7 +826,7 @@ class SearchController extends Controller
             ->all();
 
         $products = Product::with(['images', 'category'])
-            ->where('is_active', true)
+            ->available()
             ->where('name', 'like', $like)
             ->orderByDesc('views')
             ->limit(self::SUGGEST_LIMIT)
@@ -835,7 +835,7 @@ class SearchController extends Controller
             ->all();
 
         $trips = Covoiturage::where('statut', '!=', 'inactif')
-            ->whereDate('date_depart', '>=', now()->startOfDay())
+            ->upcoming()
             ->where(fn (Builder $q) => $q->where('depart', 'like', $like)->orWhere('destination', 'like', $like))
             ->orderBy('date_depart')
             ->limit(3)

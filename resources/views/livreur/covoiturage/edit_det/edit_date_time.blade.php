@@ -39,6 +39,15 @@
     <form action="{{ route('covoiturage.update-date-time', $covoiturage->covoiturage_id) }}" method="POST">
         @csrf
 
+        {{-- Ouvert depuis les archives : une nouvelle date republie le trajet --}}
+        @if ($covoiturage->isPast())
+            <div class="sp-note">
+                <i class="fa-solid fa-box-archive"></i>
+                Ce trajet est archivé : il est parti le {{ $covoiturage->date_depart->format('d/m/Y') }} et n'est
+                plus visible sur la plateforme. Choisissez une nouvelle date de départ pour le republier.
+            </div>
+        @endif
+
         @if ($errors->any())
             <div class="sp-alert">
                 <strong>La date n'a pas pu être enregistrée.</strong>

@@ -87,7 +87,8 @@ class DashboardController extends Controller
         */
         if ($user->hasRole('locateur')) {
 
-            $activeAds = Ad::where('user_id', $user->id)->count();
+            // Une annonce expiree n'est plus active : elle est aux archives
+            $activeAds = Ad::where('user_id', $user->id)->notExpired()->count();
             $totalViews += Ad::where('user_id', $user->id)->sum('views');
 
             $favoritesCount = $user->favorites()->count() + $user->productFavorites()->count();

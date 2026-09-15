@@ -3,8 +3,9 @@
 
 @php
     /*
-     | $trajets = Covoiturage du conducteur connecte, deja tries par date de
-     | depart decroissante. La cle primaire du modele est covoiturage_id.
+     | $trajets = trajets a venir du conducteur connecte, deja tries par date
+     | de depart decroissante. La cle primaire du modele est covoiturage_id.
+     | Les trajets passes sont dans les archives ($archivedCount).
      |
      | Les etapes intermediaires se lisent sur « segments » (tableau de
      | from / to / price) : l'ancienne version interrogeait $trajet->steps,
@@ -20,7 +21,6 @@
     ];
 
     $total     = $trajets->count();
-    $aVenir    = $trajets->filter(fn ($t) => $t->date_depart && $t->date_depart->isFuture())->count();
     $places    = $trajets->sum(fn ($t) => (int) $t->nb_places);
     $recette   = $trajets->sum(fn ($t) => (float) ($t->prix_place ?? 0) * (int) $t->nb_places);
 
@@ -55,15 +55,18 @@
             <span class="sp-stat-icon is-brand"><i class="fa-solid fa-car-side"></i></span>
             <div>
                 <span class="sp-stat-value">{{ $total }}</span>
-                <span class="sp-stat-label">Trajet{{ $total > 1 ? 's' : '' }} publié{{ $total > 1 ? 's' : '' }}</span>
+                <span class="sp-stat-label">Trajet{{ $total > 1 ? 's' : '' }} à venir</span>
             </div>
         </div>
 
         <div class="sp-stat">
-            <span class="sp-stat-icon is-blue"><i class="fa-regular fa-clock"></i></span>
+            <span class="sp-stat-icon is-blue"><i class="fa-solid fa-box-archive"></i></span>
             <div>
-                <span class="sp-stat-value">{{ $aVenir }}</span>
-                <span class="sp-stat-label">À venir</span>
+                <span class="sp-stat-value">{{ $archivedCount }}</span>
+                <span class="sp-stat-label">
+                    <a href="{{ route('archives', ['type' => 'trajet']) }}">Trajet{{ $archivedCount > 1 ? 's' : '' }} passé{{ $archivedCount > 1 ? 's' : '' }}</a>
+                    <small>dans les archives</small>
+                </span>
             </div>
         </div>
 
@@ -93,7 +96,7 @@
         <div class="sp-toolbar">
             <div>
                 <h2 class="sp-toolbar-title">Mes publications</h2>
-                <span class="sp-count">{{ $total }} trajet{{ $total > 1 ? 's' : '' }} au total</span>
+                <span class="sp-count">{{ $total }} trajet{{ $total > 1 ? 's' : '' }} à venir</span>
             </div>
         </div>
 
@@ -111,10 +114,9 @@
                             ->unique()
                             ->values();
 
-                        $passe = $date && $date->isPast();
                     @endphp
 
-                    <article class="sp-card sp-mission {{ $passe ? 'is-out' : '' }}">
+                    <article class="sp-card sp-mission">
 
                         <div class="sp-mission-head">
                             <div>
@@ -205,8 +207,8 @@
         @else
             <div class="sp-empty">
                 <x-empty-state
-                    title="Aucun trajet pour le moment"
-                    text="Partagez votre route et commencez à rentabiliser vos déplacements."
+                    title="Aucun trajet à venir"
+                    text="Partagez votre route et commencez à rentabiliser vos déplacements. Vos trajets passés sont dans les archives."
                     :action-url="route('covoiturage.create')"
                     action-label="Publier un trajet" />
             </div>

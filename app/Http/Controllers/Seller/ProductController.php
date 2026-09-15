@@ -25,15 +25,18 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = auth()->user()->products()->with('images', 'category');
+        // Le catalogue ne montre que ce qui est en vente : un produit epuise ou
+        // hors ligne a quitte la plateforme et vit dans les archives.
+        $query = auth()->user()->products()->available()->with('images', 'category');
 
         if ($request->filled('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
 
-        $products = $query->latest()->paginate(25);
+        $products      = $query->latest()->paginate(25);
+        $archivedCount = auth()->user()->products()->archived()->count();
 
-        return view('pages.seller.product.list', compact('products'));
+        return view('pages.seller.product.list', compact('products', 'archivedCount'));
     }
 
     public function create()
@@ -97,6 +100,14 @@ class ProductController extends Controller
             }
         }
 
+        // Enregistre hors ligne ou sans stock, le produit n'est pas en vente :
+        // il part directement aux archives, on y mene le vendeur. Personne
+        // n'est prevenu d'un produit qu'il ne pourrait pas acheter.
+        if ($product->isArchived()) {
+            return redirect()->route('archives', ['type' => 'produit'])
+                ->with('success', "Produit enregistré. Il n'est pas en vente (" . mb_strtolower($product->archiveReason()) . ') : il est rangé dans vos archives.');
+        }
+
         $users = User::where('notifications_enabled', true)
                     ->whereHas('subscription', function ($query) {
                         $query->where('slug', 'premium');
@@ -110,6 +121,7 @@ class ProductController extends Controller
         foreach ($users as $user) {
             Mail::to($user->email)->send(new NewProductNotification($product));
         }
+
         return redirect()->route('seller.produits.index') ->with('success', 'Produit ajouté avec succès');
     }
 
@@ -160,6 +172,11 @@ class ProductController extends Controller
             }
         }
 
+        if ($produit->isArchived()) {
+            return redirect()->route('archives', ['type' => 'produit'])
+                ->with('success', 'Produit mis à jour. Il reste archivé (' . mb_strtolower($produit->archiveReason()) . ') : réajustez le stock et mettez-le en ligne pour le remettre en vente.');
+        }
+
         return redirect()->route('seller.produits.index')->with('success', 'Produit mis à jour');
     }
 
@@ -196,9 +213,14 @@ class ProductController extends Controller
             }
         }
 
+        // On revient sur la liste d'ou la suppression a ete lancee
+        $liste = $produit->isArchived()
+            ? route('archives', ['type' => 'produit'])
+            : route('seller.produits.index');
+
         $produit->delete();
 
-        return redirect()->route('seller.produits.index')->with('success', 'Produit supprimé');
+        return redirect($liste)->with('success', 'Produit supprimé');
     }
 
     public function show(Product $product)
@@ -229,6 +251,12 @@ class ProductController extends Controller
         ]);
 
         $quantity = (int) $request->quantity;
+
+        // Un produit archive (hors ligne ou epuise) n'est plus en vente, meme
+        // atteint par un lien direct vers sa fiche.
+        if (! $product->is_active) {
+            return back()->with('error', "Ce produit n'est plus en vente.");
+        }
 
         if ($product->stock < $quantity) {
             return back()->with('error', 'Stock insuffisant');
@@ -290,6 +318,13 @@ class ProductController extends Controller
                     ->firstOrFail();
 
                 $quantity = (int) $request->quantity;
+
+                if (! $product->is_active) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Ce produit n'est plus en vente.",
+                    ]);
+                }
 
                 if ($product->stock < $quantity) {
                     return response()->json([

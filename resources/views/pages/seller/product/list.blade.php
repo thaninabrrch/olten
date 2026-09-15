@@ -3,8 +3,9 @@
 
 @php
     /*
-     | Aucune donnee supplementaire n'est demandee au controleur : on se sert
-     | uniquement du paginateur deja fourni.
+     | Le catalogue ne contient que les produits en vente (en ligne et en
+     | stock) : les produits epuises ou hors ligne sont dans les archives,
+     | dont le controleur fournit le nombre ($archivedCount).
      |   - le total est celui de la requete complete ($products->total())
      |   - les autres indicateurs portent sur les produits affiches, ce qui est
      |     precise sous la valeur des qu'il y a plusieurs pages.
@@ -12,8 +13,7 @@
     $onPage      = $products->getCollection();
     $search      = trim((string) request('search'));
     $countOnPage = $onPage->count();
-    $online      = $onPage->where('is_active', true)->count();
-    $outOfStock  = $onPage->filter(fn ($p) => (int) $p->stock <= 0)->count();
+    $lowStock    = $onPage->filter(fn ($p) => (int) $p->stock <= 5)->count();
     $stockValue  = $onPage->sum(fn ($p) => (float) $p->price * (int) $p->stock);
     $partial     = $products->hasPages();
     $scopeLabel  = $partial ? 'sur cette page' : null;
@@ -47,34 +47,34 @@
             <span class="sp-stat-icon is-brand"><i class="fa-solid fa-box-open"></i></span>
             <div>
                 <span class="sp-stat-value">{{ $products->total() }}</span>
-                <span class="sp-stat-label">Produit{{ $products->total() > 1 ? 's' : '' }} au total</span>
-            </div>
-        </div>
-
-        <div class="sp-stat">
-            <span class="sp-stat-icon is-green"><i class="fa-solid fa-circle-check"></i></span>
-            <div>
-                <span class="sp-stat-value">{{ $online }}</span>
-                <span class="sp-stat-label">
-                    En ligne
-                    @if($scopeLabel)<small>{{ $scopeLabel }}</small>@endif
-                </span>
+                <span class="sp-stat-label">Produit{{ $products->total() > 1 ? 's' : '' }} en vente</span>
             </div>
         </div>
 
         <div class="sp-stat">
             <span class="sp-stat-icon is-red"><i class="fa-solid fa-triangle-exclamation"></i></span>
             <div>
-                <span class="sp-stat-value">{{ $outOfStock }}</span>
+                <span class="sp-stat-value">{{ $lowStock }}</span>
                 <span class="sp-stat-label">
-                    En rupture
+                    Stock faible (5 ou moins)
                     @if($scopeLabel)<small>{{ $scopeLabel }}</small>@endif
                 </span>
             </div>
         </div>
 
         <div class="sp-stat">
-            <span class="sp-stat-icon is-blue"><i class="fa-solid fa-euro-sign"></i></span>
+            <span class="sp-stat-icon is-blue"><i class="fa-solid fa-box-archive"></i></span>
+            <div>
+                <span class="sp-stat-value">{{ $archivedCount }}</span>
+                <span class="sp-stat-label">
+                    <a href="{{ route('archives', ['type' => 'produit']) }}">Épuisé{{ $archivedCount > 1 ? 's' : '' }} ou hors ligne</a>
+                    <small>dans les archives</small>
+                </span>
+            </div>
+        </div>
+
+        <div class="sp-stat">
+            <span class="sp-stat-icon is-green"><i class="fa-solid fa-euro-sign"></i></span>
             <div>
                 <span class="sp-stat-value">{{ number_format($stockValue, 2, ',', ' ') }} €</span>
                 <span class="sp-stat-label">
@@ -230,8 +230,8 @@
                         action-label="Voir tous mes produits" />
                 @else
                     <x-empty-state
-                        title="Aucun produit en ligne"
-                        text="Ajoutez votre premier produit pour le mettre en vente sur Olten."
+                        title="Aucun produit en vente"
+                        text="Ajoutez un produit pour le mettre en vente sur Olten. Vos produits épuisés ou hors ligne sont dans les archives."
                         :action-url="route('seller.produits.create')"
                         action-label="Ajouter un produit" />
                 @endif

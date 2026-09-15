@@ -72,8 +72,8 @@ class ServicePageController extends Controller
         $services = Service::query()
             ->withCount([
                 'categories',
-                'ads as ads_count' => fn (Builder $q) => $q->where('ads.is_approved', true),
-                'products as products_count' => fn (Builder $q) => $q->where('products.is_active', true),
+                'ads as ads_count' => fn (Builder $q) => $q->published(),
+                'products as products_count' => fn (Builder $q) => $q->available(),
             ])
             ->with(['categories' => fn ($q) => $q->orderBy('id')])
             ->orderBy('id')
@@ -450,7 +450,7 @@ class ServicePageController extends Controller
     {
         return Covoiturage::query()
             ->where('statut', '!=', 'inactif')
-            ->whereDate('date_depart', '>=', now()->startOfDay())
+            ->upcoming()
             ->when($filters['departure'] ?? null, fn (Builder $q, $v) => $q->where('depart', 'like', '%' . $v . '%'))
             ->when($filters['arrival'] ?? null, fn (Builder $q, $v) => $q->where('destination', 'like', '%' . $v . '%'))
             ->when($filters['start_date'] ?? null, fn (Builder $q, $v) => $q->whereDate('date_depart', '>=', $v))
@@ -688,8 +688,8 @@ class ServicePageController extends Controller
     {
         return $service->categories()
             ->withCount([
-                'ads as ads_count' => fn (Builder $q) => $q->where('is_approved', true),
-                'products as products_count' => fn (Builder $q) => $q->where('is_active', true),
+                'ads as ads_count' => fn (Builder $q) => $q->published(),
+                'products as products_count' => fn (Builder $q) => $q->available(),
             ])
             ->orderBy('id')
             ->get();
@@ -775,7 +775,7 @@ class ServicePageController extends Controller
         if ($type !== Listing::PRODUIT) {
             $listings = $listings->merge(
                 $this->filtered($request, $categoryIds)
-                     ->with(['images', 'category', 'user'])
+                     ->with(['images', 'category.service', 'user'])
                      ->get()
                      ->map(fn (Ad $ad) => Listing::fromAd($ad))
             );
@@ -812,7 +812,7 @@ class ServicePageController extends Controller
     private function filteredProducts(Request $request, array $categoryIds): Builder
     {
         $query = Product::query()
-            ->where('is_active', true)
+            ->available()
             ->whereIn('category_id', $categoryIds);
 
         // Un produit se vend a l'unite : il n'a pas de periode de mise a
@@ -853,7 +853,7 @@ class ServicePageController extends Controller
     private function filtered(Request $request, array $categoryIds): Builder
     {
         $query = Ad::query()
-            ->where('is_approved', true)
+            ->published()
             ->whereIn('category_id', $categoryIds);
 
         if ($request->filled('search')) {
@@ -939,11 +939,11 @@ class ServicePageController extends Controller
      */
     private function priceBounds(array $categoryIds): array
     {
-        $annonces = (float) (Ad::where('is_approved', true)
+        $annonces = (float) (Ad::published()
             ->whereIn('category_id', $categoryIds)
             ->max('price_per_day') ?? 0);
 
-        $produits = (float) (Product::where('is_active', true)
+        $produits = (float) (Product::available()
             ->whereIn('category_id', $categoryIds)
             ->max('price') ?? 0);
 
@@ -1008,12 +1008,12 @@ class ServicePageController extends Controller
      */
     private function cities(array $categoryIds): Collection
     {
-        $adresses = Ad::where('is_approved', true)
+        $adresses = Ad::published()
             ->whereIn('category_id', $categoryIds)
             ->whereNotNull('address')
             ->pluck('address')
             ->merge(
-                Product::where('is_active', true)
+                Product::available()
                     ->whereIn('category_id', $categoryIds)
                     ->whereNotNull('address')
                     ->pluck('address')
@@ -1038,8 +1038,8 @@ class ServicePageController extends Controller
      */
     private function popular(array $categoryIds): Collection
     {
-        $ads = Ad::with(['images', 'category', 'user'])
-            ->where('is_approved', true)
+        $ads = Ad::with(['images', 'category.service', 'user'])
+            ->published()
             ->whereIn('category_id', $categoryIds)
             ->where('views', '>', 0)
             ->orderByDesc('views')
@@ -1048,7 +1048,7 @@ class ServicePageController extends Controller
             ->map(fn (Ad $ad) => Listing::fromAd($ad));
 
         $products = Product::with(['images', 'category', 'user'])
-            ->where('is_active', true)
+            ->available()
             ->whereIn('category_id', $categoryIds)
             ->where('views', '>', 0)
             ->orderByDesc('views')

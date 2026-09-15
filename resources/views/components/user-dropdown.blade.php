@@ -27,8 +27,14 @@
     $pending    = ! $verified;
 
     $adsCount      = $menuAdsCount      ?? 0;
+    $archivedCount = $menuArchivedCount ?? 0;
     $receivedCount = $menuReceivedCount ?? 0;
     $messagesCount = $menuMessagesCount ?? 0;
+
+    /* Archives : annonces expirees, produits epuises ou hors ligne, trajets
+       passes. L'entree s'adresse a qui publie (locateur, vendeur, conducteur),
+       et reste visible pour tout membre qui a deja quelque chose d'archive. */
+    $showArchives = $archivedCount > 0 || $u->hasRole(['locateur', 'vendeur', 'chauffeur_vtc']);
 @endphp
 
 <div class="user-menu {{ $compact ? 'is-compact' : '' }}">
@@ -82,6 +88,21 @@
                     <span>Retour à la plateforme</span>
                 </a>
             </li>
+
+            {{-- Les archives couvrent annonces, produits et trajets : elles
+                 n'appartiennent a aucune section de la barre laterale, le
+                 menu du header les garde a un clic depuis toutes les pages. --}}
+            @if ($showArchives)
+                <li class="{{ Route::is('archives') ? 'active' : '' }}">
+                    <a href="{{ route('archives') }}">
+                        <i class="fa-solid fa-box-archive"></i>
+                        <span>Archives</span>
+                        @if ($archivedCount)
+                            <em class="ud-count">{{ $archivedCount }}</em>
+                        @endif
+                    </a>
+                </li>
+            @endif
         @endif
 
         @unless ($compact)
@@ -105,7 +126,22 @@
                         @endif
                     </a>
                 </li>
+            @endif
 
+            {{-- Tout ce qui a quitte la plateforme : annonces, produits, trajets --}}
+            @if ($showArchives)
+                <li class="{{ Route::is('archives') ? 'active' : '' }}">
+                    <a href="{{ route('archives') }}">
+                        <i class="fa-solid fa-box-archive"></i>
+                        <span>Archives</span>
+                        @if ($archivedCount)
+                            <em class="ud-count">{{ $archivedCount }}</em>
+                        @endif
+                    </a>
+                </li>
+            @endif
+
+            @if ($isLocateur)
                 <li class="{{ Route::is('bookings.receivedBookings') ? 'active' : '' }}">
                     <a href="{{ route('bookings.receivedBookings') }}">
                         <i class="fa-regular fa-envelope-open"></i>

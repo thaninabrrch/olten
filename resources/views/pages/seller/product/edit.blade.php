@@ -10,6 +10,10 @@
         <i class="fa-solid fa-chevron-right"></i>
         <a href="{{ route('seller.produits.index') }}">Mes produits</a>
         <i class="fa-solid fa-chevron-right"></i>
+        @if ($product->isArchived())
+            <a href="{{ route('archives', ['type' => 'produit']) }}">Archives</a>
+            <i class="fa-solid fa-chevron-right"></i>
+        @endif
         <span class="is-current">Modifier</span>
     </nav>
 
@@ -31,6 +35,16 @@
     <form action="{{ route('seller.produits.update', $product) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
+
+        {{-- Modifie depuis les archives : on dit ce qui le tient hors de la vente --}}
+        @if ($product->isArchived())
+            <div class="sp-note">
+                <i class="fa-solid fa-box-archive"></i>
+                Ce produit est archivé ({{ mb_strtolower($product->archiveReason()) }}) : il n'est plus visible
+                sur la plateforme. Pour le remettre en vente, indiquez un stock supérieur à zéro et cochez
+                la mise en ligne.
+            </div>
+        @endif
 
         @if ($errors->any())
             <div class="sp-alert">

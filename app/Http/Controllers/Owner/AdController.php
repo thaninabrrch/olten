@@ -22,32 +22,38 @@ class AdController extends Controller
     {
         $search     = $request->input('search');
         $categoryId = $request->input('category_id');
-        $status     = $request->input('status');          // ← nouveau
+        $status     = $request->input('status');
+
+        // Les annonces expirees ont quitte « Mes annonces » pour les archives.
+        // L'ancien onglet « Expirees » reste un lien valable.
+        if ($status === 'expired') {
+            return redirect()->route('archives', ['type' => 'annonce'] + $request->only('search'));
+        }
 
         $query = Ad::where('user_id', Auth::id())
-                ->with('category')
+                ->notExpired()
+                ->with(['category.service', 'images'])
                 ->latest();
 
         if ($search) {
-            $query->where('title', 'ILIKE', "%{$search}%");
+            // `like` et non `ILIKE` : ILIKE n'existe que sous PostgreSQL et
+            // faisait echouer la recherche sous MySQL.
+            $query->where('title', 'like', "%{$search}%");
         }
 
         if ($categoryId && $categoryId !== 'all') {
             $query->where('category_id', $categoryId);
         }
 
-      
         match($status) {
             'approved' => $query->where('is_approved', true)->whereNull('rejected_at'),
-            'pending'  => $query->where('is_approved', false)->whereNull('rejected_at')
-                                ->where(fn($q) => $q->whereNull('expires_at')
-                                                ->orWhere('expires_at', '>=', now())),
+            'pending'  => $query->where('is_approved', false)->whereNull('rejected_at'),
             'rejected' => $query->whereNotNull('rejected_at'),
-            'expired'  => $query->whereNotNull('expires_at')->where('expires_at', '<', now()),
             default    => null,
         };
 
-        $ads        = $query->paginate(8)->withQueryString();
+        $ads           = $query->paginate(8)->withQueryString();
+        $archivedCount = Ad::where('user_id', Auth::id())->expired()->count();
         // Les categories sont des sous-parties d'un service : on les charge
         // avec leur service pour pouvoir les regrouper dans le selecteur.
         $categories = Category::with('service')
@@ -55,7 +61,7 @@ class AdController extends Controller
                               ->orderBy('id')
                               ->get();
 
-        return view('pages.locateur.mes_annonces', compact('ads', 'categories'));
+        return view('pages.locateur.mes_annonces', compact('ads', 'categories', 'archivedCount'));
     }
 
     public function show($id)
@@ -295,6 +301,14 @@ class AdController extends Controller
         }
         $ad->update($validated);
 
+        // Remettre en ligne une annonce archivee passe par une nouvelle date
+        // de fin. Si elle est toujours depassee, l'annonce reste aux archives :
+        // on y renvoie plutot que de laisser croire qu'elle est republiee.
+        if ($ad->isExpired()) {
+            return redirect()->route('archives', ['type' => 'annonce'])
+                ->with('success', 'Annonce mise à jour. Elle reste archivée : sa date de fin de disponibilité est dépassée.');
+        }
+
         return redirect()->route('ads.index')->with('success', 'Annonce mise à jour avec succès.');
     }
 
@@ -325,8 +339,14 @@ class AdController extends Controller
     public function destroy(Ad $ad)
     {
         $this->authorize('delete', $ad);
+
+        // On revient sur la liste d'ou la suppression a ete lancee
+        $liste = $ad->isExpired()
+            ? route('archives', ['type' => 'annonce'])
+            : route('ads.index');
+
         $ad->delete();
-        return redirect()->route('ads.index')->with('success', 'Annonce supprimée avec succès.');
+        return redirect($liste)->with('success', 'Annonce supprimée avec succès.');
     }
 
     public function destroyImgs(AdImage $image)
