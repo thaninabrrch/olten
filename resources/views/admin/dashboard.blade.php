@@ -4,7 +4,7 @@
 @section('page_title', 'Tableau de bord')
 
 @section('content')
-    <div class="p-6 lg:p-10 space-y-8">
+    <div class="space-y-6 sm:space-y-8">
 
         {{-- Header --}}
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

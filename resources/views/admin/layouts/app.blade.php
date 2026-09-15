@@ -7,7 +7,15 @@
     <title>@yield('title', 'Olten Admin Dashboard')</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('assets/css/admin.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/admin.css') }}?v={{ @filemtime(public_path('assets/css/admin.css')) ?: 1 }}">
+    {{-- Applique l'etat replie de la sidebar avant le rendu (evite le saut visuel) --}}
+    <script>
+        try {
+            if (localStorage.getItem('admin-sidebar-collapsed') === '1') {
+                document.documentElement.classList.add('sidebar-collapsed');
+            }
+        } catch (e) {}
+    </script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
@@ -19,26 +27,23 @@
     @stack('styles')
 </head>
 
-<body class="light-mode min-h-screen">
+<body class="light-mode admin-body">
 
     <!-- Sidebar -->
     @include('admin.layouts._sidebar')
 
-    <!-- Content Wrapper -->
-    @include('admin.layouts.seting')
-
-    <div id="main-content" class="main-content-area flex-1 md:ml-64 transition-all duration-300 ease-in-out">
+    <div id="main-content" class="admin-main">
         <!-- Navbar -->
         @include('admin.layouts._navbar')
 
         <!-- Page Content -->
-        <main class="container-fluid p-6 flex-grow">
+        <main class="admin-content">
             @yield('content')
         </main>
 
         <!-- Footer -->
-        <footer class="p-4 mt-6 border-t border-gray-200 text-center text-sm text-gray-500">
-            &copy; 2025 Olten Admin. Tous droits réservés.
+        <footer class="admin-footer">
+            &copy; {{ date('Y') }} Olten Admin. Tous droits réservés.
         </footer>
     </div>
 
@@ -67,7 +72,7 @@
 
 
 
-    <script src="{{ asset('assets/js/admin/dash.js') }}"></script>
+    <script src="{{ asset('assets/js/admin/dash.js') }}?v={{ @filemtime(public_path('assets/js/admin/dash.js')) ?: 1 }}"></script>
 
 </body>
 
