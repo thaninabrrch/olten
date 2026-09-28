@@ -60,15 +60,39 @@
 
             <aside class="cvd-side">
 
-                <div class="cvd-recap" data-cvd-recap>
+                @php
+                    $isOwner   = auth()->check() && auth()->id() === $driver?->id;
+                    $bookUrl   = route('covoiturage.checkout', $trip);
+                    $seatsLeft = $trip->seatsLeft();
+                    $isFull    = $trip->statut === 'complet' || $seatsLeft < 1;
+
+                    // Places payées : une réservation peut en compter plusieurs.
+                    $bookedByLeg = collect($trip->legKeys())->mapWithKeys(fn ($l) => [$l => $trip->seatsBooked($l)]);
+                    $booked      = (int) $bookedByLeg->max();
+
+                    // Places libres par sens : un sens complet ne peut plus être coché.
+                    $leftByLeg = collect($legs)->map(fn ($leg, $key) => $trip->seatsLeft($key));
+
+                    // Montants de départ (une place, sens encore libres) ; le script
+                    // les recalcule à chaque changement, avec la même règle d'arrondi
+                    // que le paiement.
+                    $rate     = \App\Models\Covoiturage::serviceRate();
+                    $subtotal = collect($legs)->filter(fn ($leg, $key) => $leftByLeg[$key] > 0)->sum('total');
+                    $fee      = \App\Models\Covoiturage::serviceFee($subtotal);
+                    $euros    = fn ($amount) => number_format((float) $amount, 2, ',', ' ') . ' €';
+                @endphp
+
+                <div class="cvd-recap" data-cvd-recap data-cvd-rate="{{ $rate }}">
                     <span class="cvd-recap-label">Récapitulatif</span>
 
                     {{-- Chaque sens se coche : le passager choisit l'aller, le retour ou les deux. --}}
                     @foreach ($legs as $key => $leg)
-                        <label class="cvd-recap-leg">
-                            <input type="checkbox" class="cvd-recap-check" checked
+                        <label class="cvd-recap-leg {{ $leftByLeg[$key] < 1 ? 'is-off is-full' : '' }}">
+                            <input type="checkbox" class="cvd-recap-check"
+                                   @checked($leftByLeg[$key] > 0) @disabled($leftByLeg[$key] < 1)
                                    data-cvd-leg="{{ $key }}"
-                                   data-cvd-price="{{ $leg['total'] }}">
+                                   data-cvd-price="{{ $leg['total'] }}"
+                                   data-cvd-seats-left="{{ $leftByLeg[$key] }}">
                             <span class="cvd-recap-box"><i class="fa-solid fa-check"></i></span>
 
                             <span class="cvd-recap-icon {{ $key === 'retour' ? 'is-return' : '' }}">
@@ -85,34 +109,77 @@
                                     @if ($leg['time'])
                                         {{ $leg['time'] }}
                                     @endif
+                                    @if ($leftByLeg[$key] < 1)
+                                        · Complet
+                                    @endif
                                 </small>
                             </span>
 
                             <span class="cvd-recap-leg-price">
-                                {{ number_format($leg['total'], 0, ',', ' ') }}€
+                                {{ $euros($leg['total']) }}
                             </span>
                         </label>
                     @endforeach
 
+                    @unless ($isOwner || $isFull)
+                        {{-- Nombre de places : borné par les places libres du sens
+                             coché le plus rempli (le serveur revérifie au paiement). --}}
+                        <div class="cvd-recap-seats">
+                            <span class="cvd-recap-seats-info">
+                                <strong>Places</strong>
+                                <small data-cvd-seats-hint>
+                                    {{ $seatsLeft }} disponible{{ $seatsLeft > 1 ? 's' : '' }}
+                                </small>
+                            </span>
+
+                            <div class="cvd-stepper">
+                                <button type="button" data-cvd-seats-step="-1" aria-label="Retirer une place" disabled>
+                                    <i class="fa-solid fa-minus"></i>
+                                </button>
+                                <input type="number" value="1" min="1" max="{{ max(1, $seatsLeft) }}"
+                                       inputmode="numeric" data-cvd-seats aria-label="Nombre de places">
+                                <button type="button" data-cvd-seats-step="1" aria-label="Ajouter une place"
+                                        @disabled($seatsLeft <= 1)>
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    @endunless
+
+                    <div class="cvd-recap-lines">
+                        <div class="cvd-recap-line">
+                            <span data-cvd-subtotal-label>Trajet · 1 place</span>
+                            <span data-cvd-subtotal>{{ $euros($subtotal) }}</span>
+                        </div>
+                        <div class="cvd-recap-line">
+                            <span>Frais de service ({{ rtrim(rtrim(number_format($rate, 2, ',', ''), '0'), ',') }} %)</span>
+                            <span data-cvd-fee>{{ $euros($fee) }}</span>
+                        </div>
+                    </div>
+
                     <div class="cvd-recap-total">
                         <span>Total</span>
-                        <strong data-cvd-total>{{ number_format($total, 0, ',', ' ') }}€</strong>
+                        <strong data-cvd-total>{{ $euros($subtotal + $fee) }}</strong>
                     </div>
 
                     {{-- La destination reste la meme pour tous : un visiteur non
                          connecte voit la popin de connexion (data-auth-required,
                          gere par assets/js/auth.js) et arrive ici une fois
-                         connecte, sens selectionnes compris. --}}
-                    @php $bookUrl = $driver ? route('messages.show', $driver) : route('contact'); @endphp
+                         connecte, sens et places selectionnes compris. --}}
+                    @if ($isOwner)
+                        <p class="cvd-recap-hint">C'est votre trajet.</p>
+                    @elseif ($isFull)
+                        <p class="cvd-recap-hint">Ce trajet est complet.</p>
+                    @else
+                        <a href="{{ $bookUrl }}" class="cvd-recap-btn" data-cvd-book
+                           data-cvd-href="{{ $bookUrl }}" data-auth-required>
+                            Réserver maintenant
+                        </a>
 
-                    <a href="{{ $bookUrl }}" class="cvd-recap-btn" data-cvd-book
-                       data-cvd-href="{{ $bookUrl }}" data-auth-required>
-                        Réserver maintenant
-                    </a>
-
-                    <p class="cvd-recap-hint" data-cvd-hint hidden>
-                        Sélectionnez au moins un sens pour réserver.
-                    </p>
+                        <p class="cvd-recap-hint" data-cvd-hint hidden>
+                            Sélectionnez au moins un sens pour réserver.
+                        </p>
+                    @endif
                 </div>
 
                 <div class="cvd-vehicle">
@@ -122,11 +189,11 @@
                             {{ $vehicle ? \Illuminate\Support\Str::title(trim($vehicle->marque . ' ' . $vehicle->modele)) : 'Véhicule non renseigné' }}
                         </strong>
                         <small>
-                            @if ($vehicle)
-                                {{ $vehicle->couleur ? ucfirst($vehicle->couleur) . ' · ' : '' }}
-                                {{ $vehicle->places ? $vehicle->places . ' places' : $trip->nb_places . ' places proposées' }}
+                            {{ $vehicle?->couleur ? ucfirst($vehicle->couleur) . ' · ' : '' }}
+                            @if ($isFull)
+                                Complet
                             @else
-                                {{ $trip->nb_places }} place{{ $trip->nb_places > 1 ? 's' : '' }} proposée{{ $trip->nb_places > 1 ? 's' : '' }}
+                                {{ $seatsLeft }} place{{ $seatsLeft > 1 ? 's' : '' }} restante{{ $seatsLeft > 1 ? 's' : '' }}
                             @endif
                         </small>
                     </span>
@@ -249,14 +316,6 @@
             <aside class="cvd-infos">
                 <span class="cvd-infos-label">Infos voyage</span>
 
-                <div class="cvd-info">
-                    <span class="cvd-info-icon is-blue"><i class="fa-solid fa-user-group"></i></span>
-                    <span class="cvd-info-text">
-                        <strong>{{ $trip->nb_places }} place{{ $trip->nb_places > 1 ? 's' : '' }}</strong>
-                        <small>{{ $trip->statut === 'complet' ? 'Trajet complet' : 'Encore disponibles' }}</small>
-                    </span>
-                </div>
-
                 @if ($mode)
                     <div class="cvd-info">
                         <span class="cvd-info-icon is-pink"><i class="fa-solid {{ $mode[0] }}"></i></span>
@@ -294,6 +353,39 @@
                         </small>
                     </span>
                 </div>
+                <div class="cvd-info">
+                    <span class="cvd-info-icon is-blue"><i class="fa-solid fa-user-group"></i></span>
+                    <span class="cvd-info-text">
+                        <strong>{{ $seatsLeft }} place{{ $seatsLeft > 1 ? 's' : '' }} restante{{ $seatsLeft > 1 ? 's' : '' }}</strong>
+                        <small>
+                            @if ($isFull)
+                                Trajet complet
+                            @elseif ($trip->retour)
+                                Aller : {{ $trip->seatsLeft('aller') }} · Retour : {{ $trip->seatsLeft('retour') }}
+                            @else
+                                Réservez la vôtre avant qu'elle parte.
+                            @endif
+                        </small>
+                    </span>
+                </div>
+                <div class="cvd-info">
+    <span class="cvd-info-icon is-green"><i class="fa-solid fa-ticket"></i></span>
+    <span class="cvd-info-text">
+        @if ($booked > 0)
+            <strong>{{ $booked }} place{{ $booked > 1 ? 's' : '' }} réservée{{ $booked > 1 ? 's' : '' }}</strong>
+            <small>
+                @if ($trip->retour)
+                    Aller : {{ $bookedByLeg['aller'] }} · Retour : {{ $bookedByLeg['retour'] }}
+                @else
+                    Par d'autres passagers sur ce trajet.
+                @endif
+            </small>
+        @else
+            <strong>Aucune place réservée</strong>
+            <small>Soyez le premier à réserver ce trajet.</small>
+        @endif
+    </span>
+</div>
             </aside>
         </div>
 
@@ -310,21 +402,33 @@
                 <a href="{{ route('contact') }}" class="cvd-help-btn">Contacter le support</a>
             </div>
 
-            <div class="cvd-policy">
-                <span class="cvd-policy-icon"><i class="fa-solid fa-shield-halved"></i></span>
-                <div>
-                    <h3 class="cvd-policy-title">Conditions et annulation</h3>
-                    <p class="cvd-policy-text">
-                        @if ($trip->message_conducteur)
-                            « {{ $trip->message_conducteur }} »
-                        @else
-                            Prévenez le conducteur au plus tôt en cas d'empêchement : une place libérée
-                            à temps peut profiter à un autre passager. Les conditions d'annulation sont
-                            convenues directement avec lui.
-                        @endif
-                    </p>
-                </div>
-            </div>
+      <div class="cvd-msg">
+    <div class="cvd-msg-head">
+        <span class="cvd-msg-icon"><i class="fa-regular fa-message"></i></span>
+        <div>
+            <h3 class="cvd-msg-title">Message du conducteur</h3>
+            <p class="cvd-msg-sub">Instructions et préférences de voyage</p>
+        </div>
+    </div>
+
+    <div class="cvd-msg-box">
+        @if ($trip->message_conducteur)
+            « {{ $trip->message_conducteur }} »
+        @else
+            Prévenez le conducteur au plus tôt en cas d'empêchement : une place libérée
+            à temps peut profiter à un autre passager. Les conditions d'annulation sont
+            convenues directement avec lui.
+        @endif
+    </div>
+
+    {{-- adapte la condition à ton champ réel --}}
+    @if ($trip->bagages_autorises ?? true)
+        <div class="cvd-msg-foot">
+            <span class="cvd-msg-dot"></span>
+            <span>À savoir avant le départ</span>
+        </div>
+    @endif
+</div>
         </div>
 
     </div>
@@ -333,37 +437,80 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
 
-        // ---- Selection des sens : le total suit les cases cochees ----
+        // ---- Recapitulatif : sens coches, nombre de places et montants ----
+        // Les montants se calculent en centimes, avec le meme arrondi que le
+        // paiement (TripBookingController::amounts) : la page de paiement
+        // affiche donc exactement le total vu ici.
+        const recap = document.querySelector('[data-cvd-recap]');
+        const rate = parseFloat(recap?.dataset.cvdRate || '0');
         const checks = document.querySelectorAll('[data-cvd-leg]');
+        const seatsInput = document.querySelector('[data-cvd-seats]');
+        const seatsHint = document.querySelector('[data-cvd-seats-hint]');
+        const steps = document.querySelectorAll('[data-cvd-seats-step]');
+        const subtotalLabel = document.querySelector('[data-cvd-subtotal-label]');
+        const subtotalEl = document.querySelector('[data-cvd-subtotal]');
+        const feeEl = document.querySelector('[data-cvd-fee]');
         const totalEl = document.querySelector('[data-cvd-total]');
         const bookBtn = document.querySelector('[data-cvd-book]');
         const hintEl = document.querySelector('[data-cvd-hint]');
 
-        function euros(value) {
-            return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(value) + '€';
+        function euros(cents) {
+            return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                .format(cents / 100) + ' €';
+        }
+
+        function plural(n, word) {
+            return n + ' ' + word + (n > 1 ? 's' : '');
         }
 
         function refreshTotal() {
-            let total = 0;
+            let seatCents = 0;
             const selected = [];
+            const lefts = [];
 
             checks.forEach(function (check) {
                 check.closest('.cvd-recap-leg')?.classList.toggle('is-off', !check.checked);
 
                 if (!check.checked) return;
 
-                total += parseFloat(check.dataset.cvdPrice || '0');
+                seatCents += Math.round(parseFloat(check.dataset.cvdPrice || '0') * 100);
                 selected.push(check.dataset.cvdLeg);
+                lefts.push(parseInt(check.dataset.cvdSeatsLeft || '0', 10));
             });
 
-            if (totalEl) totalEl.textContent = euros(total);
+            // On ne peut pas reserver plus de places que n'en laisse le sens
+            // coche le plus rempli.
+            const max = lefts.length ? Math.max(1, Math.min.apply(null, lefts)) : 1;
+            let seats = parseInt(seatsInput?.value || '1', 10);
+            seats = Math.min(Math.max(isNaN(seats) ? 1 : seats, 1), max);
+
+            if (seatsInput) {
+                seatsInput.max = max;
+                seatsInput.value = seats;
+            }
+
+            steps.forEach(function (step) {
+                step.disabled = step.dataset.cvdSeatsStep === '-1' ? seats <= 1 : seats >= max;
+            });
+
+            if (seatsHint && lefts.length) {
+                seatsHint.textContent = plural(max, 'disponible');
+            }
+
+            const subtotalCents = seatCents * seats;
+            const feeCents = Math.round(subtotalCents * rate / 100);
+
+            if (subtotalLabel) subtotalLabel.textContent = 'Trajet · ' + plural(seats, 'place');
+            if (subtotalEl) subtotalEl.textContent = euros(subtotalCents);
+            if (feeEl) feeEl.textContent = euros(feeCents);
+            if (totalEl) totalEl.textContent = euros(subtotalCents + feeCents);
 
             if (bookBtn) {
                 const base = bookBtn.dataset.cvdHref || '#';
                 bookBtn.classList.toggle('is-disabled', selected.length === 0);
 
                 bookBtn.href = selected.length
-                    ? base + (base.includes('?') ? '&' : '?') + 'legs=' + selected.join(',')
+                    ? base + (base.includes('?') ? '&' : '?') + 'legs=' + selected.join(',') + '&seats=' + seats
                     : base;
             }
 
@@ -373,6 +520,15 @@
         checks.forEach(function (check) {
             check.addEventListener('change', refreshTotal);
         });
+
+        steps.forEach(function (step) {
+            step.addEventListener('click', function () {
+                seatsInput.value = parseInt(seatsInput.value || '1', 10) + parseInt(step.dataset.cvdSeatsStep, 10);
+                refreshTotal();
+            });
+        });
+
+        seatsInput?.addEventListener('change', refreshTotal);
 
         refreshTotal();
 

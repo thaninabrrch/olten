@@ -173,4 +173,6 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail
             'notification_preferences'
         );
     }
+    public function trips()        { return $this->hasMany(Covoiturage::class, 'conducteur_id'); }
+    public function tripBookings() { return $this->hasMany(TripBooking::class); }
 }

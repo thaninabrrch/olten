@@ -46,7 +46,7 @@
 
         <header class="ck-head">
             <div>
-                <span class="ck-eyebrow"><i class="fa-solid fa-lock"></i> Paiement sécurisé</span>
+                <span class="ck-eyebrow"><i class="fa-solid fa-lock"></i> Paiement sécurisé </span>
                 <h1 class="ck-title">Finaliser votre <em>achat</em></h1>
                 <p class="ck-lead">
                     Vérifiez vos informations, choisissez la livraison si vous en avez besoin,

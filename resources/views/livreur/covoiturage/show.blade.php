@@ -426,15 +426,27 @@
                         Modifier le trajet
                     </a>
 
-                    <form id="form-annuler-trajet"
-                          action="{{ route('covoiturage.destroy', $trajet->covoiturage_id) }}" method="POST">
-                        @csrf
-                        @method('DELETE')
-                        <button type="button" class="sp-act is-cancel" onclick="confirmerAnnulation()">
-                            Annuler
-                        </button>
-                    </form>
+                    @unless ($isBooked)
+                        <form id="form-annuler-trajet"
+                              action="{{ route('covoiturage.destroy', $trajet->covoiturage_id) }}" method="POST">
+                            @csrf
+                            @method('DELETE')
+                            <button type="button" class="sp-act is-cancel" onclick="confirmerAnnulation()">
+                                Annuler
+                            </button>
+                        </form>
+                    @endunless
                 </div>
+
+                @if ($isBooked)
+                    {{-- Le conducteur s'est engagé envers ses passagers : seul un
+                         passager peut annuler sa propre réservation. --}}
+                    <p class="sp-lock">
+                        <i class="fa-solid fa-lock"></i>
+                        Des passagers ont réservé ce trajet : vous ne pouvez plus l'annuler.
+                        <a href="{{ route('trips.received') }}#trajet-{{ $trajet->covoiturage_id }}">Voir les réservations</a>
+                    </p>
+                @endif
             </section>
 
             <div class="sp-note">
@@ -576,7 +588,7 @@
     function confirmerAnnulation() {
         Swal.fire({
             title: 'Annuler ce trajet ?',
-            text: 'Cette action est définitive : le trajet et ses réservations seront supprimés.',
+            text: 'Cette action est définitive : le trajet sera supprimé.',
             icon: 'warning',
             iconColor: '#c0392b',
             showCancelButton: true,

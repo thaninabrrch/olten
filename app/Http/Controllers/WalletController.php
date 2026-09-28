@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Booking;
 use App\Models\Delivery;
 use App\Models\ProductSale;
+use App\Models\TripBooking;
 
 class WalletController extends Controller
 {
@@ -13,9 +13,7 @@ class WalletController extends Controller
     {
         $user = auth()->user();
 
-        $adEarnings = Booking::whereHas('ad', function ($q) use ($user) {
-                                $q->where('user_id', $user->id);
-                            })
+        $adEarnings = Booking::whereHas('ad', fn ($q) => $q->where('user_id', $user->id))
                             ->where('status', 'paid')
                             ->sum('total_price');
 
@@ -27,6 +25,17 @@ class WalletController extends Controller
                                     ->where('status', 'delivered')
                                     ->sum('total_price');
 
-        return view('pages.wallet', compact('user', 'adEarnings', 'productEarnings', 'deliveryEarnings'));
+        // Covoiturage : part du conducteur, hors commission plateforme.
+        // Une réservation annulée a le statut "cancelled" : elle sort de la somme.
+        $tripEarnings = TripBooking::whereHas('trip', fn ($q) => $q->where('conducteur_id', $user->id))
+                                   ->where('status', 'paid')
+                                   ->sum('driver_amount');
+
+        // Détail par trajet (évite les requêtes en boucle dans la vue)
+        $trips = $user->trips()->with(['bookings' => fn ($q) => $q->where('status', 'paid')])->get();
+
+        return view('pages.wallet', compact(
+            'user', 'adEarnings', 'productEarnings', 'deliveryEarnings', 'tripEarnings', 'trips'
+        ));
     }
 }

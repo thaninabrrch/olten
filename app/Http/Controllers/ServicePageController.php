@@ -57,6 +57,23 @@ class ServicePageController extends Controller
 
     /** Plafond de marqueurs envoyes a la carte. */
     private const MAP_LIMIT = 200;
+    /**
+     * Trajets réservables : à venir, non désactivés ET avec assez de places
+     * libres (réservations payées déduites). Toutes les pages passent par là,
+     * pour que la liste, les chiffres du hero, les villes et les bornes de
+     * recherche parlent des mêmes trajets.
+     */
+    private function availableTrips(array $filters = [], array $with = []): Collection
+    {
+        $seatsWanted = max(1, (int) ($filters['persons'] ?? 0));
+    
+        return $this->tripQuery($filters)
+            ->with(array_merge(['paidBookings'], $with))
+            ->get()
+            ->filter(fn (Covoiturage $trip) => $trip->seats_left >= $seatsWanted)
+            ->values();
+    }
+    
 
     /**
      * Vitrine « Nos services » : la liste complete des services de la
@@ -82,7 +99,7 @@ class ServicePageController extends Controller
         // Le covoiturage ne publie ni annonces ni produits : ses offres sont
         // des trajets, ranges dans une table a part. Sans ce cas particulier,
         // sa carte annoncait « 0 offre » alors que des trajets sont en ligne.
-        $trips = $this->tripQuery()->count();
+        $trips = $this->availableTrips()->count();
 
         $services->each(function (Service $service) use ($trips) {
             $service->offers_count = str_starts_with($service->slug, 'covoiturage')
@@ -147,10 +164,9 @@ class ServicePageController extends Controller
     private function covoiturage(Request $request, Service $service)
     {
         $filters = $this->tripFilters($request);
-
-        $trips = $this->tripQuery($filters)->with('conducteur')->get();
-
+        $trips  = $this->availableTrips($filters, ['conducteur']);
         $routes = $this->groupByRoute($trips, $filters['sort']);
+
 
         return view('services.covoiturage-service', [
             'service'    => $service,
@@ -185,12 +201,14 @@ class ServicePageController extends Controller
         // ses chiffres et borne la barre de recherche. Elle ne doit pas
         // bouger avec les criteres saisis, sinon un filtre trop etroit
         // retirerait du formulaire les valeurs permettant d'en sortir.
-        $all = $this->onRoute($this->tripQuery()->get(), $from, $to);
-
+        $all = $this->onRoute($this->availableTrips(), $from, $to);
+        
         $trips = $this->sortTrips(
-            $this->onRoute($this->tripQuery($filters)->with(['conducteur.vehicle'])->get(), $from, $to),
+            $this->onRoute($this->availableTrips($filters, ['conducteur.vehicle']), $from, $to),
             $filters['sort']
         );
+ 
+
 
         return view('services.covoiturage-trajets', [
             'from'       => $all->first()?->depart_ville ?: $from,
@@ -245,8 +263,7 @@ class ServicePageController extends Controller
     {
         abort_if($covoiturage->statut === 'inactif', 404);
 
-        $covoiturage->load('conducteur.vehicle');
-
+        $covoiturage->load(['conducteur.vehicle', 'paidBookings']);
         $return = $covoiturage->return_trip_data ?? [];
         $returnTrip = $return['trajet'] ?? [];
 
@@ -428,19 +445,22 @@ class ServicePageController extends Controller
      *
      * Sans argument, elle decrit tout le service ; avec, la liaison ouverte.
      */
+
     private function tripCriteria(?Collection $trips = null): array
     {
-        $trips ??= $this->tripQuery()->get(['covoiturage_id', 'nb_places', 'prix_place', 'prix_total_affiche']);
-
+        $trips ??= $this->availableTrips();
+    
         $prices = $trips->map(fn (Covoiturage $t) => (float) ($t->prix_total_affiche ?: $t->prix_place))
                         ->filter(fn (float $price) => $price > 0);
-
+    
         return [
-            'seats'     => (int) $trips->max('nb_places'),
+            // Plus grand nombre de places encore libres sur un trajet
+            'seats'     => (int) $trips->max('seats_left'),
             'min_price' => $prices->min(),
             'max_price' => $prices->max(),
         ];
     }
+
 
     /**
      * Trajets exposes au public : a venir et non desactives. Un trajet dont
@@ -487,7 +507,7 @@ class ServicePageController extends Controller
                     'to'        => $first->destination_ville,
                     'image'     => RouteImage::for($first->depart_ville, $first->destination_ville),
                     'count'     => $group->count(),
-                    'seats'     => $group->sum('nb_places'),
+                    'seats'     => $group->sum('seats_left'),
                     'min_price' => $prices->min(),
                     'next'      => $group->min('date_depart'),
                     'drivers'   => $group->map(fn (Covoiturage $t) => $t->conducteur)
@@ -512,7 +532,9 @@ class ServicePageController extends Controller
      */
     private function tripStats(): array
     {
-        $trips = $this->tripQuery()->get(['covoiturage_id', 'depart', 'destination', 'conducteur_id']);
+        
+        $trips = $this->availableTrips();
+
 
         return [
             'trips'   => $trips->count(),
@@ -528,7 +550,7 @@ class ServicePageController extends Controller
      */
     private function tripCities(): array
     {
-        $trips = $this->tripQuery()->get(['covoiturage_id', 'depart', 'destination']);
+        $trips = $this->availableTrips();
 
         // Depart et arrivee sont proposes separement : toutes les villes ne
         // sont pas des villes de depart, et l'inverse est vrai aussi.

@@ -122,6 +122,13 @@
                 Les Annonces Populaires du Moment
             </h2>
         </div>
+
+        @if($latestItems->isNotEmpty())
+            <a href="{{ route('search') }}" class="section-link">
+                Voir tout
+                <i class="fas fa-arrow-right"></i>
+            </a>
+        @endif
     </div>
 
     @if($latestItems->isNotEmpty())
@@ -322,6 +329,125 @@
             action-label="Publier la première annonce"
             action-auth
             text="Soyez le premier à publier un service, une location, un trajet en covoiturage ou un objet à vendre sur la plateforme Olten." />
+
+    @endif
+
+</section>
+
+<!---------- Trajets du jour -------------->
+@php
+    // Même carte que les annonces ci-dessus ; le lien « Voir tout » ouvre la
+    // page covoiturage filtrée sur la date du jour.
+    $today      = today()->toDateString();
+    $tripsUrl   = route('services.show', [
+        'slug'       => \App\Models\Covoiturage::SERVICE_SLUG,
+        'start_date' => $today,
+        'end_date'   => $today,
+    ]);
+    $tripRate   = rtrim(rtrim(number_format(\App\Models\Covoiturage::serviceRate(), 2, ',', ''), '0'), ',');
+@endphp
+
+<section class="annonces-section annonces-section--white home-trips">
+
+    <div class="section-header section-header--left">
+        <div class="section-heading">
+            <span class="section-eyebrow section-eyebrow--plain">Covoiturage</span>
+            <h2 class="section-title">
+                Les Trajets du Jour
+            </h2>
+        </div>
+
+        @if($todayTrips->isNotEmpty())
+            <a href="{{ $tripsUrl }}" class="section-link">
+                Voir tous les trajets du jour{{ $todayTripsTotal > $todayTrips->count() ? ' (' . $todayTripsTotal . ')' : '' }}
+                <i class="fas fa-arrow-right"></i>
+            </a>
+        @endif
+    </div>
+
+    @if($todayTrips->isNotEmpty())
+
+        <div class="annonces-grid">
+            @foreach($todayTrips as $trip)
+                @php
+                    $driver    = $trip->conducteur;
+                    $vehicle   = $driver?->vehicle;
+                    $seatsLeft = $trip->seats_left;
+                    $price     = $trip->seat_price;
+                    $fee       = \App\Models\Covoiturage::serviceFee($price);
+                    $departure = \Illuminate\Support\Str::substr((string) $trip->heure_depart, 0, 5);
+                    $duration  = (int) ($trip->selected_route['duration'] ?? 0);
+                @endphp
+
+                <a href="{{ route('covoiturage.trip', $trip->covoiturage_id) }}" class="annonce-card">
+
+                    <div class="card-image-container">
+                        <img
+                            src="{{ \App\Support\RouteImage::for($trip->depart_ville, $trip->destination_ville) }}"
+                            alt="{{ $trip->depart_ville }} → {{ $trip->destination_ville }}"
+                            class="card-image"
+                            loading="lazy"
+                        >
+
+                        <span class="category-badge">
+                            <i class="fa-regular fa-clock"></i>
+                            {{ $departure ? 'Départ ' . $departure : "Aujourd'hui" }}
+                        </span>
+                    </div>
+
+                    <div class="card-content">
+
+                        <div class="card-meta">
+                            <span class="card-location">
+                                <i class="fas fa-user"></i>
+                                {{ $driver->name ?? 'Conducteur' }}
+                            </span>
+
+                            <span class="card-delivery">
+                                <i class="fas fa-user-group"></i>
+                                {{ $seatsLeft }} place{{ $seatsLeft > 1 ? 's' : '' }} restante{{ $seatsLeft > 1 ? 's' : '' }}
+                            </span>
+                        </div>
+
+                        <h3 class="card-title">{{ $trip->depart_ville }} → {{ $trip->destination_ville }}</h3>
+
+                        <p class="card-desc">
+                            {{ $trip->retour ? 'Aller-retour' : 'Aller simple' }}
+                            @if($duration > 0)
+                                · {{ intdiv($duration, 3600) }}h{{ str_pad((string) intdiv($duration % 3600, 60), 2, '0', STR_PAD_LEFT) }} de route
+                            @endif
+                            @if($vehicle)
+                                · {{ \Illuminate\Support\Str::title(trim($vehicle->marque . ' ' . $vehicle->modele)) }}
+                            @endif
+                        </p>
+
+                        <div class="card-footer">
+                            <span class="card-price-block">
+                                <span class="card-price-label">la place</span>
+                                <span class="card-price">
+                                    {{ number_format($price, 2, ',', ' ') }} €
+                                </span>
+                                <span class="card-fee">
+                                    + {{ number_format($fee, 2, ',', ' ') }} € de frais ({{ $tripRate }} %)
+                                </span>
+                            </span>
+
+                            <span class="card-cta">Voir détails</span>
+                        </div>
+
+                    </div>
+
+                </a>
+            @endforeach
+        </div>
+
+    @else
+
+        <x-empty-state compact
+            title="Aucun trajet aujourd'hui"
+            text="Aucun conducteur ne part aujourd'hui pour le moment. Les trajets des prochains jours vous attendent."
+            :action-url="route('services.show', \App\Models\Covoiturage::SERVICE_SLUG)"
+            action-label="Voir les trajets à venir" />
 
     @endif
 

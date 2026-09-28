@@ -162,8 +162,11 @@
                                         ->addSeconds($duration)->format('H:i');
                         }
 
-                        $price  = $trip->prix_total_affiche ?: $trip->prix_place;
-                        $isFull = $trip->statut === 'complet' || $trip->nb_places < 1;
+                        // Prix d'une place fixé par le conducteur, et frais de service
+                        // ajoutés au paiement : le passager voit d'emblée ce qu'il paiera.
+                        $price = $trip->seat_price;
+                        $fee   = \App\Models\Covoiturage::serviceFee($price);
+                        $rate  = rtrim(rtrim(number_format(\App\Models\Covoiturage::serviceRate(), 2, ',', ''), '0'), ',');
 
                         $modes = [
                             'womenOnly'     => ['fa-venus', 'Entre femmes'],
@@ -171,6 +174,8 @@
                             'mixed'         => ['fa-users', 'Mixte'],
                         ];
                         $mode = $modes[$trip->passenger_mode] ?? null;
+                        $seatsLeft = $trip->seats_left;   
+                        $isFull    = $seatsLeft < 1;
                     @endphp
 
                     <article class="cv-trip">
@@ -244,7 +249,11 @@
                                             {{ $vehicle ? trim(\Illuminate\Support\Str::title($vehicle->marque . ' ' . $vehicle->modele)) : 'Véhicule non renseigné' }}
                                         </strong>
                                         <small>
-                                            {{ $trip->nb_places }} place{{ $trip->nb_places > 1 ? 's' : '' }} disponible{{ $trip->nb_places > 1 ? 's' : '' }}
+                                            @if ($isFull)
+                                                Complet
+                                            @else
+                                                {{ $seatsLeft }} place{{ $seatsLeft > 1 ? 's' : '' }} restante{{ $seatsLeft > 1 ? 's' : '' }}
+                                            @endif
                                             @if ($vehicle?->couleur)
                                                 · {{ $vehicle->couleur }}
                                             @endif
@@ -272,9 +281,17 @@
                             </div>
 
                             <div class="cv-trip-action">
-                                <span class="cv-trip-price">
-                                    {{ number_format((float) $price, 2, ',', ' ') }}&nbsp;€
-                                    <small>/ place</small>
+                                <span class="cv-trip-pricing">
+                                    <span class="cv-trip-price">
+                                        {{ number_format((float) $price, 2, ',', ' ') }}&nbsp;€
+                                        <small>/ place</small>
+                                    </span>
+                                    <span class="cv-trip-fee">
+                                        + {{ number_format($fee, 2, ',', ' ') }}&nbsp;€ de frais de service ({{ $rate }}&nbsp;%)
+                                    </span>
+                                    <span class="cv-trip-fee">
+                                        Soit <strong>{{ number_format($price + $fee, 2, ',', ' ') }}&nbsp;€</strong> la place
+                                    </span>
                                 </span>
                                 <a href="{{ route('covoiturage.trip', $trip->covoiturage_id) }}" class="cv-trip-btn">
                                     Voir détails

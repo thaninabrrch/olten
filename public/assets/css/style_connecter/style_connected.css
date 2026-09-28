@@ -4117,6 +4117,51 @@ span.expired {
     box-shadow: 0 10px 22px rgba(255, 60, 0, .34);
 }
 
+/* Plusieurs boutons dans l'en-tete : l'action secondaire prend la forme du
+   bouton principal pour que les deux s'alignent. */
+.sp-page .sp-head-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.sp-page .sp-head-actions .sp-act {
+    height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+}
+
+/* Action verrouillee : remplace un bouton qui n'a plus lieu d'etre
+   (ex. annuler un trajet deja reserve par des passagers). */
+.sp-page .sp-lock {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: var(--sp-radius-sm, 10px);
+    background: #f5f6f7;
+    color: #495057;
+    font-size: 12.5px;
+    line-height: 1.4;
+}
+
+.sp-page .sp-lock i {
+    color: #6b7280;
+}
+
+.sp-page .sp-lock a {
+    color: var(--color-primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.sp-page .sp-actions + .sp-lock {
+    margin: 0 16px 16px;
+}
+
 /* ---------- Indicateurs ---------- */
 .sp-page .sp-stats {
     display: grid;
@@ -4736,6 +4781,14 @@ span.expired {
     .sp-page .sp-btn-primary {
         width: 100%;
         justify-content: center;
+    }
+
+    .sp-page .sp-head-actions {
+        width: 100%;
+    }
+
+    .sp-page .sp-head-actions .sp-act {
+        width: 100%;
     }
 
     .sp-page .sp-stats {

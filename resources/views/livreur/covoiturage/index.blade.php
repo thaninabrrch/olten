@@ -44,9 +44,14 @@
             <p class="sp-subtitle">Vos annonces de covoiturage, leurs places et leurs recettes.</p>
         </div>
 
-        <a href="{{ route('covoiturage.create') }}" class="sp-btn-primary">
-            Publier un trajet
-        </a>
+        <div class="sp-head-actions">
+            <a href="{{ route('trips.received') }}" class="sp-act">
+                <i class="fa-solid fa-ticket"></i> Réservations reçues
+            </a>
+            <a href="{{ route('covoiturage.create') }}" class="sp-btn-primary">
+                Publier un trajet
+            </a>
+        </div>
     </header>
 
     {{-- Indicateurs --}}
@@ -114,6 +119,10 @@
                             ->unique()
                             ->values();
 
+                        // Places payées sur le sens le plus rempli, et nombre de passagers
+                        $reservees  = collect($trajet->legKeys())->map(fn ($l) => $trajet->seatsBooked($l))->max();
+                        $restantes  = $trajet->seats_left;
+                        $passagers  = $trajet->paidBookings->count();
                     @endphp
 
                     <article class="sp-card sp-mission">
@@ -175,8 +184,19 @@
                             <div class="sp-row-meta">
                                 <span class="sp-tag">
                                     <i class="fa-solid fa-users"></i>
-                                    {{ $trajet->nb_places }} place{{ $trajet->nb_places > 1 ? 's' : '' }}
+                                    @if ($restantes > 0)
+                                        {{ $restantes }} place{{ $restantes > 1 ? 's' : '' }} restante{{ $restantes > 1 ? 's' : '' }}
+                                    @else
+                                        Complet
+                                    @endif
                                 </span>
+
+                                @if ($reservees)
+                                    <span class="sp-tag is-ok">
+                                        <i class="fa-solid fa-ticket"></i>
+                                        {{ $reservees }} réservée{{ $reservees > 1 ? 's' : '' }}
+                                    </span>
+                                @endif
 
                                 @if($trajet->retour)
                                     <span class="sp-tag is-ok">
@@ -200,6 +220,13 @@
 
                             <a href="{{ route('covoiturage.edit', $trajet->covoiturage_id) }}"
                                class="sp-act is-ghost">Modifier</a>
+
+                            @if ($passagers)
+                                <a href="{{ route('trips.received') }}#trajet-{{ $trajet->covoiturage_id }}"
+                                   class="sp-act is-ghost">
+                                    Réservations ({{ $passagers }})
+                                </a>
+                            @endif
                         </div>
                     </article>
                 @endforeach

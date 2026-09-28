@@ -69,6 +69,7 @@
         'icon'  => 'fa-bag-shopping',
         'items' => [
             ['Mes commandes', 'fa-bag-shopping', route('orders'),  request()->is('mes-commandes*'), false],
+            ['Mes trajets réservés', 'fa-car-side', route('trips.myBookings'), request()->routeIs('trips.myBookings'), false],
             ['Favoris',       'fa-heart',        route('favoris'), request()->is('favoris'), false],
         ],
     ];
@@ -101,6 +102,7 @@
             'items' => [
                 ['Documents requis',         'fa-id-card',          route('livreur.documents'),  request()->routeIs('livreur.documents'), false],
                 ['Mes trajets',       'fa-map-location-dot', route('covoiturage.index'),  request()->routeIs('covoiturage.index'), false],
+                ['Réservations reçues', 'fa-ticket',         route('trips.received'),     request()->routeIs('trips.received'), false],
                 ['Ajouter un trajet', 'fa-circle-plus',      route('covoiturage.create'), request()->routeIs('covoiturage.create'), false],
             ],
         ];

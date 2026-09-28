@@ -144,7 +144,11 @@
                 {{ $trajet->retour ? 'Modifier le retour' : 'Ajouter un retour' }}
             </a>
 
-            @if($trajet->retour)
+            @if($trajet->retour && $retourBooked)
+                <span class="sp-lock">
+                    <i class="fa-solid fa-lock"></i> Retour réservé : il ne peut plus être supprimé.
+                </span>
+            @elseif($trajet->retour)
                 <form id="form-supprimer-retour"
                       action="{{ route('covoiturage.destroy-retour', $trajet->covoiturage_id) }}" method="POST">
                     @csrf
@@ -162,18 +166,26 @@
         <div class="sp-toolbar">
             <div>
                 <h2 class="sp-toolbar-title">Actions</h2>
-                <span class="sp-count">Dupliquer ce trajet ou le retirer définitivement</span>
+                <span class="sp-count">
+                    @if($isBooked)
+                        <i class="fa-solid fa-lock"></i> Des passagers ont réservé ce trajet : il ne peut plus être supprimé
+                    @else
+                        Dupliquer ce trajet ou le retirer définitivement
+                    @endif
+                </span>
             </div>
 
             <div class="sp-toolbar-actions">
                 <button type="button" class="sp-act is-ghost" onclick="dupliquerTrajet(event)">Dupliquer</button>
 
-                <form id="form-supprimer-trajet"
-                      action="{{ route('covoiturage.destroy', $trajet->covoiturage_id) }}" method="POST">
-                    @csrf
-                    @method('DELETE')
-                    <button type="button" class="sp-act is-cancel" onclick="confirmerSuppression()">Supprimer</button>
-                </form>
+                @unless($isBooked)
+                    <form id="form-supprimer-trajet"
+                          action="{{ route('covoiturage.destroy', $trajet->covoiturage_id) }}" method="POST">
+                        @csrf
+                        @method('DELETE')
+                        <button type="button" class="sp-act is-cancel" onclick="confirmerSuppression()">Supprimer</button>
+                    </form>
+                @endunless
             </div>
         </div>
     </section>

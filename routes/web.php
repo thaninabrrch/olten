@@ -13,6 +13,7 @@ use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\SellerController;
 use App\Http\Controllers\Seller\SellerOrderController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\TripBookingController;
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\AdminDashboardController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\livrer\DocumentController as LivreurDocumentController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\TripReservationsController;
 use App\Http\Controllers\ArchiveController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ServicePageController;
@@ -242,6 +244,15 @@ Route::middleware('auth', 'verified', 'approved')->group(function () {
     Route::get('/mes-commandes/{order}', [SellerOrderController::class, 'show'])->name('orders.show');
     Route::post('/{delivery}/rate', [DeliveryAdController::class, 'rateDelivery'])->name('delivery.rate');
     Route::get('/mes-reservations/{booking}', [BookingController::class, 'show'])->name('bookings.show');
+    Route::get('/trajets/{trip}/reserver', [TripBookingController::class, 'checkout'])->name('covoiturage.checkout');
+    Route::post('/trajets/{trip}/payer',   [TripBookingController::class, 'pay'])->name('trips.pay');
+    Route::get('/reservations/{booking}',  [TripBookingController::class, 'showtripe'])->name('bookings.showtripe');
+    Route::post('/reservations/{booking}/annuler', [TripBookingController::class, 'cancel'])->name('bookings.cancel');
+    Route::get('/mes-trajets-reserves', [TripReservationsController::class, 'index'])->name('trips.myBookings');
+    Route::get('/mes-trajets-reserves/{booking}', [TripReservationsController::class, 'show'])->name('trips.myBookings.show');
+    // Côté conducteur : les réservations reçues sur ses trajets
+    Route::get('/mes-trajets/reservations', [TripReservationsController::class, 'received'])->name('trips.received');
+
 });
 //visualiser le détails d'une annonce meme pour un utilisateur visteur non connecté
 Route::get('/annonces/{ad}/détails', [AdController::class, 'show'])->name('ads.show');

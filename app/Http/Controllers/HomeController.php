@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Covoiturage;
 use App\Models\Service;
 use App\Models\Ad;
 use App\Models\Product;
@@ -112,7 +113,9 @@ class HomeController extends Controller
         | Derniers éléments
         |--------------------------------------------------------------------------
         | Ici on garde volontairement le classement chronologique.
-        | L'abonnement ne modifie pas la sélection des 10 derniers éléments.
+        | L'abonnement ne modifie pas la sélection des derniers éléments.
+        | Quatre suffisent à remplir une ligne de la grille : le reste est à
+        | un clic, derrière le bouton « Voir tout » (page de recherche).
         |--------------------------------------------------------------------------
         */
         $latestItems = $ads
@@ -133,15 +136,38 @@ class HomeController extends Controller
                 })
             )
             ->sortByDesc('created_at')
-            ->take(10)
+            ->take(4)
             ->values();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Trajets du jour
+        |--------------------------------------------------------------------------
+        | Les trajets qui partent aujourd'hui et ont encore une place, dans
+        | l'ordre des départs. Même règle que la page covoiturage : un trajet
+        | désactivé n'est pas proposé, et il reste en ligne jusqu'au soir.
+        |--------------------------------------------------------------------------
+        */
+        $todayTrips = Covoiturage::query()
+            ->where('statut', '!=', 'inactif')
+            ->whereDate('date_depart', today()->toDateString())
+            ->with(['conducteur.vehicle', 'paidBookings'])
+            ->orderBy('heure_depart')
+            ->get()
+            ->filter(fn (Covoiturage $trip) => $trip->seats_left > 0)
+            ->values();
+
+        $todayTripsTotal = $todayTrips->count();
+        $todayTrips      = $todayTrips->take(4);
 
         return view('home', compact(
             'categories',
             'services',
             'ads',
             'products',
-            'latestItems'
+            'latestItems',
+            'todayTrips',
+            'todayTripsTotal'
         ));
     }
 

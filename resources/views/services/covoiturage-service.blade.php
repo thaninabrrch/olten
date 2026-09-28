@@ -281,7 +281,7 @@
                                 </div>
 
                                 <span class="cv-card-status">
-                                    {{ $route['seats'] }} place{{ $route['seats'] > 1 ? 's' : '' }}
+                                    {{ $route['seats'] }} place{{ $route['seats'] > 1 ? 's' : '' }} restante{{ $route['seats'] > 1 ? 's' : '' }}
                                 </span>
                             </div>
                         </div>

@@ -15,6 +15,7 @@ class CovoiturageController extends Controller
         // Les trajets passes ont quitte la plateforme : ils vivent dans les archives
         $trajets = Covoiturage::where('conducteur_id', auth()->id())
             ->upcoming()
+            ->with('paidBookings')
             ->orderBy('date_depart', 'desc')
             ->get();
 
@@ -42,6 +43,8 @@ class CovoiturageController extends Controller
             'itineraire' => $itineraire,
             'selectedRoute' => $selectedRoute,
             'returnTripData' => $returnTripData,
+            // Réservé : le bouton « Annuler » laisse place à une explication
+            'isBooked' => $trajet->isBooked(),
         ]);
     }
 
@@ -128,6 +131,12 @@ class CovoiturageController extends Controller
             ], 404);
         }
 
+        // Un trajet réservé ne s'annule plus côté conducteur : la suppression
+        // effacerait aussi les réservations, sans rembourser les passagers.
+        if ($covoiturage->isBooked()) {
+            return back()->with('error', "Des passagers ont réservé ce trajet : vous ne pouvez plus l'annuler.");
+        }
+
         if ($covoiturage->photo_conducteur) {
             \Storage::disk('public')->delete($covoiturage->photo_conducteur);
         }
@@ -145,7 +154,11 @@ class CovoiturageController extends Controller
     {
         $trajet = Covoiturage::findOrFail($id);
 
-        return view('livreur.covoiturage.edit', compact('trajet'));
+        // Un trajet (ou un retour) réservé ne peut plus être supprimé
+        $isBooked     = $trajet->isBooked();
+        $retourBooked = $isBooked && $trajet->isBooked('retour');
+
+        return view('livreur.covoiturage.edit', compact('trajet', 'isBooked', 'retourBooked'));
     }
 
     public function update(Request $request, $id)
@@ -436,6 +449,13 @@ class CovoiturageController extends Controller
             'retour' => 'required|boolean',
         ]);
 
+        if (! $validated['retour'] && $covoiturage->isBooked('retour')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Des passagers ont réservé le retour : il ne peut plus être désactivé.',
+            ], 422);
+        }
+
         $updateData = ['retour' => $validated['retour']];
 
         // Si on désactive le retour, on nettoie les données
@@ -534,6 +554,12 @@ class CovoiturageController extends Controller
             return redirect()
                 ->route('covoiturage.edit', $covoiturage->covoiturage_id)
                 ->with('error', 'Ce trajet n\'a pas de trajet retour.');
+        }
+
+        if ($covoiturage->isBooked('retour')) {
+            return redirect()
+                ->route('covoiturage.edit', $covoiturage->covoiturage_id)
+                ->with('error', 'Des passagers ont réservé le retour : il ne peut plus être supprimé.');
         }
 
         $selectedRoute = $covoiturage->selected_route ?? [];
