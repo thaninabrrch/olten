@@ -19,19 +19,21 @@ class SellerController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
 
+            // whereLike : insensible à la casse sur les trois moteurs (ILIKE
+            // n'existe que sous PostgreSQL et faisait planter la recherche en MySQL)
             $query->where(function ($q) use ($search) {
 
                 $q->whereHas('product', function ($q2) use ($search) {
-                    $q2->where('name', 'ILIKE', "%{$search}%");
+                    $q2->whereLike('name', "%{$search}%");
                 });
 
                 $q->orWhereHas('buyer', function ($q3) use ($search) {
-                    $q3->where('firstname', 'ILIKE', "%{$search}%")
-                        ->orWhere('lastname', 'ILIKE', "%{$search}%")
-                        ->orWhere('email', 'ILIKE', "%{$search}%");
+                    $q3->whereLike('firstname', "%{$search}%")
+                        ->orWhereLike('lastname', "%{$search}%")
+                        ->orWhereLike('email', "%{$search}%");
                 });
 
-                $q->orWhere('status', 'ILIKE', "%{$search}%");
+                $q->orWhereLike('status', "%{$search}%");
             });
         }
 

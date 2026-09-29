@@ -94,7 +94,13 @@
             <div class="sp-box is-row">
                 <div class="sp-box-head">
                     <span class="sp-label">Places proposées</span>
-                    <span class="sp-help">Entre 1 et 10, sans compter le conducteur.</span>
+                    <span class="sp-help">
+                        @if ($minPlaces > 1)
+                            {{ $minPlaces }} places sont déjà réservées : entre {{ $minPlaces }} et 10, sans compter le conducteur.
+                        @else
+                            Entre 1 et 10, sans compter le conducteur.
+                        @endif
+                    </span>
                 </div>
 
                 <div class="sp-stepper">
@@ -193,13 +199,16 @@
 </div>
 
 <script>
-    // Le controleur accepte de 1 a 10 places
+    // Le controleur accepte jusqu'a 10 places, et jamais moins que celles
+    // deja reservees par des passagers
+    const MIN_PLACES = {{ (int) $minPlaces }};
+
     function ajustePlaces(delta) {
         const input = document.getElementById('input_nb_places');
         const display = document.getElementById('display_nb_places');
 
-        const valeur = (parseInt(input.value, 10) || 1) + delta;
-        if (valeur < 1 || valeur > 10) return;
+        const valeur = (parseInt(input.value, 10) || MIN_PLACES) + delta;
+        if (valeur < MIN_PLACES || valeur > 10) return;
 
         input.value = valeur;
         display.innerText = valeur;

@@ -4162,6 +4162,35 @@ span.expired {
     margin: 0 16px 16px;
 }
 
+/* Carte d'edition figee (trajet reserve) : ni lien, ni survol */
+.sp-page .sp-tile.is-locked {
+    cursor: default;
+    opacity: .75;
+}
+
+.sp-page .sp-tile.is-locked:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.sp-page .sp-tile-lock {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #f5f6f7;
+    color: #495057;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.sp-page .sp-tile-lock i {
+    font-size: 10px;
+    color: #6b7280;
+}
+
 /* ---------- Indicateurs ---------- */
 .sp-page .sp-stats {
     display: grid;
@@ -9667,4 +9696,77 @@ span.expired {
     .notification-modal-content {
         padding: 20px;
     }
+}
+
+/* ===================================================================
+   Réservations à approuver (trajets en validation manuelle)
+   - .menu-badge : compteur de la barre latérale, sur l'entrée
+     « Réservations reçues » et sur sa section, même repliée ;
+   - .trq-alert : bandeau <x-trip-requests-alert /> (tableau de bord,
+     réservations reçues).
+   =================================================================== */
+.sidebar-menu li a .menu-badge,
+.menu-group > summary > .menu-badge {
+    flex: 0 0 auto;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f79009;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.trq-alert {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0 0 22px;
+    padding: 14px 18px;
+    border: 1px solid #fedf89;
+    border-radius: 16px;
+    background: #fffaeb;
+}
+
+.trq-alert-icon {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: #f79009;
+    color: #fff;
+    font-size: 17px;
+}
+
+.trq-alert-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.trq-alert-text strong { font-size: 15px; font-weight: 800; color: #7a2e0e; }
+.trq-alert-text small { font-size: 13px; color: #93370d; }
+
+.trq-alert-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: #f79009;
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background .15s;
+}
+.trq-alert-btn:hover { background: #dc6803; color: #fff; }
+
+@media (max-width: 640px) {
+    .trq-alert { flex-wrap: wrap; }
+    .trq-alert-btn { width: 100%; justify-content: center; }
 }

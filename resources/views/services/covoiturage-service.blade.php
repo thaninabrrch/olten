@@ -295,6 +295,13 @@
                 </div>
             @endif
         @endif
+
+        {{-- Recherche d'une liaison précise : on propose d'être prévenu des prochains trajets --}}
+        @if ($filters['departure'] && $filters['arrival'])
+            <x-services.trip-alert :from="\App\Models\Covoiturage::villeCourte($filters['departure'])"
+                :to="\App\Models\Covoiturage::villeCourte($filters['arrival'])"
+                :date="$filters['start_date'] && $filters['start_date'] === $filters['end_date'] ? $filters['start_date'] : null" />
+        @endif
     </section>
 
     {{-- Bannière conducteur --}}

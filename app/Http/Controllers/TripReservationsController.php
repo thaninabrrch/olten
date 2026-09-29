@@ -96,21 +96,25 @@ class TripReservationsController extends Controller
 
         $state = self::RECEIVED_TABS[$tab];
 
-        // À venir : le départ le plus proche d'abord. Passés : le plus récent d'abord.
+        // À venir : les trajets qui ont des demandes à traiter d'abord, puis
+        // le départ le plus proche. Passés : le plus récent d'abord.
         $list = $trips->where('state', $state);
         $list = $state === 'upcoming'
-            ? $list->sortBy('sort')
+            ? $list->sortBy([['pending', 'desc'], ['sort', 'asc']])
             : $list->sortByDesc('sort');
 
         $upcoming = $trips->where('state', 'upcoming');
 
         return view('trips.received', [
-            'tab'        => $tab,
-            'list'       => $list->values(),
-            'counts'     => $counts,
-            'passengers' => $upcoming->sum('passengers'),
-            'seats'      => $upcoming->sum('seats'),
-            'earnings'   => $trips->sum('earnings'),
+            'tab'         => $tab,
+            'list'        => $list->values(),
+            'counts'      => $counts,
+            'passengers'  => $upcoming->sum('passengers'),
+            'seats'       => $upcoming->sum('seats'),
+            'earnings'    => $trips->sum('earnings'),
+            // Demandes qui attendent son accord, et le premier trajet concerné
+            'pending'     => $trips->sum('pending'),
+            'pendingTrip' => $trips->where('pending', '>', 0)->sortBy('sort')->first()['trip'] ?? null,
         ]);
     }
 
@@ -199,10 +203,7 @@ class TripReservationsController extends Controller
     {
         $bookings = $trip->bookings;
         $paid     = $bookings->where('status', 'paid');
-
-        // Les places se comptent sur les réservations déjà chargées :
-        // aucune requête de plus par trajet.
-        $trip->setRelation('paidBookings', $paid);
+        $pending  = $bookings->where('status', 'pending');
 
         $from = Covoiturage::villeCourte($trip->depart);
         $to   = Covoiturage::villeCourte($trip->destination);
@@ -230,9 +231,11 @@ class TripReservationsController extends Controller
             'to'         => $to,
             'image'      => RouteImage::for($from, $to),
             'legs'       => $legs,
-            // Les réservations en cours d'abord, les annulées ensuite
-            'bookings'   => $bookings->sortBy(fn (TripBooking $b) => $b->status === 'paid' ? 0 : 1)->values(),
+            // Les demandes à traiter d'abord, puis les réservations en cours,
+            // les annulées ensuite
+            'bookings'   => $bookings->sortBy(fn (TripBooking $b) => ['pending' => 0, 'paid' => 1][$b->status] ?? 2)->values(),
             'passengers' => $paid->count(),
+            'pending'    => $pending->count(),
             'seats'      => (int) $legs->max('booked'),
             'earnings'   => (float) $paid->sum('driver_amount'),
             'state'      => $days->isNotEmpty() && $days->max() < today()->timestamp ? 'past' : 'upcoming',
@@ -246,7 +249,9 @@ class TripReservationsController extends Controller
      */
     private function stateOf(TripBooking $booking, Collection $dates): string
     {
-        if ($booking->status !== 'paid' || $booking->cancelled_at !== null) {
+        // Confirmée ou en attente de l'accord du conducteur : la réservation
+        // tient sa place, elle se range avec les trajets à venir ou passés.
+        if (! in_array($booking->status, TripBooking::HOLDING, true) || $booking->cancelled_at !== null) {
             return 'cancelled';
         }
 

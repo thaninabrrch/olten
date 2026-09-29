@@ -27,6 +27,10 @@
         'upcoming'  => ['Confirmé', 'fa-solid fa-circle-check'],
         'past'      => ['Terminé',  'fa-solid fa-flag-checkered'],
         'cancelled' => ['Annulé',   'fa-solid fa-ban'],
+        // Libellés de la validation manuelle, lus sur le statut
+        'pending'   => ["En attente d'accord", 'fa-solid fa-hourglass-half'],
+        'refused'   => ['Refusé',       'fa-solid fa-circle-xmark'],
+        'expired'   => ['Sans réponse', 'fa-solid fa-clock-rotate-left'],
     ];
 
     $avatarUrl = function ($user) {
@@ -109,6 +113,9 @@
                         $driver  = $item['driver'];
                         $vehicle = $item['vehicle'];
                         $state   = $item['state'];
+                        // Pastille : l'état de l'onglet, précisé par le statut
+                        // (en attente d'accord, refusé, sans réponse)
+                        $badge   = in_array($booking->status, ['pending', 'refused', 'expired'], true) ? $booking->status : $state;
                         $photo   = $driver ? $avatarUrl($driver) : null;
                         $initial = $driver
                             ? mb_strtoupper(mb_substr($driver->firstname ?? '?', 0, 1) . mb_substr($driver->lastname ?? '', 0, 1))
@@ -131,8 +138,8 @@
                                 <span class="sp-badge is-type">
                                     <i class="fa-solid fa-car-side"></i> Covoiturage
                                 </span>
-                                <span class="sp-badge mtb-state mtb-state--{{ $state }}">
-                                    <i class="{{ $states[$state][1] }}"></i> {{ $states[$state][0] }}
+                                <span class="sp-badge mtb-state mtb-state--{{ $badge }}">
+                                    <i class="{{ $states[$badge][1] }}"></i> {{ $states[$badge][0] }}
                                 </span>
                             </div>
                         @if ($item['url'])
@@ -145,7 +152,7 @@
                             <div class="sp-list-main">
                                 <span class="sp-chip">
                                     <i class="fa-solid fa-route"></i>
-                                    {{ $sens }} · {{ $booking->seats }} place{{ $booking->seats > 1 ? 's' : '' }} · Réservation #{{ $booking->id }}
+                                    {{ $sens }} · {{ $booking->seatsLabel() }} · Réservation #{{ $booking->id }}
                                 </span>
 
                                 @if ($item['url'])
@@ -278,6 +285,9 @@
     .sp-badge.mtb-state--upcoming  { background: #2f9e5f; color: #fff; }
     .sp-badge.mtb-state--past      { background: #6b7280; color: #fff; }
     .sp-badge.mtb-state--cancelled { background: #b42318; color: #fff; }
+    .sp-badge.mtb-state--pending   { background: #f79009; color: #fff; }
+    .sp-badge.mtb-state--refused,
+    .sp-badge.mtb-state--expired   { background: #b42318; color: #fff; }
 
     .mtb-more { margin-top: 12px; border-top: 1px dashed var(--color-divider, #e9ecef); padding-top: 10px; }
 

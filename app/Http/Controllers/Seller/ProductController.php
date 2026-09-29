@@ -20,6 +20,7 @@ use App\Notifications\NewOrderNotification;
 use App\Mail\NewProductNotification;
 use Illuminate\Support\Facades\Mail;
 use App\Models\User;
+use App\Support\ImageUpload;
 
 class ProductController extends Controller
 {
@@ -69,12 +70,12 @@ class ProductController extends Controller
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'description' => 'nullable|string',
-            'images.*' => 'image|mimes:jpg,jpeg,png,webp',
+            'images.*' => ImageUpload::rules(),
             'delivery_available' => 'nullable|boolean',
             'address' => 'nullable|string|max:255',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-        ]);
+        ], ImageUpload::messages('images.*'));
 
         $product = Product::create([
             'name' => $request->name,
@@ -92,7 +93,7 @@ class ProductController extends Controller
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
-                $path = $image->store('products', 'public');
+                $path = ImageUpload::store($image, 'products');
 
                 $product->images()->create([
                     'image' => $path
@@ -148,9 +149,9 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
-            'images.*' => 'image',
+            'images.*' => ImageUpload::rules(),
             'delivery_available' => 'nullable|boolean',
-        ]);
+        ], ImageUpload::messages('images.*'));
 
         $produit->update([
             'name' => $request->name,
@@ -164,7 +165,7 @@ class ProductController extends Controller
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
-                $path = $image->store('products', 'public');
+                $path = ImageUpload::store($image, 'products');
 
                 $produit->images()->create([
                     'image' => $path

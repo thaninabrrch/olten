@@ -97,7 +97,7 @@
 
                 <span>
                     <i class="fa-solid fa-users"></i>
-                    {{ $listing['seats'] ?? 0 }} place{{ ($listing['seats'] ?? 0) > 1 ? 's' : '' }}
+                    {{ $listing['seats'] ?? 0 }} place{{ ($listing['seats'] ?? 0) > 1 ? 's' : '' }} restante{{ ($listing['seats'] ?? 0) > 1 ? 's' : '' }}
                 </span>
             @else
                 <span><i class="fa-regular fa-eye"></i> {{ $listing['views'] }} vue{{ $listing['views'] > 1 ? 's' : '' }}</span>

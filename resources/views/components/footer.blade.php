@@ -56,7 +56,21 @@
 
     </div>
 
+    {{-- Bas de page : copyright, liens legaux et credit sur une ligne ;
+         ils passent les uns sous les autres sur petit ecran. --}}
     <div class="footer-bottom">
-        <p>&copy; {{ date('Y') }} Olten.fr — Tous droits réservés.</p>
+        <p class="footer-copy">&copy; {{ date('Y') }} Olten.fr. Tous droits réservés.</p>
+
+        <nav class="footer-legal" aria-label="Informations légales">
+            <a href="{{ route('legal.mentions') }}">Mentions légales</a>
+            <a href="{{ route('legal.cgu') }}">CGU</a>
+            <a href="{{ route('legal.cgv') }}">CGV</a>
+            <a href="{{ route('legal.privacy') }}">Confidentialité</a>
+        </nav>
+
+        <p class="footer-credit">
+            Designé &amp; développé par
+            <a href="https://olten-agency.fr/" target="_blank" rel="noopener">Olten Agency</a>
+        </p>
     </div>
 </footer>

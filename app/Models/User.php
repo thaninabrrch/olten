@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use App\Notifications\ResetPassword as ResetPasswordNotification;
 use Laratrust\Contracts\LaratrustUser;
 use Laratrust\Traits\HasRolesAndPermissions;
@@ -175,4 +177,68 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail
     }
     public function trips()        { return $this->hasMany(Covoiturage::class, 'conducteur_id'); }
     public function tripBookings() { return $this->hasMany(TripBooking::class); }
+    public function tripAlerts()   { return $this->hasMany(TripAlert::class); }
+
+    /** Demandes de réservation reçues sur ses trajets, en attente de sa réponse. */
+    public function pendingTripRequests()
+    {
+        return TripBooking::query()->pending()
+            ->whereHas('trip', fn ($q) => $q->where('conducteur_id', $this->id));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Identite montree aux autres membres
+    |--------------------------------------------------------------------------
+    | Par exemple dans la liste des passagers d'un trajet : le prenom et le
+    | nom (« Sarah Amrani »), la photo ou les initiales, jamais les
+    | coordonnees.
+    */
+
+    public function publicName(): Attribute
+    {
+        return Attribute::get(function () {
+            [$first, $last] = $this->nameParts();
+
+            return trim(Str::ucfirst($first) . ' ' . Str::ucfirst($last)) ?: 'Membre';
+        });
+    }
+
+    public function initials(): Attribute
+    {
+        return Attribute::get(function () {
+            [$first, $last] = $this->nameParts();
+
+            return mb_strtoupper(mb_substr($first, 0, 1) . mb_substr($last, 0, 1)) ?: '?';
+        });
+    }
+
+    /** Photo de profil : chemin sur le disque public, ou adresse deja complete. */
+    public function avatarUrl(): Attribute
+    {
+        return Attribute::get(function () {
+            $photo = $this->profile_photo;
+
+            if (! $photo) {
+                return null;
+            }
+
+            return Str::startsWith($photo, ['http://', 'https://', '/']) ? $photo : asset('storage/' . ltrim($photo, '/'));
+        });
+    }
+
+    /** Prenom et nom ; les comptes sans ces champs sont lus dans `name`. */
+    private function nameParts(): array
+    {
+        $first = trim((string) $this->firstname);
+        $last  = trim((string) $this->lastname);
+
+        if ($first === '') {
+            $words = preg_split('/\s+/', trim((string) $this->name), -1, PREG_SPLIT_NO_EMPTY);
+            $first = (string) array_shift($words);
+            $last  = $last !== '' ? $last : (string) array_pop($words);
+        }
+
+        return [$first, $last];
+    }
 }

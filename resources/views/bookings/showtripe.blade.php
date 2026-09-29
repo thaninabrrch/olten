@@ -5,7 +5,11 @@
 @php
     $trip     = $booking->trip;
     $legs     = collect($booking->legs);
-    $isPaid   = $booking->status === 'paid';
+    $status    = $booking->status;
+    $isPaid    = $status === 'paid';
+    // Validation manuelle : payée, la place est tenue, le conducteur doit accepter
+    $isPending = $status === 'pending';
+    $isLive    = $isPaid || $isPending;
     $isDriver = auth()->id() === $trip->conducteur_id;
 
     $departVille      = \App\Models\Covoiturage::villeCourte($trip->depart);
@@ -40,7 +44,9 @@
         ? ['label' => 'Retour', 'from' => $destinationVille, 'to' => $departVille, 'date' => $trip->return_date, 'time' => $trip->return_time]
         : ['label' => 'Aller',  'from' => $departVille, 'to' => $destinationVille, 'date' => $trip->date_depart, 'time' => $trip->heure_depart];
 
-    $confirmMsg = 'Annuler votre réservation ? Vous serez intégralement remboursé.';
+    $confirmMsg = $isPending
+        ? 'Annuler votre demande ? Vous serez intégralement remboursé.'
+        : 'Annuler votre réservation ? Vous serez intégralement remboursé.';
 @endphp
 
 @section('content')
@@ -56,7 +62,7 @@
         @endif
 
         {{-- Fil de progression : toutes les étapes sont passées --}}
-        @if ($isPaid)
+        @if ($isLive)
             <ol class="ck-steps">
                 <li class="is-done">
                     <span class="ck-step-dot"><i class="fa-solid fa-check"></i></span>
@@ -72,11 +78,11 @@
                         <small>Paiement accepté</small>
                     </span>
                 </li>
-                <li class="is-done">
-                    <span class="ck-step-dot"><i class="fa-solid fa-check"></i></span>
+                <li class="{{ $isPaid ? 'is-done' : 'is-waiting' }}">
+                    <span class="ck-step-dot"><i class="fa-solid {{ $isPaid ? 'fa-check' : 'fa-hourglass-half' }}"></i></span>
                     <span class="ck-step-text">
-                        <strong>Confirmation</strong>
-                        <small>Conducteur prévenu</small>
+                        <strong>{{ $isPaid ? 'Confirmation' : 'Accord du conducteur' }}</strong>
+                        <small>{{ $isPaid ? 'Conducteur prévenu' : 'En attente de sa réponse' }}</small>
                     </span>
                 </li>
             </ol>
@@ -87,16 +93,39 @@
             <div>
                 @if ($isPaid)
                     <span class="ck-eyebrow"><i class="fa-solid fa-circle-check"></i> Paiement accepté</span>
+                @elseif ($isPending)
+                    <span class="ck-eyebrow ck-eyebrow--pending"><i class="fa-solid fa-hourglass-half"></i> Paiement accepté · en attente du conducteur</span>
                 @else
-                    <span class="ck-eyebrow ck-eyebrow--cancelled"><i class="fa-solid fa-ban"></i> Réservation annulée</span>
+                    <span class="ck-eyebrow ck-eyebrow--cancelled">
+                        <i class="fa-solid fa-ban"></i>
+                        {{ ['refused' => 'Demande refusée', 'expired' => 'Demande sans réponse'][$status] ?? 'Réservation annulée' }}
+                    </span>
                 @endif
 
-                <h1 class="ck-title {{ $isPaid ? '' : 'ck-title--cancelled' }}">
-                    Réservation <em>{{ $isPaid ? 'confirmée' : 'annulée' }}</em>
+                <h1 class="ck-title {{ $isLive ? '' : 'ck-title--cancelled' }}">
+                    @if ($isPending)
+                        Demande <em>envoyée</em>
+                    @elseif ($status === 'refused')
+                        Demande <em>refusée</em>
+                    @elseif ($status === 'expired')
+                        Demande <em>sans réponse</em>
+                    @else
+                        Réservation <em>{{ $isPaid ? 'confirmée' : 'annulée' }}</em>
+                    @endif
                 </h1>
 
                 <p class="ck-lead">
-                    @if (! $isPaid)
+                    @if ($isPending && $isDriver)
+                        Ce passager a payé sa place et attend votre accord. Sans réponse de votre part au départ,
+                        sa demande est annulée et il est remboursé.
+                    @elseif ($isPending)
+                        Votre paiement est accepté et votre demande envoyée au conducteur : vous serez prévenu dès
+                        qu'il répond. S'il refuse, ou s'il ne répond pas avant le départ, vous êtes intégralement remboursé.
+                    @elseif ($status === 'refused')
+                        Le conducteur n'a pas accepté cette demande : le paiement est intégralement remboursé.
+                    @elseif ($status === 'expired')
+                        Le conducteur n'a pas répondu avant le départ : le paiement est intégralement remboursé.
+                    @elseif (! $isPaid)
                         Cette réservation a été annulée et le paiement remboursé.
                     @elseif ($isDriver)
                         Un passager a réservé votre trajet. Vous pouvez le joindre au numéro indiqué ci-dessous.
@@ -109,11 +138,11 @@
 
             <div class="ck-illu">
                 <svg viewBox="0 0 300 210" fill="none" xmlns="http://www.w3.org/2000/svg"
-                     role="img" aria-label="Illustration : {{ $isPaid ? 'réservation confirmée' : 'réservation annulée' }}">
-                    <circle cx="150" cy="105" r="92" fill="{{ $isPaid ? '#ff3c00' : '#b42318' }}" fill-opacity="0.07"/>
-                    <circle cx="150" cy="105" r="68" fill="{{ $isPaid ? '#ff3c00' : '#b42318' }}" fill-opacity="0.06"/>
+                     role="img" aria-label="Illustration : {{ $isPaid ? 'réservation confirmée' : ($isPending ? 'demande en attente' : 'réservation annulée') }}">
+                    <circle cx="150" cy="105" r="92" fill="{{ $isLive ? '#ff3c00' : '#b42318' }}" fill-opacity="0.07"/>
+                    <circle cx="150" cy="105" r="68" fill="{{ $isLive ? '#ff3c00' : '#b42318' }}" fill-opacity="0.06"/>
 
-                    @if ($isPaid)
+                    @if ($isLive)
                         <g class="ck-twinkle" fill="#ffb020">
                             <circle cx="34" cy="46" r="4"/>
                             <circle cx="268" cy="164" r="5"/>
@@ -121,11 +150,11 @@
                     @endif
 
                     {{-- Voiture --}}
-                    <g class="{{ $isPaid ? 'ck-float' : '' }}" @unless ($isPaid) opacity=".55" @endunless>
-                        <path d="M62 132 L62 112 Q62 104 70 102 L100 96 L120 74 Q124 70 130 70 L178 70 Q184 70 188 74 L206 96 L232 102 Q240 104 240 112 L240 132 Z" fill="{{ $isPaid ? '#ff3c00' : '#8a9099' }}" fill-opacity=".92"/>
+                    <g class="{{ $isLive ? 'ck-float' : '' }}" @unless ($isLive) opacity=".55" @endunless>
+                        <path d="M62 132 L62 112 Q62 104 70 102 L100 96 L120 74 Q124 70 130 70 L178 70 Q184 70 188 74 L206 96 L232 102 Q240 104 240 112 L240 132 Z" fill="{{ $isLive ? '#ff3c00' : '#8a9099' }}" fill-opacity=".92"/>
                         <path d="M112 96 L128 80 L150 80 L150 96 Z" fill="#ffffff" fill-opacity=".85"/>
                         <path d="M158 96 L158 80 L178 80 L194 96 Z" fill="#ffffff" fill-opacity=".85"/>
-                        <rect x="62" y="124" width="178" height="14" rx="7" fill="{{ $isPaid ? '#cf3200' : '#6b7280' }}"/>
+                        <rect x="62" y="124" width="178" height="14" rx="7" fill="{{ $isLive ? '#cf3200' : '#6b7280' }}"/>
                         <circle cx="102" cy="138" r="16" fill="#111111"/>
                         <circle cx="102" cy="138" r="7" fill="#e9ecef"/>
                         <circle cx="200" cy="138" r="16" fill="#111111"/>
@@ -133,11 +162,14 @@
                     </g>
 
                     {{-- Pastille de statut --}}
-                    <g class="{{ $isPaid ? 'ck-float-2' : '' }}">
+                    <g class="{{ $isLive ? 'ck-float-2' : '' }}">
                         <circle cx="228" cy="52" r="38" fill="#ffffff"/>
-                        <circle cx="228" cy="52" r="30" fill="{{ $isPaid ? '#1a9d5c' : '#b42318' }}"/>
+                        <circle cx="228" cy="52" r="30" fill="{{ $isPaid ? '#1a9d5c' : ($isPending ? '#f79009' : '#b42318') }}"/>
                         @if ($isPaid)
                             <path d="M214 53 l10 10 l19 -20" stroke="#ffffff" stroke-width="6" fill="none"
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        @elseif ($isPending)
+                            <path d="M228 37 v16 l10 7" stroke="#ffffff" stroke-width="6" fill="none"
                                   stroke-linecap="round" stroke-linejoin="round"/>
                         @else
                             <path d="M217 41 l22 22 M239 41 l-22 22" stroke="#ffffff" stroke-width="6" fill="none"
@@ -264,7 +296,7 @@
                         </span>
                         <span class="ck-recap-dates-end">
                             <small>Statut</small>
-                            <strong class="{{ $isPaid ? 'ck-ok' : 'ck-ko' }}">{{ $isPaid ? 'Confirmée' : 'Annulée' }}</strong>
+                            <strong class="{{ $isPaid ? 'ck-ok' : ($isPending ? 'ck-wait' : 'ck-ko') }}">{{ \App\Models\TripBooking::STATUS[$status][0] ?? 'Annulée' }}</strong>
                         </span>
                     </div>
 
@@ -275,7 +307,7 @@
                         </div>
                     @else
                         <div class="ck-line">
-                            <span>Prix du trajet · {{ $booking->seats }} place{{ $booking->seats > 1 ? 's' : '' }}</span>
+                            <span>Prix du trajet · {{ $booking->seatsLabel() }}</span>
                             <span>{{ number_format($booking->driver_amount, 2, ',', ' ') }} €</span>
                         </div>
                         <div class="ck-line">
@@ -283,18 +315,18 @@
                             <span>{{ number_format($booking->commission, 2, ',', ' ') }} €</span>
                         </div>
                         <div class="ck-line ck-line--total">
-                            <span>{{ $isPaid ? 'Total payé' : 'Total remboursé' }}</span>
+                            <span>{{ $isLive ? 'Total payé' : 'Total remboursé' }}</span>
                             <span>{{ number_format($booking->total_price, 2, ',', ' ') }} €</span>
                         </div>
                     @endif
 
                     {{-- Seul le passager annule sa réservation : le conducteur s'est engagé envers lui --}}
-                    @if ($isPaid && ! $isDriver)
+                    @if ($isLive && ! $isDriver)
                         <form method="POST" action="{{ route('bookings.cancel', $booking) }}"
                               onsubmit="return confirm('{{ $confirmMsg }}')">
                             @csrf
                             <button type="submit" class="ck-btn-danger">
-                                <i class="fa-solid fa-ban"></i> Annuler la réservation
+                                <i class="fa-solid fa-ban"></i> {{ $isPending ? 'Annuler ma demande' : 'Annuler la réservation' }}
                             </button>
                         </form>
 
@@ -302,6 +334,21 @@
                             <i class="fa-solid fa-circle-info"></i>
                             En cas d'annulation, vous êtes intégralement remboursé.
                         </p>
+                    @elseif ($isPending)
+                        {{-- Validation manuelle : le conducteur accepte ou refuse la demande --}}
+                        <form method="POST" action="{{ route('bookings.approve', $booking) }}">
+                            @csrf
+                            <button type="submit" class="ck-btn-accept">
+                                <i class="fa-solid fa-check"></i> Approuver la réservation
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ route('bookings.refuse', $booking) }}"
+                              onsubmit="return confirm('Refuser cette demande ? Le passager sera intégralement remboursé.')">
+                            @csrf
+                            <button type="submit" class="ck-btn-danger">
+                                <i class="fa-solid fa-xmark"></i> Refuser la demande
+                            </button>
+                        </form>
                     @elseif ($isPaid)
                         <p class="ck-recap-note">
                             <i class="fa-solid fa-lock"></i>
@@ -311,9 +358,9 @@
                 </div>
 
                 <div class="ck-mini">
-                    <span><small>Places</small><strong>{{ $booking->seats }}</strong></span>
+                    <span><small>Places</small><strong>{{ $booking->seatsLabel(short: true) }}</strong></span>
                     <span>
-                        <small>{{ $isDriver ? 'Gain' : ($isPaid ? 'Total' : 'Remboursé') }}</small>
+                        <small>{{ $isDriver ? 'Gain' : ($isLive ? 'Total' : 'Remboursé') }}</small>
                         <strong>{{ number_format($isDriver ? $booking->driver_amount : $booking->total_price, 2, ',', ' ') }} €</strong>
                     </span>
                 </div>
@@ -394,6 +441,8 @@
 
     .ck-steps li.is-done { border-color: #b7e4c7; }
     .ck-steps li.is-done .ck-step-dot { background: #2f9e5f; color: #fff; }
+    .ck-steps li.is-waiting { border-color: #fedf89; }
+    .ck-steps li.is-waiting .ck-step-dot { background: #f79009; color: #fff; }
 
     .ck-step-text strong { display: block; font-size: 13.5px; font-weight: 700; line-height: 1.3; }
     .ck-step-text small { font-size: 11.5px; color: #8a9099; }
@@ -423,6 +472,7 @@
     }
 
     .ck-eyebrow--cancelled { background: rgba(180, 35, 24, .1); color: #b42318; }
+    .ck-eyebrow--pending { background: #fef0c7; color: #b54708; }
 
     .ck-title {
         font-size: clamp(1.6rem, 3vw, 2.3rem);
@@ -776,6 +826,7 @@
 
     .ck-ok { color: #14794a; }
     .ck-ko { color: #b42318; }
+    .ck-wait { color: #b54708; }
 
     .ck-line {
         display: flex;
@@ -843,6 +894,25 @@
     }
 
     .ck-btn-danger:hover { background: #fdeceb; }
+
+    .ck-btn-accept {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        width: 100%;
+        margin-top: 16px;
+        padding: 14px 20px;
+        border: 0;
+        border-radius: 13px;
+        background: #1a9d5c;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background .2s ease;
+    }
+    .ck-btn-accept:hover { background: #148a50; }
 
     .ck-recap-note {
         display: flex;

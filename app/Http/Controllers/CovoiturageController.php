@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Covoiturage;
+use App\Notifications\TripScheduleChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -10,6 +11,34 @@ use Illuminate\Support\Facades\Storage;
 
 class CovoiturageController extends Controller
 {
+    /**
+     * Trajet réservé : ce que le conducteur ne peut plus changer (voir
+     * Covoiturage::bookedLegs). La date, l'itinéraire et le prix sont ceux
+     * pour lesquels les passagers ont payé ; l'horaire peut encore glisser
+     * de quelques minutes, et les passagers en sont prévenus.
+     */
+    private const LOCKED = "Des passagers ont réservé ce trajet : la date, l'itinéraire et le prix ne peuvent plus être modifiés.";
+
+    /**
+     * Le trajet du conducteur connecté. Toute page d'édition et toute action
+     * d'écriture passent par là : un membre ne touche pas au trajet d'un
+     * autre (ni ne déclenche de notification à ses passagers).
+     */
+    private function ownTrip($id): Covoiturage
+    {
+        $trip = $id instanceof Covoiturage ? $id : Covoiturage::findOrFail($id);
+
+        abort_unless((int) $trip->conducteur_id === (int) Auth::id(), 403, 'Ce trajet ne vous appartient pas.');
+
+        return $trip;
+    }
+
+    /** Retour au sommaire d'édition du trajet, avec le motif du refus. */
+    private function locked(Covoiturage $trip, string $message = self::LOCKED)
+    {
+        return redirect()->route('covoiturage.edit', $trip->covoiturage_id)->with('error', $message);
+    }
+
     public function index()
     {
         // Les trajets passes ont quitte la plateforme : ils vivent dans les archives
@@ -25,7 +54,7 @@ class CovoiturageController extends Controller
     }
     public function show($covoiturage_id)
     {
-        $trajet = Covoiturage::findOrFail($covoiturage_id);
+        $trajet = $this->ownTrip($covoiturage_id);
 
         $segments = $trajet->segments ?? [];
         $itineraire = $trajet->itineraire ?? [];
@@ -152,18 +181,25 @@ class CovoiturageController extends Controller
     }
     public function edit($id)
     {
-        $trajet = Covoiturage::findOrFail($id);
+        $trajet = $this->ownTrip($id);
 
-        // Un trajet (ou un retour) réservé ne peut plus être supprimé
-        $isBooked     = $trajet->isBooked();
-        $retourBooked = $isBooked && $trajet->isBooked('retour');
+        // Un trajet (ou un retour) réservé ne peut plus être supprimé, et sa
+        // date, son itinéraire et son prix sont figés
+        $bookedLegs   = $trajet->bookedLegs();
+        $isBooked     = $bookedLegs !== [];
+        $retourBooked = in_array('retour', $bookedLegs, true);
+        $shift        = Covoiturage::bookedTimeShift();
 
-        return view('livreur.covoiturage.edit', compact('trajet', 'isBooked', 'retourBooked'));
+        return view('livreur.covoiturage.edit', compact('trajet', 'isBooked', 'retourBooked', 'shift'));
     }
 
     public function update(Request $request, $id)
     {
-        $trajet = Covoiturage::findOrFail($id);
+        $trajet = $this->ownTrip($id);
+
+        if ($trajet->isBooked()) {
+            return $this->locked($trajet);
+        }
 
         $data = $request->validate([
             'depart' => 'required|string|max:255',
@@ -183,19 +219,30 @@ class CovoiturageController extends Controller
     }
     public function editOptions($id)
     {
-        $covoiturage = Covoiturage::findOrFail($id);
+        $covoiturage = $this->ownTrip($id);
 
-        return view('livreur.covoiturage.edit_det.option', compact('covoiturage'));
+        // Places déjà vendues : le conducteur ne peut pas en proposer moins
+        $minPlaces = max(1, $covoiturage->seatsBooked('aller'), $covoiturage->seatsBooked('retour'));
+
+        return view('livreur.covoiturage.edit_det.option', compact('covoiturage', 'minPlaces'));
     }
     public function updateOptions(Request $request, $id)
     {
-        $covoiturage = Covoiturage::findOrFail($id);
+        $covoiturage = $this->ownTrip($id);
+
+        // Recompté sur les réservations (et non les compteurs) : la réponse
+        // décide de ce qui est enregistré.
+        $minPlaces = max(1, $covoiturage->countPaidSeats('aller'), $covoiturage->countPaidSeats('retour'));
 
         $request->validate([
-            'nb_places' => 'required|integer|min:1|max:10',
+            'nb_places' => 'required|integer|min:' . $minPlaces . '|max:10',
             'booking_mode' => 'required|in:instant,manual',
             'passenger_mode' => 'required|in:mixed,womenOnly,maxBackSeats',
             'message_conducteur' => 'nullable|string|max:500',
+        ], [
+            'nb_places.min' => $minPlaces > 1
+                ? 'Des passagers ont déjà réservé ' . $minPlaces . ' places : vous ne pouvez pas en proposer moins.'
+                : 'Proposez au moins une place.',
         ]);
 
         $maxArriere = false;
@@ -231,7 +278,11 @@ class CovoiturageController extends Controller
     }
     public function editPrice($id)
     {
-        $covoiturage = Covoiturage::findOrFail($id);
+        $covoiturage = $this->ownTrip($id);
+
+        if ($covoiturage->isBooked()) {
+            return $this->locked($covoiturage, 'Des passagers ont réservé ce trajet : son prix ne peut plus être modifié.');
+        }
 
         $segments = $covoiturage->segments ?? [];
         $returnSegments = [];
@@ -247,7 +298,12 @@ class CovoiturageController extends Controller
     }
     public function updatePrice(Request $request, $id)
     {
-        $covoiturage = Covoiturage::findOrFail($id);
+        $covoiturage = $this->ownTrip($id);
+
+        if ($covoiturage->isBooked()) {
+            return $this->locked($covoiturage, 'Des passagers ont réservé ce trajet : son prix ne peut plus être modifié.');
+        }
+
         $segments = $request->input('segments', []);
         $returnSegments = $request->input('return_segments', []);
         $covoiturage->segments = $segments;
@@ -262,37 +318,150 @@ class CovoiturageController extends Controller
     }
     public function edititen($id)
     {
-        $covoiturage = Covoiturage::findOrFail($id);
-        return view('livreur.covoiturage.edit_det.iten', compact(
-            'covoiturage'
-        ));
+        $covoiturage = $this->ownTrip($id);
+        $bookedLegs  = $covoiturage->bookedLegs();
+        $shift       = Covoiturage::bookedTimeShift();
+
+        return view('livreur.covoiturage.edit_det.iten', compact('covoiturage', 'bookedLegs', 'shift'));
     }
     public function editDateTime($id)
     {
-        $covoiturage = Covoiturage::findOrFail($id);
-        return view('livreur.covoiturage.edit_det.edit_date_time', compact('covoiturage'));
+        $covoiturage = $this->ownTrip($id);
+        $bookedLegs  = $covoiturage->bookedLegs();
+        $shift       = Covoiturage::bookedTimeShift();
+
+        return view('livreur.covoiturage.edit_det.edit_date_time', compact('covoiturage', 'bookedLegs', 'shift'));
     }
 
+    /**
+     * Date et heure de l'aller et, s'il existe, du retour.
+     *
+     * Sur un sens réservé, la date ne bouge plus et l'horaire ne glisse que
+     * dans la marge de Covoiturage::bookedTimeShift() : les passagers de ce
+     * sens sont alors prévenus (cloche et e-mail). Le retour se décale ici
+     * aussi : son écran dédié est verrouillé dès qu'il est réservé.
+     */
     public function updateDateTime(Request $request, $id)
     {
-        $covoiturage = Covoiturage::findOrFail($id);
+        $covoiturage = $this->ownTrip($id);
+        $booked      = $covoiturage->bookedLegs();
+        $shift       = Covoiturage::bookedTimeShift();
 
-        $request->validate([
-            'date_depart' => 'required|date',
+        $rules = [
+            'date_depart'  => 'required|date',
             'heure_depart' => 'required|date_format:H:i',
+        ];
+
+        if ($covoiturage->retour) {
+            $rules['return_date'] = 'required|date|after_or_equal:date_depart';
+            $rules['return_time'] = 'required|date_format:H:i';
+        }
+
+        $data = $request->validate($rules, [
+            'heure_depart.date_format'   => 'Indiquez l\'heure de départ au format HH:MM.',
+            'return_time.date_format'    => 'Indiquez l\'heure du retour au format HH:MM.',
+            'return_date.after_or_equal' => 'Le retour ne peut pas partir avant l\'aller.',
         ]);
 
-        $covoiturage->update([
-            'date_depart' => $request->date_depart,
-            'heure_depart' => $request->heure_depart,
-        ]);
+        $legs = [
+            'aller'  => ['date_depart', 'heure_depart', 'l\'aller'],
+            'retour' => ['return_date', 'return_time', 'le retour'],
+        ];
+
+        $update  = [];
+        $changes = [];
+        $errors  = [];
+
+        foreach ($legs as $leg => [$dateField, $timeField, $label]) {
+            if (! array_key_exists($dateField, $data)) {
+                continue;
+            }
+
+            $oldTime = substr((string) $covoiturage->{$timeField}, 0, 5);
+            $newTime = $data[$timeField];
+
+            if (! in_array($leg, $booked, true)) {
+                $update[$dateField] = $data[$dateField];
+                $update[$timeField] = $newTime;
+                continue;
+            }
+
+            // Sens réservé : même jour, et un horaire qui ne glisse que de la marge
+            if ($data[$dateField] !== $covoiturage->{$dateField}?->toDateString()) {
+                $errors[$dateField] = "Des passagers ont réservé {$label} : sa date ne peut plus changer."
+                    . ($covoiturage->isPast() ? ' Pour reproposer ce trajet, dupliquez-le.' : '');
+            } elseif ($oldTime !== '' && abs($this->minutes($newTime) - $this->minutes($oldTime)) > $shift) {
+                $errors[$timeField] = "Des passagers ont réservé {$label} : son horaire ne peut bouger que de {$shift} minutes"
+                    . " au plus (départ prévu à {$oldTime}).";
+            } else {
+                $update[$timeField] = $newTime;
+
+                if ($oldTime !== '' && $newTime !== $oldTime) {
+                    $changes[$leg] = [$oldTime, $newTime];
+                }
+            }
+        }
+
+        if ($errors) {
+            return back()->withErrors($errors)->withInput();
+        }
+
+        $covoiturage->update($update);
+
+        $notified = $changes ? $this->notifyScheduleChange($covoiturage, $changes) : 0;
 
         return redirect()->route('covoiturage.edit-date-time', $id)
-            ->with('success', 'Date et heure mises à jour avec succès !');
+            ->with('success', 'Date et heure mises à jour avec succès !' . ($notified
+                ? ' ' . $notified . ' passager' . ($notified > 1 ? 's ont été prévenus' : ' a été prévenu') . ' du nouvel horaire.'
+                : ''));
     }
+
+    /** « 08:30 » → 510 : minutes depuis minuit, pour mesurer un décalage. */
+    private function minutes(string $time): int
+    {
+        [$hours, $minutes] = array_map('intval', explode(':', $time) + [0, 0]);
+
+        return $hours * 60 + $minutes;
+    }
+
+    /**
+     * Prévient chaque passager dont un sens réservé change d'horaire. Un
+     * envoi qui échoue n'annule pas la modification déjà enregistrée : il
+     * est signalé dans les logs.
+     *
+     * @param  array<string, array{0: string, 1: string}>  $changes  sens => [ancien, nouveau]
+     * @return int nombre de passagers prévenus
+     */
+    private function notifyScheduleChange(Covoiturage $trip, array $changes): int
+    {
+        $count = 0;
+
+        foreach ($trip->paidBookings()->with('passenger')->get() as $booking) {
+            $concerned = array_intersect_key($changes, array_flip((array) $booking->legs));
+
+            if (! $concerned || ! $booking->passenger) {
+                continue;
+            }
+
+            try {
+                $booking->setRelation('trip', $trip);
+                $booking->passenger->notify(new TripScheduleChanged($booking, $concerned));
+                $count++;
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        return $count;
+    }
+
     public function dupliquer(Covoiturage $covoiturage)
     {
-        $newTrip = $covoiturage->replicate();
+        $this->ownTrip($covoiturage);
+
+        // La copie repart sans réservation : ses compteurs de places ne sont
+        // pas recopiés (ils reprennent leur valeur par défaut, zéro).
+        $newTrip = $covoiturage->replicate(['places_reservees_aller', 'places_reservees_retour']);
         $newTrip->statut = 'pending';
         $newTrip->save();
 
@@ -308,6 +477,10 @@ class CovoiturageController extends Controller
             abort(403);
         }
 
+        if ($covoiturage->isBooked('aller')) {
+            return $this->locked($covoiturage, 'Des passagers ont réservé l\'aller : son itinéraire et son prix ne peuvent plus être modifiés.');
+        }
+
         return view('livreur.covoiturage.edit_det.edit-route', compact('covoiturage'));
     }
 
@@ -315,6 +488,14 @@ class CovoiturageController extends Controller
     {
         if ($covoiturage->conducteur_id !== Auth::id()) {
             return response()->json(['success' => false, 'message' => 'Non autorisé.'], 403);
+        }
+
+        // L'itinéraire fixe aussi le prix (somme des segments) : figé dès que l'aller est réservé
+        if ($covoiturage->isBooked('aller')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Des passagers ont réservé l\'aller : son itinéraire et son prix ne peuvent plus être modifiés.',
+            ], 422);
         }
         $validated = $request->validate([
             'depart'      => 'required|string|max:500',
@@ -372,6 +553,11 @@ class CovoiturageController extends Controller
             return redirect()->back()->with('error', 'Ce trajet n\'a pas de retour configuré.');
         }
 
+        if ($covoiturage->isBooked('retour')) {
+            return $this->locked($covoiturage, 'Des passagers ont réservé le retour : son itinéraire et son prix ne peuvent plus'
+                . ' être modifiés. Son horaire se décale depuis « Date et heure ».');
+        }
+
         return view('livreur.covoiturage.edit_det.edit-retour', compact('covoiturage'));
     }
 
@@ -393,6 +579,13 @@ class CovoiturageController extends Controller
                 'success' => false,
                 'message' => 'Non autorisé.'
             ], 403);
+        }
+
+        if ($covoiturage->isBooked('retour')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Des passagers ont réservé le retour : son itinéraire et son prix ne peuvent plus être modifiés.',
+            ], 422);
         }
 
         // Validation

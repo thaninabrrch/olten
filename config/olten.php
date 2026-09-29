@@ -78,4 +78,28 @@ return [
         'tagline' => 'Louez, vendez, covoiturez et faites livrer entre nous.',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Informations legales de l'editeur
+    |--------------------------------------------------------------------------
+    | Lues par les pages Mentions legales, CGU, CGV et Politique de
+    | confidentialite (resources/views/pages/legal). Tout ce qui est entre
+    | crochets est A COMPLETER avant la mise en ligne : une mention legale
+    | incomplete n'a pas de valeur. Les coordonnees (e-mail, adresse) sont
+    | celles de la section `email` ci-dessus.
+    */
+    'legal' => [
+        'site'       => 'Olten.fr',
+        'company'    => '[Raison sociale à compléter]',
+        'legal_form' => '[Forme juridique et capital social à compléter]',
+        'registry'   => '[N° SIREN et ville du RCS à compléter]',
+        'vat'        => '[N° de TVA intracommunautaire à compléter]',
+        'phone'      => '[Téléphone à compléter]',
+        'publisher'  => '[Nom du directeur de la publication à compléter]',
+        'host'       => '[Hébergeur : raison sociale, adresse et téléphone à compléter]',
+        'mediator'   => '[Médiateur de la consommation : nom et site internet à compléter]',
+        // Date de derniere mise a jour des textes, affichee en tete de page
+        'updated_at' => '2026-09-29',
+    ],
+
 ];

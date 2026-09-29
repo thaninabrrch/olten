@@ -64,6 +64,10 @@
         </a>
     </header>
 
+    {{-- Demandes en attente de votre accord (trajets en validation manuelle) --}}
+    <x-trip-requests-alert :count="$pending"
+        :href="$pendingTrip ? route('trips.received') . '#trajet-' . $pendingTrip->covoiturage_id : null" />
+
     {{-- Indicateurs --}}
     <div class="sp-stats">
         <div class="sp-stat">
@@ -130,7 +134,7 @@
                         $upcoming = $item['state'] === 'upcoming';
                     @endphp
 
-                    <article class="rtr-trip" id="trajet-{{ $trip->covoiturage_id }}">
+                    <article class="rtr-trip {{ $item['pending'] ? 'has-pending' : '' }}" id="trajet-{{ $trip->covoiturage_id }}">
 
                         {{-- Le trajet --}}
                         <header class="rtr-trip-head">
@@ -143,6 +147,13 @@
                                     <i class="fa-solid {{ $trip->retour ? 'fa-arrow-right-arrow-left' : 'fa-arrow-right-long' }}"></i>
                                     {{ $trip->retour ? 'Aller-retour' : 'Aller simple' }} · Trajet #{{ $trip->covoiturage_id }}
                                 </span>
+
+                                @if ($item['pending'])
+                                    <span class="rtr-pending-chip">
+                                        <i class="fa-solid fa-hourglass-half"></i>
+                                        {{ $item['pending'] }} demande{{ $item['pending'] > 1 ? 's' : '' }} à approuver
+                                    </span>
+                                @endif
 
                                 <a href="{{ route('trajet.show', ['covoiturage' => $trip->covoiturage_id]) }}" class="rtr-trip-name">
                                     {{ $item['from'] }} → {{ $item['to'] }}
@@ -194,14 +205,16 @@
                                 @php
                                     $passenger = $booking->passenger;
                                     $paid      = $booking->status === 'paid';
+                                    $pending   = $booking->isPending();
+                                    [$stateLabel, $stateIcon] = \App\Models\TripBooking::STATUS[$booking->status] ?? \App\Models\TripBooking::STATUS['cancelled'];
                                     $photo     = $passenger ? $avatarUrl($passenger) : null;
                                     $name      = $fullName($passenger);
                                     $initial   = mb_strtoupper(mb_substr($name, 0, 1));
                                     $legs      = collect($booking->legs)->map(fn ($l) => $l === 'retour' ? 'Retour' : 'Aller');
-                                    $seatCount = (int) $booking->seats;
+                                    $seatText  = $booking->seatsLabel(short: true);
                                 @endphp
 
-                                <li class="rtr-row {{ $paid ? '' : 'is-cancelled' }}">
+                                <li class="rtr-row {{ $paid ? '' : ($pending ? 'is-pending' : 'is-cancelled') }}">
                                     <span class="rtr-avatar">
                                         <span>{{ $initial }}</span>
                                         @if ($photo)
@@ -218,7 +231,7 @@
 
                                     <span class="rtr-cell rtr-cell--seats">
                                         <small>Places</small>
-                                        <strong>{{ $seatCount }}</strong>
+                                        <strong>{{ $seatText }}</strong>
                                     </span>
 
                                     <span class="rtr-cell">
@@ -230,25 +243,47 @@
                                         <small>Téléphone</small>
                                         @if ($paid && $upcoming && $booking->phone)
                                             <a href="tel:{{ $booking->phone }}"><i class="fa-solid fa-phone"></i> {{ $booking->phone }}</a>
+                                        @elseif ($pending)
+                                            <strong class="rtr-muted">Après accord</strong>
                                         @else
                                             <strong>—</strong>
                                         @endif
                                     </span>
 
                                     <span class="rtr-cell rtr-cell--amount">
-                                        <small>{{ $paid ? 'Votre gain' : 'Remboursé' }}</small>
-                                        <strong>{{ $euros($paid ? $booking->driver_amount : $booking->total_price) }}</strong>
+                                        <small>{{ $paid ? 'Votre gain' : ($pending ? 'Gain si acceptée' : 'Remboursé') }}</small>
+                                        <strong>{{ $euros($paid || $pending ? $booking->driver_amount : $booking->total_price) }}</strong>
                                     </span>
 
-                                    <span class="rtr-state {{ $paid ? 'is-paid' : 'is-cancelled' }}">
-                                        <i class="fa-solid {{ $paid ? 'fa-circle-check' : 'fa-ban' }}"></i>
-                                        {{ $paid ? 'Confirmée' : 'Annulée' }}
+                                    <span class="rtr-state {{ $paid ? 'is-paid' : ($pending ? 'is-pending' : 'is-cancelled') }}">
+                                        <i class="fa-solid {{ $stateIcon }}"></i>
+                                        {{ $stateLabel }}
                                     </span>
 
-                                    <a href="{{ route('trips.myBookings.show', $booking) }}" class="sp-act rtr-open"
-                                       aria-label="Voir la réservation de {{ $name }}">
-                                        Détail
-                                    </a>
+                                    <span class="rtr-actions">
+                                        {{-- Validation manuelle : le conducteur accepte ou refuse la demande --}}
+                                        @if ($pending)
+                                            <form method="POST" action="{{ route('bookings.approve', $booking) }}" data-approve>
+                                                @csrf
+                                                <button type="submit" class="rtr-btn rtr-btn--accept">
+                                                    <i class="fa-solid fa-check"></i> Approuver
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="{{ route('bookings.refuse', $booking) }}"
+                                                  data-refuse data-name="{{ $name }}">
+                                                @csrf
+                                                <button type="submit" class="rtr-btn rtr-btn--refuse"
+                                                        aria-label="Refuser la demande de {{ $name }}">
+                                                    <i class="fa-solid fa-xmark"></i> Refuser
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        <a href="{{ route('trips.myBookings.show', $booking) }}" class="sp-act rtr-open"
+                                           aria-label="Voir la réservation de {{ $name }}">
+                                            Détail
+                                        </a>
+                                    </span>
                                 </li>
                             @endforeach
                         </ul>
@@ -285,6 +320,14 @@
         scroll-margin-top: 90px;
     }
     .rtr-trip:target { border-color: var(--color-primary, #ff3c00); box-shadow: 0 0 0 3px rgba(255, 60, 0, .15); }
+    .rtr-trip.has-pending { border-color: #fdb022; }
+    .rtr-pending-chip {
+        align-self: flex-start;
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 10px; border-radius: 999px;
+        background: #fef0c7; color: #b54708;
+        font-size: 12px; font-weight: 700;
+    }
 
     .rtr-trip-head { display: flex; align-items: stretch; gap: 18px; padding: 16px; }
 
@@ -358,6 +401,30 @@
     .rtr-state.is-paid { background: #e8f6ee; color: #2f9e5f; }
     .rtr-state.is-cancelled { background: #fdeceb; color: #b42318; }
 
+    /* Demande en attente de l'accord du conducteur (validation manuelle) */
+    .rtr-row.is-pending { background: #fffcf5; }
+    .rtr-state.is-pending { background: #fef0c7; color: #b54708; }
+    .rtr-cell strong.rtr-muted { font-size: 12.5px; font-weight: 600; color: #9aa0a6; }
+
+    .rtr-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
+    .rtr-actions form { margin: 0; }
+    .rtr-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        height: 34px; padding: 0 12px; border-radius: 10px;
+        border: 1px solid transparent;
+        font-size: 12.5px; font-weight: 700; white-space: nowrap;
+        cursor: pointer; transition: background .15s, border-color .15s;
+    }
+    .rtr-btn--accept { background: #1a9d5c; color: #fff; }
+    .rtr-btn--accept:hover { background: #148a50; }
+    .rtr-btn--accept:disabled { opacity: .6; cursor: wait; }
+    .rtr-btn--refuse { background: #fff; border-color: #f3c7c2; color: #b42318; }
+    .rtr-btn--refuse:hover { background: #fdeceb; }
+
+    /* Demande à traiter : les boutons passent sur leur propre ligne, sous
+       le passager, plutôt que de s'empiler dans la dernière colonne. */
+    .rtr-row.is-pending .rtr-actions { grid-column: 2 / -1; justify-content: flex-start; }
+
     .sp-page .rtr-open { height: 34px; }
 
     /* Écran moyen : identité et statut sur une ligne, les chiffres en dessous */
@@ -366,7 +433,7 @@
         .rtr-who { grid-column: 2 / 5; }
         .rtr-state { grid-column: 5 / 6; justify-self: end; }
         .rtr-cell--seats { grid-column: 2 / 3; }
-        .rtr-open { grid-column: 2 / 6; }
+        .rtr-actions { grid-column: 2 / 6; justify-content: flex-start; }
     }
 
     /* Mobile : deux colonnes de chiffres sous le nom */
@@ -379,7 +446,44 @@
         .rtr-who { grid-column: 2 / 4; }
         .rtr-state { grid-column: 2 / 4; justify-self: start; }
         .rtr-cell--phone { grid-column: 2 / 3; }
-        .rtr-open { grid-column: 1 / 4; }
+        .rtr-actions { grid-column: 1 / 4; justify-content: flex-start; }
     }
 </style>
 @endsection
+
+@push('scripts')
+<script>
+    (function () {
+        // Acceptation : un seul envoi, même sur un double clic.
+        document.querySelectorAll('[data-approve]').forEach(function (form) {
+            form.addEventListener('submit', function () {
+                form.querySelector('button').disabled = true;
+            });
+        });
+
+        // Refus : confirmation, le passager sera remboursé.
+        document.querySelectorAll('[data-refuse]').forEach(function (form) {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var text = 'La demande de ' + form.dataset.name + ' sera refusée et le passager intégralement remboursé.';
+                var refuse = function () { form.submit(); };
+
+                if (window.Swal) {
+                    Swal.fire({
+                        title: 'Refuser cette demande ?',
+                        text: text,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Oui, refuser',
+                        cancelButtonText: 'Revenir',
+                        confirmButtonColor: '#b42318',
+                        reverseButtons: true
+                    }).then(function (result) { if (result.isConfirmed) refuse(); });
+                } else if (window.confirm(text)) {
+                    refuse();
+                }
+            });
+        });
+    })();
+</script>
+@endpush

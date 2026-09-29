@@ -73,6 +73,7 @@
         </button>
 
         @if (Auth::check())
+            <x-notification-bell />
             <x-user-dropdown />
         @else
             <button class="icon-btn">
@@ -292,7 +293,8 @@
 
                 <label>
                     <input type="checkbox" name="terms" required>
-                    J'accepte les <a href="#">Conditions de confidentialité</a>
+                    J'accepte les <a href="{{ route('legal.cgu') }}" target="_blank" rel="noopener">conditions générales d'utilisation</a>
+                    et la <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener">politique de confidentialité</a>
                 </label>
 
                 <div id="registerErrors"></div>

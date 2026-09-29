@@ -21,6 +21,12 @@
 
     $mois = [1 => 'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
              'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+    // Aller reserve : son parcours et sa date sont figes, son horaire glisse
+    // encore de $shift minutes (voir CovoiturageController::updateDateTime).
+    $routeLocked = in_array('aller', $bookedLegs, true);
+    $pointTag    = $routeLocked ? 'div' : 'a';
+    $routeUrl    = route('covoiturage.edit-route', $covoiturage->covoiturage_id);
 @endphp
 
 @section('content')
@@ -63,6 +69,10 @@
                         Non définie
                     @endif
                 </p>
+
+                @if($routeLocked)
+                    <span class="sp-tile-lock"><i class="fa-solid fa-lock"></i> Réservé : date figée</span>
+                @endif
             </div>
 
             <i class="fa-solid fa-chevron-right sp-tile-arrow"></i>
@@ -76,6 +86,10 @@
                     <h3>Heure de départ</h3>
                 </div>
                 <p>{{ $heure ?: 'Non définie' }}</p>
+
+                @if($routeLocked)
+                    <span class="sp-tile-lock"><i class="fa-solid fa-lock"></i> Réservé : ajustable de {{ $shift }} min</span>
+                @endif
             </div>
 
             <i class="fa-solid fa-chevron-right sp-tile-arrow"></i>
@@ -93,20 +107,26 @@
             </div>
 
             <div class="sp-toolbar-actions">
-                <a href="{{ route('covoiturage.edit-route', $covoiturage->covoiturage_id) }}" class="sp-act is-edit">
-                    Gérer les étapes
-                </a>
+                @if($routeLocked)
+                    <span class="sp-lock">
+                        <i class="fa-solid fa-lock"></i> Des passagers ont réservé l'aller : le parcours et son prix sont figés.
+                    </span>
+                @else
+                    <a href="{{ $routeUrl }}" class="sp-act is-edit">
+                        Gérer les étapes
+                    </a>
+                @endif
             </div>
         </div>
 
         <div class="sp-route-list">
-            <a href="{{ route('covoiturage.edit-route', $covoiturage->covoiturage_id) }}" class="sp-route-point is-start">
+            <{{ $pointTag }} @unless($routeLocked) href="{{ $routeUrl }}" @endunless class="sp-route-point is-start">
                 <span class="sp-route-dot"></span>
                 <div>
                     <span class="sp-route-kind">Point de départ</span>
                     <span class="sp-route-name">{{ $covoiturage->depart ?: 'Non précisé' }}</span>
                 </div>
-            </a>
+            </{{ $pointTag }}>
 
             @foreach($escales as $escale)
                 <div class="sp-route-point">
@@ -118,13 +138,13 @@
                 </div>
             @endforeach
 
-            <a href="{{ route('covoiturage.edit-route', $covoiturage->covoiturage_id) }}" class="sp-route-point is-end">
+            <{{ $pointTag }} @unless($routeLocked) href="{{ $routeUrl }}" @endunless class="sp-route-point is-end">
                 <span class="sp-route-dot"></span>
                 <div>
                     <span class="sp-route-kind">Destination</span>
                     <span class="sp-route-name">{{ $covoiturage->destination ?: 'Non précisée' }}</span>
                 </div>
-            </a>
+            </{{ $pointTag }}>
         </div>
     </section>
 </div>

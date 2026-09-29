@@ -70,6 +70,7 @@
         'items' => [
             ['Mes commandes', 'fa-bag-shopping', route('orders'),  request()->is('mes-commandes*'), false],
             ['Mes trajets réservés', 'fa-car-side', route('trips.myBookings'), request()->routeIs('trips.myBookings'), false],
+            ['Mes alertes trajet', 'fa-bell', route('trips.alerts.index'), request()->routeIs('trips.alerts.*'), false],
             ['Favoris',       'fa-heart',        route('favoris'), request()->is('favoris'), false],
         ],
     ];
@@ -96,13 +97,17 @@
     $sections[] = ['label' => 'Livraison', 'icon' => 'fa-truck', 'items' => $livraison];
 
     if ($user->hasRole('chauffeur_vtc')) {
+        // Demandes de réservation qui attendent son accord (validation
+        // manuelle) : compteur sur l'entrée, et sur la section même repliée.
+        $pendingRequests = $user->pendingTripRequests()->count();
+
         $sections[] = [
             'label' => 'Covoiturage',
             'icon'  => 'fa-car-side',
             'items' => [
                 ['Documents requis',         'fa-id-card',          route('livreur.documents'),  request()->routeIs('livreur.documents'), false],
                 ['Mes trajets',       'fa-map-location-dot', route('covoiturage.index'),  request()->routeIs('covoiturage.index'), false],
-                ['Réservations reçues', 'fa-ticket',         route('trips.received'),     request()->routeIs('trips.received'), false],
+                ['Réservations reçues', 'fa-ticket',         route('trips.received'),     request()->routeIs('trips.received'), false, $pendingRequests],
                 ['Ajouter un trajet', 'fa-circle-plus',      route('covoiturage.create'), request()->routeIs('covoiturage.create'), false],
             ],
         ];
@@ -137,24 +142,36 @@
         {{-- Sections repliables --}}
         @foreach ($sections as $section)
             @php
-                $open = collect($section['items'])->contains(fn ($i) => $i[3]);
-                $key  = \Illuminate\Support\Str::slug($section['label']);
+                $open  = collect($section['items'])->contains(fn ($i) => $i[3]);
+                $key   = \Illuminate\Support\Str::slug($section['label']);
+                // Choses à traiter dans la section (6e valeur d'une entrée)
+                $alert = collect($section['items'])->sum(fn ($i) => $i[5] ?? 0);
             @endphp
 
             <details class="menu-group" data-group="{{ $key }}" @if($open) open @endif>
                 <summary>
                     <i class="fa-solid {{ $section['icon'] }}"></i>
                     <span>{{ $section['label'] }}</span>
+                    @if ($alert)
+                        <span class="menu-badge" aria-label="{{ $alert }} à traiter">{{ $alert }}</span>
+                    @endif
                     <i class="fa-solid fa-chevron-down menu-caret" aria-hidden="true"></i>
                 </summary>
 
                 <ul>
-                    @foreach ($section['items'] as [$label, $icon, $url, $active, $locked])
+                    @foreach ($section['items'] as $item)
+                        @php
+                            [$label, $icon, $url, $active, $locked] = $item;
+                            $badge = $item[5] ?? 0;
+                        @endphp
                         <li class="{{ $active ? 'active' : '' }}">
                             <a href="{{ $url }}" class="{{ $locked ? 'is-locked' : '' }}"
                                @if($locked) aria-disabled="true" tabindex="-1" @endif>
                                 <i class="fa-solid {{ $icon }}"></i>
                                 <span>{{ $label }}</span>
+                                @if ($badge)
+                                    <span class="menu-badge" aria-label="{{ $badge }} à approuver">{{ $badge }}</span>
+                                @endif
                             </a>
                         </li>
                     @endforeach

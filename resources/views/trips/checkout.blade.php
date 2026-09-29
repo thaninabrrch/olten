@@ -113,6 +113,16 @@
                                        value="{{ $user->firstname }}" readonly>
                             </div>
 
+                            {{-- Ce que les autres membres verront : la page du trajet
+                                 liste ses passagers (services/covoiturage-detail). --}}
+                            <div class="ck-field ck-field--full">
+                                <small class="ck-hint">
+                                    <i class="fa-solid fa-user-group"></i>
+                                    Vos prénom, nom et photo apparaîtront sur la page du trajet, parmi ses passagers.
+                                    Votre téléphone n'est communiqué qu'au conducteur.
+                                </small>
+                            </div>
+
                             <div class="ck-field ck-field--full">
                                 <label class="ck-label" for="phone">
                                     Téléphone <span class="ck-required">*</span>
@@ -154,16 +164,29 @@
                             </span>
                         </div>
 
+                        {{-- Places par sens quand elles different (2 a l'aller, 1 au retour) --}}
                         <div class="ck-recap-dates">
-                            <span>
-                                <small>Places</small>
-                                <strong>{{ $seats }}</strong>
-                            </span>
-                            <i class="fa-solid fa-xmark"></i>
-                            <span>
-                                <small>Sens</small>
-                                <strong>{{ $legsCount > 1 ? 'Aller & retour' : $lines->first()['label'] }}</strong>
-                            </span>
+                            @if (count(array_unique($seats)) > 1)
+                                @foreach ($lines as $line)
+                                    @if (! $loop->first)
+                                        <i class="fa-solid fa-plus"></i>
+                                    @endif
+                                    <span>
+                                        <small>{{ $line['label'] }}</small>
+                                        <strong>{{ $line['seats'] }} place{{ $line['seats'] > 1 ? 's' : '' }}</strong>
+                                    </span>
+                                @endforeach
+                            @else
+                                <span>
+                                    <small>Places</small>
+                                    <strong>{{ max($seats) }}</strong>
+                                </span>
+                                <i class="fa-solid fa-xmark"></i>
+                                <span>
+                                    <small>Sens</small>
+                                    <strong>{{ $legsCount > 1 ? 'Aller & retour' : $lines->first()['label'] }}</strong>
+                                </span>
+                            @endif
                         </div>
 
                         @foreach ($lines as $line)
@@ -171,11 +194,11 @@
                                 <span>
                                     {{ $line['label'] }} · {{ \App\Models\Covoiturage::villeCourte($line['from']) }}
                                     → {{ \App\Models\Covoiturage::villeCourte($line['to']) }}
-                                    @if ($seats > 1)
-                                        <small>({{ $seats }} × {{ number_format($line['price'], 2, ',', ' ') }} €)</small>
+                                    @if ($line['seats'] > 1)
+                                        <small>({{ $line['seats'] }} × {{ number_format($line['price'], 2, ',', ' ') }} €)</small>
                                     @endif
                                 </span>
-                                <span>{{ number_format($line['price'] * $seats, 2, ',', ' ') }} €</span>
+                                <span>{{ number_format($line['price'] * $line['seats'], 2, ',', ' ') }} €</span>
                             </div>
                         @endforeach
 
@@ -196,13 +219,20 @@
 
                         <p class="ck-recap-note">
                             <i class="fa-solid fa-circle-info"></i>
-                            Le conducteur est prévenu dès le paiement accepté. En cas d'annulation,
-                            vous êtes intégralement remboursé.
+                            @if ($trip->isManual())
+                                Votre demande part au conducteur dès le paiement accepté : il l'accepte ou la refuse.
+                                S'il refuse, ou s'il ne répond pas avant le départ, vous êtes intégralement remboursé.
+                            @else
+                                Le conducteur est prévenu dès le paiement accepté. En cas d'annulation,
+                                vous êtes intégralement remboursé.
+                            @endif
+                            En payant, vous acceptez nos
+                            <a href="{{ route('legal.cgv') }}" target="_blank" rel="noopener">conditions générales de vente</a>.
                         </p>
                     </div>
 
                     <div class="ck-mini">
-                        <span><small>Places</small><strong>{{ $seats }}</strong></span>
+                        <span><small>Places</small><strong>{{ \App\Models\TripBooking::describeSeats($seats, short: true) }}</strong></span>
                         <span><small>Total</small><strong>{{ number_format($amounts['total'], 2, ',', ' ') }} €</strong></span>
                     </div>
                 </aside>
@@ -659,7 +689,8 @@ const releaseButton = () => { submitBtn.disabled = false; submitBtn.innerHTML = 
 const fail = (msg) => { errorsEl.textContent = msg; releaseButton(); };
 
 const LEGS    = "{{ implode(',', $legs) }}";
-const SEATS   = {{ (int) $seats }};
+// Places par sens : { seats_aller: 2, seats_retour: 1 }
+const SEATS   = {!! json_encode(collect($seats)->mapWithKeys(fn ($count, $leg) => ['seats_' . $leg => $count])) !!};
 const PAY_URL = "{{ route('trips.pay', $trip) }}";
 const CSRF    = document.querySelector('input[name=_token]').value;
 
@@ -671,7 +702,7 @@ async function postPayment(body) {
             "Accept": "application/json",
             "X-CSRF-TOKEN": CSRF
         },
-        body: JSON.stringify({ legs: LEGS, seats: SEATS, ...body })
+        body: JSON.stringify({ legs: LEGS, ...SEATS, ...body })
     });
     return res.json();
 }

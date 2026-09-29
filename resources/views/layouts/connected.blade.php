@@ -17,6 +17,10 @@
     {{-- Etat vide unique de la plateforme (<x-empty-state />) --}}
     <link rel="stylesheet" href="{{ asset('assets/css/empty-state.css') }}?v={{ @filemtime(public_path('assets/css/empty-state.css')) ?: 1 }}">
     <link rel="stylesheet" href="{{ asset('assets/css/pagination.css') }}?v={{ @filemtime(public_path('assets/css/pagination.css')) ?: 1 }}">
+    {{-- Cloche des notifications du header (<x-notification-bell />) --}}
+    <link rel="stylesheet" href="{{ asset('assets/css/notifications.css') }}?v={{ @filemtime(public_path('assets/css/notifications.css')) ?: 1 }}">
+    {{-- Feuilles de style poussees par les vues (@push('styles')) --}}
+    @stack('styles')
 </head>
 
 <body>
@@ -55,6 +59,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="{{ asset('assets/js/adress.js') }}"></script>
     <script src="{{ asset('assets/js/script_connected.js') }}"></script>
+    <script src="{{ asset('assets/js/notifications.js') }}?v={{ @filemtime(public_path('assets/js/notifications.js')) ?: 1 }}"></script>
     <script src="{{ asset('assets/js/ckeditor.js') }}"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -128,6 +133,9 @@
 
         });
     </script>
+
+    {{-- Scripts pousses par les vues : joues apres ceux du layout (SweetAlert2...) --}}
+    @stack('scripts')
 
 </body>
 

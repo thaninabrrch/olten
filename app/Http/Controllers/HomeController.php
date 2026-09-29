@@ -20,25 +20,6 @@ class HomeController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Score de visibilité selon l'abonnement
-        |--------------------------------------------------------------------------
-        | Premium  = 2 → meilleure visibilité
-        | Standard = 1 → visibilité améliorée
-        | Aucun    = 0 → visibilité normale
-        |
-        | Important : aucun élément n'est filtré selon l'abonnement.
-        |--------------------------------------------------------------------------
-        */
-        $visibilityScore = function ($item) {
-            return match ($item->user?->subscription?->slug) {
-                'premium' => 2,
-                'standard' => 1,
-                default => 0,
-            };
-        };
-
-        /*
-        |--------------------------------------------------------------------------
         | Annonces
         |--------------------------------------------------------------------------
         */
@@ -47,7 +28,6 @@ class HomeController extends Controller
         $query = Ad::with([
             'images',
             'category.service',
-            'user.subscription'
         ])->published();
 
         if ($request->filled('search')) {
@@ -86,57 +66,33 @@ class HomeController extends Controller
             });
         }
 
-        $ads = $query
-            ->latest()
-            ->get()
-            ->sortByDesc($visibilityScore)
-            ->values();
-
         /*
         |--------------------------------------------------------------------------
-        | Produits
+        | Derniers éléments (annonces et produits)
+        |--------------------------------------------------------------------------
+        | Classement chronologique volontaire : l'abonnement ne modifie pas la
+        | sélection. Quatre suffisent à remplir une ligne de la grille ; le
+        | reste est à un clic, derrière le bouton « Voir tout » (recherche).
+        |
+        | Seuls les quatre plus récents de chaque table sont lus : les quatre
+        | plus récents des deux tables réunies en font forcément partie.
         |--------------------------------------------------------------------------
         */
-        $products = Product::with([
-            'images',
-            'category',
-            'user.subscription'
-        ])
+        $latest = 4;
+
+        $ads = $query->latest()->take($latest)->get()
+            ->map(fn (Ad $ad) => (object) ['type' => 'ad', 'item' => $ad, 'created_at' => $ad->created_at]);
+
+        $products = Product::with(['images', 'category'])
             ->available()
             ->latest()
+            ->take($latest)
             ->get()
-            ->sortByDesc($visibilityScore)
-            ->values();
+            ->map(fn (Product $product) => (object) ['type' => 'product', 'item' => $product, 'created_at' => $product->created_at]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Derniers éléments
-        |--------------------------------------------------------------------------
-        | Ici on garde volontairement le classement chronologique.
-        | L'abonnement ne modifie pas la sélection des derniers éléments.
-        | Quatre suffisent à remplir une ligne de la grille : le reste est à
-        | un clic, derrière le bouton « Voir tout » (page de recherche).
-        |--------------------------------------------------------------------------
-        */
-        $latestItems = $ads
-            ->map(function ($ad) {
-                return (object) [
-                    'type' => 'ad',
-                    'item' => $ad,
-                    'created_at' => $ad->created_at,
-                ];
-            })
-            ->concat(
-                $products->map(function ($product) {
-                    return (object) [
-                        'type' => 'product',
-                        'item' => $product,
-                        'created_at' => $product->created_at,
-                    ];
-                })
-            )
+        $latestItems = $ads->concat($products)
             ->sortByDesc('created_at')
-            ->take(4)
+            ->take($latest)
             ->values();
 
         /*
@@ -146,25 +102,23 @@ class HomeController extends Controller
         | Les trajets qui partent aujourd'hui et ont encore une place, dans
         | l'ordre des départs. Même règle que la page covoiturage : un trajet
         | désactivé n'est pas proposé, et il reste en ligne jusqu'au soir.
+        | Places lues sur les compteurs du trajet : filtre et limite en SQL.
         |--------------------------------------------------------------------------
         */
         $todayTrips = Covoiturage::query()
             ->where('statut', '!=', 'inactif')
             ->whereDate('date_depart', today()->toDateString())
-            ->with(['conducteur.vehicle', 'paidBookings'])
-            ->orderBy('heure_depart')
-            ->get()
-            ->filter(fn (Covoiturage $trip) => $trip->seats_left > 0)
-            ->values();
+            ->withSeats();
 
-        $todayTripsTotal = $todayTrips->count();
-        $todayTrips      = $todayTrips->take(4);
+        $todayTripsTotal = (clone $todayTrips)->count();
+        $todayTrips      = $todayTrips->with('conducteur.vehicle')
+            ->orderBy('heure_depart')
+            ->take(4)
+            ->get();
 
         return view('home', compact(
             'categories',
             'services',
-            'ads',
-            'products',
             'latestItems',
             'todayTrips',
             'todayTripsTotal'

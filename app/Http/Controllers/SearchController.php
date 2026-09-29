@@ -108,7 +108,7 @@ class SearchController extends Controller
             'listings'        => $this->paginate($listings, self::PER_PAGE, $request),
             'counts'          => $counts,
             'typeCounts'      => $this->typeCounts($request, $service, $category),
-            'serviceCounts'   => $this->serviceCounts($categories, $categoryCounts),
+            'serviceCounts'   => $this->serviceCounts($request, $services, $categories, $categoryCounts),
             'categoryCounts'  => $categoryCounts,
             'mapPoints'       => $this->mapPoints($listings),
             'cities'          => $this->cities(),
@@ -336,15 +336,17 @@ class SearchController extends Controller
     /**
      * Trajets a venir correspondant aux criteres.
      *
-     * Un trajet n'appartient a aucune categorie et ne se livre pas : des que
-     * la recherche porte sur l'un ou l'autre, il sort du perimetre plutot que
-     * d'etre propose a tort. La table `covoiturages` n'est pas datee non
-     * plus, un filtre sur la date de publication l'ecarte donc aussi.
+     * Un trajet n'a pas de categorie : une categorie du covoiturage
+     * (« Trajets quotidiens »...) designe donc tous les trajets, comme sur la
+     * page /covoiturage/{categorie}. Toute autre categorie ou service les
+     * ecarte, de meme qu'une recherche avec livraison (un trajet ne se livre
+     * pas). La table `covoiturages` n'est pas datee non plus, un filtre sur
+     * la date de publication l'ecarte donc aussi.
      */
     private function tripQuery(Request $request, ?Service $service, ?Category $category): Collection
     {
-        $horsPerimetre = $category
-            || ($service && ! str_starts_with($service->slug, 'covoiturage'))
+        $horsPerimetre = ($category && ! $this->isCovoiturage($category->service))
+            || ($service && ! $this->isCovoiturage($service))
             || $request->boolean('delivery')
             || $this->periodDays($request);
 
@@ -383,10 +385,20 @@ class SearchController extends Controller
             $query->whereRaw($affiche . ' <= ?', [(float) $request->input('max_price')]);
         }
 
-        return $query->with('conducteur')
+        // Seuls les trajets reservables remontent, comme sur la page
+        // covoiturage (ServicePageController::tripQuery) : un trajet complet,
+        // reservations payees deduites, n'a plus rien a proposer. Les places
+        // se lisent sur les compteurs du trajet : filtre et plafond en SQL.
+        return $query->withSeats()
+                     ->with('conducteur')
                      ->orderBy('date_depart')
-                     ->limit(self::TRIP_LIMIT)
+                     ->take(self::TRIP_LIMIT)
                      ->get();
+    }
+
+    private function isCovoiturage(?Service $service): bool
+    {
+        return $service !== null && str_starts_with($service->slug, Covoiturage::SERVICE_SLUG);
     }
 
     /**
@@ -483,11 +495,10 @@ class SearchController extends Controller
 
     /**
      * Nombre d'offres par service, deduit des categories qu'il porte.
-     * Le covoiturage n'en a pas : ses trajets se comptent a part.
      *
      * @return array<int,int>
      */
-    private function serviceCounts(Collection $categories, array $categoryCounts): array
+    private function serviceCounts(Request $request, Collection $services, Collection $categories, array $categoryCounts): array
     {
         $counts = [];
 
@@ -498,6 +509,16 @@ class SearchController extends Controller
 
             $counts[$category->service_id] = ($counts[$category->service_id] ?? 0)
                 + ($categoryCounts[$category->id] ?? 0);
+        }
+
+        // Les trajets n'ont pas de categorie : la boucle ne les voit pas, et
+        // le covoiturage affichait « 0 » alors que des trajets etaient en
+        // ligne. Ils s'ajoutent ici, a criteres egaux (sans le perimetre).
+        $covoiturage = $services->first(fn (Service $s) => $this->isCovoiturage($s));
+
+        if ($covoiturage && in_array($request->input('type'), [null, Listing::TRAJET], true)) {
+            $counts[$covoiturage->id] = ($counts[$covoiturage->id] ?? 0)
+                + $this->tripQuery($request, null, null)->count();
         }
 
         return $counts;
@@ -837,12 +858,14 @@ class SearchController extends Controller
         $trips = Covoiturage::where('statut', '!=', 'inactif')
             ->upcoming()
             ->where(fn (Builder $q) => $q->where('depart', 'like', $like)->orWhere('destination', 'like', $like))
+            // Meme regle que la liste de resultats : pas de trajet complet
+            ->withSeats()
             ->orderBy('date_depart')
-            ->limit(3)
+            ->take(3)
             ->get()
             ->map(fn (Covoiturage $t) => [
                 'label' => $t->depart_ville . ' → ' . $t->destination_ville,
-                'sub'   => optional($t->date_depart)->translatedFormat('D j M') . ' · ' . $t->nb_places . ' place' . ($t->nb_places > 1 ? 's' : ''),
+                'sub'   => optional($t->date_depart)->translatedFormat('D j M') . ' · ' . $t->seats_left . ' place' . ($t->seats_left > 1 ? 's' : '') . ' restante' . ($t->seats_left > 1 ? 's' : ''),
                 'icon'  => 'fa-solid fa-car-side',
                 'price' => number_format((float) ($t->prix_total_affiche ?: $t->prix_place), 0, ',', ' ') . ' €',
                 'url'   => route('covoiturage.trip', $t),

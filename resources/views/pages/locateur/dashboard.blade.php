@@ -56,6 +56,9 @@
         @endif
     </header>
 
+    {{-- Réservations à approuver (trajets en validation manuelle) --}}
+    <x-trip-requests-alert />
+
     {{-- ══ Synthese des six derniers mois ══ --}}
     <div class="sp-balance">
         <div>

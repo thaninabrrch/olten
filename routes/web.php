@@ -43,7 +43,10 @@ use App\Models\User;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\NotificationPreferenceController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\TripAlertController;
 use App\Http\Controllers\Admin\SubscriptionsController;
+use App\Http\Controllers\Admin\RefundController;
 
 /*
 |--------------------------------------------------------------------------
@@ -95,6 +98,14 @@ Route::get('/contact', [ContactController::class, 'index'])
     ->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])
     ->name('contact.store');
+
+// Pages légales (liens dans le pied de page). A déclarer avant la route
+// catch-all `/{slug}` de fin de fichier, qui prendrait sinon « cgu » pour le
+// slug d'un service.
+Route::view('/mentions-legales', 'pages.legal.mentions')->name('legal.mentions');
+Route::view('/cgu', 'pages.legal.cgu')->name('legal.cgu');
+Route::view('/cgv', 'pages.legal.cgv')->name('legal.cgv');
+Route::view('/confidentialite', 'pages.legal.confidentialite')->name('legal.privacy');
 Route::get('/annonce-details', function () {
     return view('pages.annonces_pages.annonces_details');
 })->name('annonces.details');
@@ -114,6 +125,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/abonnements/{subscription}/paiement', [SubscriptionController::class, 'payment'])->name('subscriptions.payment');
     Route::get('/abonnements/paiement/success', [SubscriptionController::class, 'success'])->name('subscriptions.success');
     Route::get('/abonnements/paiement/cancel', [SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
+
+    // Cloche du header : notifications du membre (alertes trajet, horaires modifiés...)
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/{id}/ouvrir', [NotificationController::class, 'open'])->name('notifications.open');
+    Route::post('/notifications/tout-lire', [NotificationController::class, 'readAll'])->name('notifications.readAll');
+
+    // Alertes trajet : « prévenez-moi quand un Paris → Lyon est publié »
+    Route::get('/mes-alertes-trajet', [TripAlertController::class, 'index'])->name('trips.alerts.index');
+    Route::post('/alertes-trajet', [TripAlertController::class, 'store'])->name('trips.alerts.store');
+    Route::delete('/alertes-trajet/{alert}', [TripAlertController::class, 'destroy'])->name('trips.alerts.destroy');
 });
 
 Route::middleware('auth', 'verified', 'approved')->group(function () {
@@ -248,6 +269,9 @@ Route::middleware('auth', 'verified', 'approved')->group(function () {
     Route::post('/trajets/{trip}/payer',   [TripBookingController::class, 'pay'])->name('trips.pay');
     Route::get('/reservations/{booking}',  [TripBookingController::class, 'showtripe'])->name('bookings.showtripe');
     Route::post('/reservations/{booking}/annuler', [TripBookingController::class, 'cancel'])->name('bookings.cancel');
+    // Validation manuelle : le conducteur accepte ou refuse une demande
+    Route::post('/reservations/{booking}/accepter', [TripBookingController::class, 'approve'])->name('bookings.approve');
+    Route::post('/reservations/{booking}/refuser', [TripBookingController::class, 'refuse'])->name('bookings.refuse');
     Route::get('/mes-trajets-reserves', [TripReservationsController::class, 'index'])->name('trips.myBookings');
     Route::get('/mes-trajets-reserves/{booking}', [TripReservationsController::class, 'show'])->name('trips.myBookings.show');
     // Côté conducteur : les réservations reçues sur ses trajets
@@ -266,6 +290,8 @@ Route::post('admin/login', [AdminAuthController::class, 'login'])->name('admin.l
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     // covoiturage
     Route::get('rides', [CovoiturageAdminController::class, 'index'])->name('rides.index');
+    // Remboursements, tous services confondus
+    Route::get('remboursements', [RefundController::class, 'index'])->name('refunds.index');
     Route::patch('rides/{ride}/toggle-status', [CovoiturageAdminController::class, 'toggleStatus'])->name('rides.toggle-status');
     // Catégories
     Route::get('/categorie', [CategoryController::class, 'index'])->name('categories.index');
@@ -344,7 +370,6 @@ Route::prefix('vendeur')
         Route::post('ventes/{sale}/delivered', [SellerController::class, 'markAsDelivered'])->name('sales.delivered');
         Route::get('ventes/{sale}/invoice', [SellerController::class, 'invoice'])->name('sales.invoice');
         Route::post('ventes/{sale}/paid', [SellerController::class, 'markAsPaid'])->name('sales.paid');
-        Route::get('orders/{order}', [SellerOrderController::class, 'showOrder'])->name('orders.show');
         Route::get('commandes-clients', [SellerOrderController::class, 'clientOrders'])->name('clientOrders');
     });
 Route::get('/produit/{product}', [ProductController::class, 'show'])->name('products.show');
@@ -355,8 +380,10 @@ Route::prefix('produits')
     ->group(function () {
         Route::get('confirm', [ProductController::class, 'confirm'])->name('confirm')->middleware('auth');
         Route::post('pay', [ProductController::class, 'pay'])->name('pay')->middleware('auth');
+        // Retour après l'achat d'un produit : la commande est déjà enregistrée
+        // (ProductController::pay), l'acheteur la retrouve dans « Mes commandes ».
         Route::get('success', function () {
-            return view('products.success');
+            return redirect()->route('orders')->with('success', 'Paiement accepté : votre commande est enregistrée.');
         })->name('success');
         Route::post('{product}/acheter', [ProductController::class, 'purchase'])->name('purchase')->middleware('auth');
     });

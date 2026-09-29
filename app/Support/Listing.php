@@ -125,7 +125,8 @@ class Listing
             'favorite'     => null,
             'trip_date'    => $trip->date_depart,
             'trip_time'    => $trip->heure_depart,
-            'seats'        => (int) $trip->nb_places,
+            // Places encore libres, reservations payees deduites
+            'seats'        => $trip->seats_left,
         ];
     }
 

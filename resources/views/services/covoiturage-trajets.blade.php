@@ -2,6 +2,10 @@
 
 @section('title', $from . ' → ' . $to . ' en covoiturage - Olten.fr')
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/trip-passengers.css') }}?v={{ @filemtime(public_path('assets/css/trip-passengers.css')) ?: 1 }}">
+@endpush
+
 @section('content')
 
 <div class="cv-page">
@@ -176,6 +180,21 @@
                         $mode = $modes[$trip->passenger_mode] ?? null;
                         $seatsLeft = $trip->seats_left;   
                         $isFull    = $seatsLeft < 1;
+
+                        // Passagers deja inscrits, tous sens confondus, une fois
+                        // chacun ; places prises sens par sens : « 3 places
+                        // reservees », ou « Reservees : 5 a l'aller · 2 au retour ».
+                        $riders     = $trip->paidBookings->pluck('passenger')->filter()->unique('id')->values();
+                        $booked     = collect($trip->legKeys())->mapWithKeys(fn ($leg) => [$leg => $trip->seatsBooked($leg)]);
+                        $bookedText = $booked->unique()->count() > 1
+                            ? "Réservées : {$booked['aller']} à l'aller · {$booked['retour']} au retour"
+                            : $booked->first() . ' place' . ($booked->first() > 1 ? 's' : '') . ' réservée' . ($booked->first() > 1 ? 's' : '');
+                        $names       = $riders->map(fn ($rider) => $rider->public_name);
+                        $ridersText  = match (true) {
+                            $names->count() <= 1 => (string) $names->first(),
+                            $names->count() === 2 => $names[0] . ' et ' . $names[1],
+                            default => $names[0] . ', ' . $names[1] . ' et ' . ($names->count() - 2) . ' autre' . ($names->count() > 3 ? 's' : ''),
+                        };
                     @endphp
 
                     <article class="cv-trip">
@@ -249,17 +268,38 @@
                                             {{ $vehicle ? trim(\Illuminate\Support\Str::title($vehicle->marque . ' ' . $vehicle->modele)) : 'Véhicule non renseigné' }}
                                         </strong>
                                         <small>
-                                            @if ($isFull)
-                                                Complet
-                                            @else
-                                                {{ $seatsLeft }} place{{ $seatsLeft > 1 ? 's' : '' }} restante{{ $seatsLeft > 1 ? 's' : '' }}
-                                            @endif
+                                            {{-- « Aller complet · 1 place au retour » : le trajet reste
+                                                 en ligne tant qu'un sens a une place. --}}
+                                            {{ $trip->seatsLeftLabel() }}
                                             @if ($vehicle?->couleur)
                                                 · {{ $vehicle->couleur }}
                                             @endif
                                         </small>
                                     </span>
                                 </div>
+
+                                {{-- Deja inscrits : prenom, nom et photo de chacun. --}}
+                                @if ($riders->isNotEmpty())
+                                    <div class="cv-trip-riders">
+                                        <span class="cv-riders-stack">
+                                            @foreach ($riders->take(4) as $rider)
+                                                <span class="cv-rider" title="{{ $rider->public_name }}">
+                                                    <span>{{ $rider->initials }}</span>
+                                                    @if ($rider->avatar_url)
+                                                        <img src="{{ $rider->avatar_url }}" alt="" loading="lazy" onerror="this.remove()">
+                                                    @endif
+                                                </span>
+                                            @endforeach
+                                            @if ($riders->count() > 4)
+                                                <span class="cv-rider is-more">+{{ $riders->count() - 4 }}</span>
+                                            @endif
+                                        </span>
+                                        <span class="cv-trip-riders-text">
+                                            <strong>{{ $bookedText }}</strong>
+                                            <small>{{ $ridersText }}</small>
+                                        </span>
+                                    </div>
+                                @endif
                             </div>
                         </div>
 
@@ -308,6 +348,10 @@
                 </div>
             @endif
         @endif
+
+        {{-- Alerte trajet : un jour précis quand la recherche porte sur un seul jour --}}
+        <x-services.trip-alert :from="$from" :to="$to"
+            :date="$filters['start_date'] && $filters['start_date'] === $filters['end_date'] ? $filters['start_date'] : null" />
     </section>
 
 </div>

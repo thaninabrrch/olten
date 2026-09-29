@@ -29,6 +29,7 @@
             'items' => [
                 ['label' => 'Annonces', 'icon' => 'bi-megaphone-fill', 'route' => 'admin.admin.ads.index', 'active' => ['admin.admin.ads.*', 'admin.ads.*']],
                 ['label' => 'Trajets', 'icon' => 'bi-car-front-fill', 'route' => 'admin.rides.index', 'active' => 'admin.rides.*'],
+                ['label' => 'Remboursements', 'icon' => 'bi-arrow-counterclockwise', 'route' => 'admin.refunds.index', 'active' => 'admin.refunds.*'],
                 ['label' => 'Messages contact', 'icon' => 'bi-envelope-fill', 'route' => 'admin.contact_messages.index', 'active' => 'admin.contact_messages.*'],
             ],
         ],

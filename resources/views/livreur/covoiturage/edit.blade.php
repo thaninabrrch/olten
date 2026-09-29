@@ -24,6 +24,15 @@
     // Prix affiche sur la carte Prix : le total du trajet, sinon le prix par place
     $prix = $trajet->prix_total_affiche ?: $trajet->prix_place;
 
+    /*
+     | Trajet reserve ($isBooked) : la date, l'itinéraire et le prix sont ceux
+     | pour lesquels les passagers ont paye, ils sont figes ; l'horaire peut
+     | encore glisser de $shift minutes (passagers prevenus). Chaque bloc
+     | porte alors un « verrou » qui le dit. La carte Prix, entierement figee,
+     | n'est plus un lien.
+     */
+    $reservees = max($trajet->seatsBooked('aller'), $trajet->seatsBooked('retour'));
+
     $blocs = [
         [
             'titre' => 'Itinéraire',
@@ -34,6 +43,7 @@
             'valeur' => $trajet->depart && $trajet->destination
                 ? $trajet->depart . ' → ' . $trajet->destination
                 : null,
+            'verrou' => $isBooked ? 'Date et itinéraire figés · horaire ajustable de ' . $shift . ' min' : null,
         ],
         [
             'titre' => 'Mode de réservation',
@@ -42,14 +52,16 @@
             'ton'   => 'is-green',
             'url'   => route('covoiturage.editMode', $trajet->covoiturage_id),
             'valeur' => $trajet->booking_mode ? ucfirst((string) $trajet->booking_mode) : null,
+            'verrou' => null,
         ],
         [
             'titre' => 'Prix et paiement',
             'texte' => 'Tarif par place et prix de chaque segment.',
             'icone' => 'fa-euro-sign',
             'ton'   => 'is-blue',
-            'url'   => route('covoiturage.prix.edit', $trajet->covoiturage_id),
+            'url'   => $isBooked ? null : route('covoiturage.prix.edit', $trajet->covoiturage_id),
             'valeur' => $prix ? number_format((float) $prix, 2, ',', ' ') . ' €' : null,
+            'verrou' => $isBooked ? 'Figé : des passagers ont payé ce prix' : null,
         ],
         [
             'titre' => 'Places et confort',
@@ -58,6 +70,7 @@
             'ton'   => 'is-red',
             'url'   => route('covoiturage.options.edit', $trajet->covoiturage_id),
             'valeur' => $trajet->nb_places ? $trajet->nb_places . ' place' . ($trajet->nb_places > 1 ? 's' : '') : null,
+            'verrou' => $reservees ? $reservees . ' déjà réservée' . ($reservees > 1 ? 's' : '') . ' : pas moins de places' : null,
         ],
     ];
 
@@ -96,12 +109,26 @@
         </div>
     </header>
 
+    {{-- Trajet réservé : ce qui reste modifiable, et ce qui ne l'est plus --}}
+    @if($isBooked)
+        <div class="sp-note">
+            <i class="fa-solid fa-lock"></i>
+            Des passagers ont réservé ce trajet. <strong>La date, l'itinéraire et le prix sont figés</strong> :
+            c'est ce qu'ils ont payé. L'horaire peut encore être décalé de {{ $shift }} minutes au plus
+            depuis « Date et heure », et les passagers concernés sont prévenus. Le nombre de places, le confort
+            et le mode de réservation restent modifiables.
+        </div>
+    @endif
+
     {{-- Sections a editer --}}
     <p class="sp-section-title">Que souhaitez-vous modifier ?</p>
 
     <div class="sp-grid is-flat">
         @foreach($blocs as $bloc)
-            <a href="{{ $bloc['url'] }}" class="sp-card sp-tile">
+            @php $tag = $bloc['url'] ? 'a' : 'div'; @endphp
+
+            <{{ $tag }} @if($bloc['url']) href="{{ $bloc['url'] }}" @endif
+                class="sp-card sp-tile {{ $bloc['url'] ? '' : 'is-locked' }}">
                 <span class="sp-stat-icon {{ $bloc['ton'] }}">
                     <i class="fa-solid {{ $bloc['icone'] }}"></i>
                 </span>
@@ -116,10 +143,14 @@
                     </div>
 
                     <p>{{ $bloc['texte'] }}</p>
+
+                    @if($bloc['verrou'])
+                        <span class="sp-tile-lock"><i class="fa-solid fa-lock"></i> {{ $bloc['verrou'] }}</span>
+                    @endif
                 </div>
 
-                <i class="fa-solid fa-chevron-right sp-tile-arrow"></i>
-            </a>
+                <i class="fa-solid {{ $bloc['url'] ? 'fa-chevron-right' : 'fa-lock' }} sp-tile-arrow"></i>
+            </{{ $tag }}>
         @endforeach
     </div>
 
@@ -130,19 +161,30 @@
         <div>
             <h2>{{ $trajet->retour ? 'Trajet retour' : 'Aucun trajet retour' }}</h2>
             <p>
-                {{ $trajet->retour
-                    ? 'Un retour est associé à ce trajet : vous pouvez en modifier l\'itinéraire, les horaires et les tarifs.'
-                    : 'Proposez le trajet inverse pour doubler vos chances de remplir votre véhicule.' }}
+                @if($retourBooked)
+                    Des passagers ont réservé le retour : son itinéraire, sa date et son prix sont figés.
+                    Son horaire peut encore être décalé de {{ $shift }} minutes depuis « Date et heure ».
+                @else
+                    {{ $trajet->retour
+                        ? 'Un retour est associé à ce trajet : vous pouvez en modifier l\'itinéraire, les horaires et les tarifs.'
+                        : 'Proposez le trajet inverse pour doubler vos chances de remplir votre véhicule.' }}
+                @endif
             </p>
         </div>
 
         <div class="sp-row-actions">
-            <a href="{{ $trajet->retour
-                        ? route('covoiturage.edit-retour', $trajet->covoiturage_id)
-                        : route('covoiturage.add-retour', $trajet->covoiturage_id) }}"
-               class="sp-act is-edit">
-                {{ $trajet->retour ? 'Modifier le retour' : 'Ajouter un retour' }}
-            </a>
+            @if($retourBooked)
+                <a href="{{ route('covoiturage.edit-date-time', $trajet->covoiturage_id) }}" class="sp-act is-edit">
+                    Décaler l'horaire
+                </a>
+            @else
+                <a href="{{ $trajet->retour
+                            ? route('covoiturage.edit-retour', $trajet->covoiturage_id)
+                            : route('covoiturage.add-retour', $trajet->covoiturage_id) }}"
+                   class="sp-act is-edit">
+                    {{ $trajet->retour ? 'Modifier le retour' : 'Ajouter un retour' }}
+                </a>
+            @endif
 
             @if($trajet->retour && $retourBooked)
                 <span class="sp-lock">

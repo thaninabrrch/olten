@@ -40,10 +40,12 @@ class AdminDashboardController extends Controller
                     ->pluck('users_count', 'name')
                     ->toArray();
 
-        $rawInscriptions = User::selectRaw("DATE_FORMAT(created_at, '%Y-%m') as mois, COUNT(*) as total")
-                                ->where('created_at', '>=', now()->subMonths(5)->startOfMonth())
-                                ->groupBy('mois')
-                                ->pluck('total', 'mois')
+        // Regroupement par mois en PHP : DATE_FORMAT n'existe que sous MySQL
+        // (le tableau de bord plantait sous PostgreSQL et SQLite), et six
+        // mois d'inscriptions tiennent sans peine en mémoire.
+        $rawInscriptions = User::where('created_at', '>=', now()->subMonths(5)->startOfMonth())
+                                ->pluck('created_at')
+                                ->countBy(fn ($date) => $date->format('Y-m'))
                                 ->toArray();
 
         $inscriptions = [];

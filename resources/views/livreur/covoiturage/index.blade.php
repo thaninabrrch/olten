@@ -119,10 +119,12 @@
                             ->unique()
                             ->values();
 
-                        // Places payées sur le sens le plus rempli, et nombre de passagers
+                        // Places payées sur le sens le plus rempli, nombre de passagers
+                        // confirmés et demandes qui attendent son accord (validation manuelle)
                         $reservees  = collect($trajet->legKeys())->map(fn ($l) => $trajet->seatsBooked($l))->max();
                         $restantes  = $trajet->seats_left;
-                        $passagers  = $trajet->paidBookings->count();
+                        $enAttente  = $trajet->paidBookings->where('status', 'pending')->count();
+                        $passagers  = $trajet->paidBookings->count() - $enAttente;
                     @endphp
 
                     <article class="sp-card sp-mission">
@@ -221,10 +223,10 @@
                             <a href="{{ route('covoiturage.edit', $trajet->covoiturage_id) }}"
                                class="sp-act is-ghost">Modifier</a>
 
-                            @if ($passagers)
+                            @if ($passagers || $enAttente)
                                 <a href="{{ route('trips.received') }}#trajet-{{ $trajet->covoiturage_id }}"
                                    class="sp-act is-ghost">
-                                    Réservations ({{ $passagers }})
+                                    Réservations ({{ $passagers }}){{ $enAttente ? ' · ' . $enAttente . ' à approuver' : '' }}
                                 </a>
                             @endif
                         </div>

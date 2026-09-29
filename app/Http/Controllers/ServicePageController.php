@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Covoiturage;
 use App\Models\Product;
 use App\Models\Service;
+use App\Models\User;
 use App\Support\Listing;
 use App\Support\RouteImage;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ServicePageController extends Controller
@@ -57,23 +59,6 @@ class ServicePageController extends Controller
 
     /** Plafond de marqueurs envoyes a la carte. */
     private const MAP_LIMIT = 200;
-    /**
-     * Trajets réservables : à venir, non désactivés ET avec assez de places
-     * libres (réservations payées déduites). Toutes les pages passent par là,
-     * pour que la liste, les chiffres du hero, les villes et les bornes de
-     * recherche parlent des mêmes trajets.
-     */
-    private function availableTrips(array $filters = [], array $with = []): Collection
-    {
-        $seatsWanted = max(1, (int) ($filters['persons'] ?? 0));
-    
-        return $this->tripQuery($filters)
-            ->with(array_merge(['paidBookings'], $with))
-            ->get()
-            ->filter(fn (Covoiturage $trip) => $trip->seats_left >= $seatsWanted)
-            ->values();
-    }
-    
 
     /**
      * Vitrine « Nos services » : la liste complete des services de la
@@ -99,7 +84,7 @@ class ServicePageController extends Controller
         // Le covoiturage ne publie ni annonces ni produits : ses offres sont
         // des trajets, ranges dans une table a part. Sans ce cas particulier,
         // sa carte annoncait « 0 offre » alors que des trajets sont en ligne.
-        $trips = $this->availableTrips()->count();
+        $trips = $this->tripQuery()->count();
 
         $services->each(function (Service $service) use ($trips) {
             $service->offers_count = str_starts_with($service->slug, 'covoiturage')
@@ -164,19 +149,17 @@ class ServicePageController extends Controller
     private function covoiturage(Request $request, Service $service)
     {
         $filters = $this->tripFilters($request);
-        $trips  = $this->availableTrips($filters, ['conducteur']);
-        $routes = $this->groupByRoute($trips, $filters['sort']);
-
+        $trips   = $this->tripQuery($filters);
 
         return view('services.covoiturage-service', [
             'service'    => $service,
             'categories' => $service->categories()->orderBy('id')->get(),
-            'routes'     => $this->paginate($routes, self::ROUTES_PER_PAGE, $request),
-            'tripTotal'  => $trips->count(),
+            'routes'     => $this->routes($trips, $filters['sort']),
+            'tripTotal'  => (clone $trips)->count(),
             'filters'    => $filters,
             'stats'      => $this->tripStats(),
             'cities'     => $this->tripCities(),
-            'criteria'   => $this->tripCriteria(),
+            'criteria'   => $this->tripCriteria($this->tripQuery()),
             'hasFilters' => $this->hasTripFilters($filters),
         ]);
     }
@@ -201,50 +184,39 @@ class ServicePageController extends Controller
         // ses chiffres et borne la barre de recherche. Elle ne doit pas
         // bouger avec les criteres saisis, sinon un filtre trop etroit
         // retirerait du formulaire les valeurs permettant d'en sortir.
-        $all = $this->onRoute($this->availableTrips(), $from, $to);
-        
-        $trips = $this->sortTrips(
-            $this->onRoute($this->availableTrips($filters, ['conducteur.vehicle']), $from, $to),
-            $filters['sort']
-        );
- 
+        $all   = $this->tripQuery()->onRoute($from, $to);
+        $first = (clone $all)->orderBy('date_depart')->orderBy('heure_depart')->first();
 
+        // Le rapprochement se fait sur la ville et non sur l'adresse complete
+        // (scopeOnRoute) : « Lyon » et « Lyon, Metropole de Lyon » sont la
+        // meme ville. Par defaut le depart le plus proche ; au prix, le trajet
+        // le moins cher d'abord. Tri et pagination se font en SQL.
+        // Les passagers de chaque carte sont charges en une requete pour la
+        // page (prenom, initiale et photo seulement).
+        $trips = $this->tripQuery($filters)
+            ->onRoute($from, $to)
+            ->with([
+                'conducteur.vehicle',
+                'paidBookings' => fn ($q) => $q->oldest()->select('id', 'trip_id', 'user_id', 'legs', 'seats'),
+                'paidBookings.passenger:id,firstname,lastname,name,profile_photo',
+            ])
+            ->when($filters['sort'] === 'price', fn (Builder $q) => $q->orderByRaw(Covoiturage::PRICE_SQL))
+            ->orderBy('date_depart')
+            ->orderBy('heure_depart')
+            ->paginate(self::TRIPS_PER_PAGE)
+            ->withQueryString();
 
         return view('services.covoiturage-trajets', [
-            'from'       => $all->first()?->depart_ville ?: $from,
-            'to'         => $all->first()?->destination_ville ?: $to,
-            'trips'      => $this->paginate($trips, self::TRIPS_PER_PAGE, $request),
-            'total'      => $trips->count(),
-            'routeTotal' => $all->count(),
+            'from'       => $first?->depart_ville ?: $from,
+            'to'         => $first?->destination_ville ?: $to,
+            'trips'      => $trips,
+            'total'      => $trips->total(),
+            'routeTotal' => (clone $all)->count(),
             'image'      => RouteImage::for($from, $to),
             'filters'    => $filters,
             'criteria'   => $this->tripCriteria($all),
             'hasFilters' => $this->hasTripFilters($filters),
         ]);
-    }
-
-    /**
-     * Les trajets d'une liaison. Le rapprochement se fait sur la ville et
-     * non sur l'adresse complete : les conducteurs saisissent des adresses
-     * geocodees, « Lyon » et « Lyon, Metropole de Lyon » sont la meme ville.
-     */
-    private function onRoute(Collection $trips, string $from, string $to): Collection
-    {
-        return $trips
-            ->filter(fn (Covoiturage $trip) => Str::slug($trip->depart_ville) === Str::slug($from)
-                                            && Str::slug($trip->destination_ville) === Str::slug($to))
-            ->values();
-    }
-
-    /**
-     * Tri de la liste d'une liaison. Par defaut l'ordre de la requete (le
-     * depart le plus proche) ; au prix, le trajet le moins cher d'abord.
-     */
-    private function sortTrips(Collection $trips, string $sort): Collection
-    {
-        return $sort === 'price'
-            ? $trips->sortBy(fn (Covoiturage $t) => (float) ($t->prix_total_affiche ?: $t->prix_place))->values()
-            : $trips;
     }
 
     /**
@@ -263,7 +235,7 @@ class ServicePageController extends Controller
     {
         abort_if($covoiturage->statut === 'inactif', 404);
 
-        $covoiturage->load(['conducteur.vehicle', 'paidBookings']);
+        $covoiturage->load('conducteur.vehicle');
         $return = $covoiturage->return_trip_data ?? [];
         $returnTrip = $return['trajet'] ?? [];
 
@@ -297,11 +269,25 @@ class ServicePageController extends Controller
             );
         }
 
+        // Passagers de chaque sens, du premier au dernier inscrit : chaque
+        // reservation porte ses places par sens (2 a l'aller, 1 au retour...)
+        // et figure dans la liste de chaque sens ou elle en a. Seules les
+        // colonnes affichees sont lues : jamais le telephone.
+        $bookings = $covoiturage->paidBookings()
+            ->with('passenger:id,firstname,lastname,name,profile_photo')
+            ->oldest()
+            ->get(['id', 'user_id', 'status', 'legs', 'seats', 'seats_aller', 'seats_retour']);
+
+        $passengers = collect($covoiturage->legKeys())->mapWithKeys(fn (string $leg) => [
+            $leg => $bookings->filter(fn ($booking) => $booking->seatsOn($leg) > 0)->values(),
+        ]);
+
         return view('services.covoiturage-detail', [
-            'trip'  => $covoiturage,
-            'legs'  => $legs,
-            'total' => collect($legs)->sum('total'),
-            'image' => RouteImage::for($covoiturage->depart_ville, $covoiturage->destination_ville),
+            'trip'       => $covoiturage,
+            'legs'       => $legs,
+            'passengers' => $passengers,
+            'total'      => collect($legs)->sum('total'),
+            'image'      => RouteImage::for($covoiturage->depart_ville, $covoiturage->destination_ville),
         ]);
     }
 
@@ -443,127 +429,192 @@ class ServicePageController extends Controller
      * que des criteres qui existent : on ne demande pas 6 places quand le
      * trajet le plus large en compte 4, ni un prix plafond hors de portee.
      *
-     * Sans argument, elle decrit tout le service ; avec, la liaison ouverte.
+     * Decrit les trajets de la requete recue : tout le service, ou la
+     * liaison ouverte. Une seule requete d'agregats, rien n'est charge.
      */
-
-    private function tripCriteria(?Collection $trips = null): array
+    private function tripCriteria(Builder $trips): array
     {
-        $trips ??= $this->availableTrips();
-    
-        $prices = $trips->map(fn (Covoiturage $t) => (float) ($t->prix_total_affiche ?: $t->prix_place))
-                        ->filter(fn (float $price) => $price > 0);
-    
+        $price = Covoiturage::PRICE_SQL;
+
+        $row = (clone $trips)->toBase()
+            ->selectRaw('MAX(' . Covoiturage::SEATS_LEFT_SQL . ') as seats')
+            ->selectRaw("MIN(CASE WHEN $price > 0 THEN $price END) as min_price")
+            ->selectRaw("MAX(CASE WHEN $price > 0 THEN $price END) as max_price")
+            ->first();
+
         return [
             // Plus grand nombre de places encore libres sur un trajet
-            'seats'     => (int) $trips->max('seats_left'),
-            'min_price' => $prices->min(),
-            'max_price' => $prices->max(),
+            'seats'     => (int) ($row->seats ?? 0),
+            'min_price' => isset($row->min_price) ? (float) $row->min_price : null,
+            'max_price' => isset($row->max_price) ? (float) $row->max_price : null,
         ];
     }
 
-
     /**
-     * Trajets exposes au public : a venir et non desactives. Un trajet dont
-     * la date est passee n'a plus a etre reservable.
+     * Trajets exposes au public et reservables : a venir, non desactives et
+     * avec assez de places libres. Toutes les pages covoiturage partent
+     * d'ici, pour que la liste, les chiffres du hero, les villes et les
+     * bornes de recherche parlent des memes trajets.
+     *
+     * Tout se filtre en SQL : les places se lisent sur les compteurs du
+     * trajet (Covoiturage::SEATS_LEFT_SQL), tenus a jour a chaque
+     * reservation. Pas de tri ici : les requetes regroupees par liaison
+     * n'en veulent pas, chaque appelant ordonne selon son besoin.
      */
     private function tripQuery(array $filters = []): Builder
     {
         return Covoiturage::query()
             ->where('statut', '!=', 'inactif')
             ->upcoming()
+            // Au moins une place, ou le nombre de voyageurs demande
+            ->withSeats((int) ($filters['persons'] ?? 0))
             ->when($filters['departure'] ?? null, fn (Builder $q, $v) => $q->where('depart', 'like', '%' . $v . '%'))
             ->when($filters['arrival'] ?? null, fn (Builder $q, $v) => $q->where('destination', 'like', '%' . $v . '%'))
             ->when($filters['start_date'] ?? null, fn (Builder $q, $v) => $q->whereDate('date_depart', '>=', $v))
             ->when($filters['end_date'] ?? null, fn (Builder $q, $v) => $q->whereDate('date_depart', '<=', $v))
-            ->when(($filters['persons'] ?? 0) > 0, fn (Builder $q) => $q->where('nb_places', '>=', $filters['persons']))
             // Prix affiche du trajet : le total quand le conducteur en publie
             // un, le prix par place sinon (meme regle que les cartes).
             ->when(($filters['max_price'] ?? 0) > 0, fn (Builder $q) => $q->whereRaw(
-                'COALESCE(NULLIF(prix_total_affiche, 0), prix_place) <= ?',
+                Covoiturage::PRICE_SQL . ' <= ?',
                 [$filters['max_price']]
-            ))
-            ->orderBy('date_depart')
-            ->orderBy('heure_depart');
+            ));
     }
 
     /**
-     * Regroupe les trajets par liaison (ville de depart -> ville d'arrivee).
-     * Le regroupement se fait en PHP : les colonnes stockent l'adresse
-     * geocodee complete, un GROUP BY SQL separerait « Lyon » de
-     * « Lyon, Metropole de Lyon, ... ».
+     * Liaisons de la recherche (ville de depart -> ville d'arrivee), une
+     * carte par liaison. Regroupement et pagination se font en SQL sur les
+     * slugs de ville (Covoiturage::saving) : un GROUP BY sur l'adresse
+     * complete separerait « Lyon » de « Lyon, Metropole de Lyon, ... ».
+     *
+     * Par defaut la liaison qui part le plus tot ; au prix, celle dont le
+     * trajet le moins cher est le moins cher. Une liaison sans prix affiche
+     * passe en dernier plutot que de sortir en tete.
      */
-    private function groupByRoute(Collection $trips, string $sort = ''): Collection
+    private function routes(Builder $trips, string $sort = ''): LengthAwarePaginator
     {
-        return $trips
-            ->groupBy(fn (Covoiturage $trip) => Str::slug($trip->depart_ville) . '::' . Str::slug($trip->destination_ville))
-            ->map(function (Collection $group) {
-                $first = $group->first();
+        $price    = Covoiturage::PRICE_SQL;
+        $minPrice = "MIN(CASE WHEN $price > 0 THEN $price END)";
 
-                $prices = $group->map(fn (Covoiturage $t) => (float) ($t->prix_total_affiche ?: $t->prix_place))
-                                ->filter(fn ($p) => $p > 0);
+        $routes = (clone $trips)->toBase()
+            ->select('depart_slug', 'destination_slug')
+            ->selectRaw('MIN(depart) as depart, MIN(destination) as destination')
+            ->selectRaw('COUNT(*) as trips')
+            ->selectRaw('SUM(' . Covoiturage::SEATS_LEFT_SQL . ') as seats')
+            ->selectRaw("$minPrice as min_price")
+            ->selectRaw('MIN(date_depart) as next_departure')
+            ->groupBy('depart_slug', 'destination_slug')
+            ->when(
+                $sort === 'price',
+                fn ($q) => $q->orderByRaw("CASE WHEN $minPrice IS NULL THEN 1 ELSE 0 END")->orderByRaw($minPrice),
+                fn ($q) => $q->orderByRaw('MIN(date_depart)')
+            )
+            ->orderBy('depart_slug')
+            ->orderBy('destination_slug')
+            ->paginate(self::ROUTES_PER_PAGE)
+            ->withQueryString();
 
-                return [
-                    'from'      => $first->depart_ville,
-                    'to'        => $first->destination_ville,
-                    'image'     => RouteImage::for($first->depart_ville, $first->destination_ville),
-                    'count'     => $group->count(),
-                    'seats'     => $group->sum('seats_left'),
-                    'min_price' => $prices->min(),
-                    'next'      => $group->min('date_depart'),
-                    'drivers'   => $group->map(fn (Covoiturage $t) => $t->conducteur)
-                                         ->filter()
-                                         ->unique('id')
-                                         ->take(3)
-                                         ->values(),
-                ];
+        $drivers = $this->routeDrivers($trips, collect($routes->items()));
+
+        return $routes->through(function ($route) use ($drivers) {
+            $from = Covoiturage::villeCourte($route->depart);
+            $to   = Covoiturage::villeCourte($route->destination);
+
+            return [
+                'from'      => $from,
+                'to'        => $to,
+                'image'     => RouteImage::for($from, $to),
+                'count'     => (int) $route->trips,
+                'seats'     => (int) $route->seats,
+                'min_price' => $route->min_price !== null ? (float) $route->min_price : null,
+                'next'      => Carbon::parse($route->next_departure),
+                'drivers'   => $drivers->get($route->depart_slug . '::' . $route->destination_slug, collect()),
+            ];
+        });
+    }
+
+    /**
+     * Jusqu'a trois conducteurs par liaison, pour les seules liaisons de la
+     * page affichee : une requete pour les couples liaison / conducteur, une
+     * pour les conducteurs.
+     */
+    private function routeDrivers(Builder $trips, Collection $routes): Collection
+    {
+        if ($routes->isEmpty()) {
+            return collect();
+        }
+
+        $pairs = (clone $trips)->toBase()
+            ->where(function ($q) use ($routes) {
+                foreach ($routes as $route) {
+                    $q->orWhere(fn ($w) => $w->where('depart_slug', $route->depart_slug)
+                                              ->where('destination_slug', $route->destination_slug));
+                }
             })
-            // Par defaut la liaison qui part le plus tot ; au prix, celle dont
-            // le trajet le moins cher est le moins cher. Une liaison sans
-            // prix affiche passe en dernier plutot que de sortir en tete.
-            ->sortBy($sort === 'price'
-                ? fn (array $route) => $route['min_price'] ?? INF
-                : 'next')
-            ->values();
+            ->select('depart_slug', 'destination_slug', 'conducteur_id')
+            ->distinct()
+            ->get();
+
+        $users = User::whereIn('id', $pairs->pluck('conducteur_id')->unique())->get()->keyBy('id');
+
+        return $pairs
+            ->groupBy(fn ($pair) => $pair->depart_slug . '::' . $pair->destination_slug)
+            ->map(fn (Collection $group) => $group
+                ->map(fn ($pair) => $users->get($pair->conducteur_id))
+                ->filter()
+                ->unique('id')
+                ->take(3)
+                ->values());
     }
 
     /**
      * Chiffres de l'entete : ils decrivent l'offre du service et non la
-     * recherche en cours, ils ignorent donc les filtres.
+     * recherche en cours, ils ignorent donc les filtres. Des agregats SQL,
+     * aucun trajet n'est charge.
      */
     private function tripStats(): array
     {
-        
-        $trips = $this->availableTrips();
-
+        $trips = $this->tripQuery();
 
         return [
-            'trips'   => $trips->count(),
-            'routes'  => $trips->map(fn (Covoiturage $t) => Str::slug($t->depart_ville) . '::' . Str::slug($t->destination_ville))
-                               ->unique()->count(),
-            'cities'  => $trips->map(fn (Covoiturage $t) => Str::slug($t->destination_ville))->filter()->unique()->count(),
-            'drivers' => $trips->pluck('conducteur_id')->unique()->count(),
+            'trips'   => (clone $trips)->count(),
+            'routes'  => DB::query()->fromSub(
+                (clone $trips)->toBase()->select('depart_slug', 'destination_slug')->groupBy('depart_slug', 'destination_slug'),
+                'liaisons'
+            )->count(),
+            'cities'  => (clone $trips)->toBase()->distinct()->count('destination_slug'),
+            'drivers' => (clone $trips)->toBase()->distinct()->count('conducteur_id'),
         ];
     }
 
     /**
-     * Villes proposees en autocompletion des champs de recherche.
+     * Villes proposees en autocompletion des champs de recherche : une par
+     * slug de ville, nommee d'apres l'une de ses adresses.
      */
     private function tripCities(): array
     {
-        $trips = $this->availableTrips();
+        $cities = fn (string $slug, string $column) => $this->tripQuery()->toBase()
+            ->select($slug)
+            ->selectRaw("MIN($column) as ville")
+            ->groupBy($slug)
+            ->get()
+            ->map(fn ($row) => Covoiturage::villeCourte($row->ville))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
 
         // Depart et arrivee sont proposes separement : toutes les villes ne
         // sont pas des villes de depart, et l'inverse est vrai aussi.
         return [
-            'from' => $trips->map(fn (Covoiturage $t) => $t->depart_ville)->filter()->unique()->sort()->values(),
-            'to'   => $trips->map(fn (Covoiturage $t) => $t->destination_ville)->filter()->unique()->sort()->values(),
+            'from' => $cities('depart_slug', 'depart'),
+            'to'   => $cities('destination_slug', 'destination'),
         ];
     }
 
     /**
-     * Pagination d'une collection construite en memoire (liaisons, trajets
-     * filtres sur la ville) : le tri et le regroupement ayant lieu en PHP,
-     * la pagination ne peut pas etre deleguee a SQL.
+     * Pagination d'une collection construite en memoire (annonces et
+     * produits melanges puis tries en PHP) : la pagination ne peut pas etre
+     * deleguee a SQL.
      */
     private function paginate(Collection $items, int $perPage, Request $request): LengthAwarePaginator
     {

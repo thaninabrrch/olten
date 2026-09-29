@@ -15,6 +15,7 @@ use App\Models\AdVisit;
 use App\Mail\NewAdNotification;
 use Illuminate\Support\Facades\Mail;
 use App\Models\User;
+use App\Support\ImageUpload;
 
 class AdController extends Controller
 {
@@ -156,13 +157,10 @@ class AdController extends Controller
             'price_per_day.numeric'  => 'Le prix doit être un nombre.',
             'description.string' => 'La description doit être un texte.',
             'summary.string' => "L'aperçu doit être un texte.",
-            'images.*.image' => "Chaque fichier doit être une image.",
-            'images.*.mimes' => "Les images doivent être au format :values.",
-            'images.*.max' => "Chaque image ne peut pas dépasser 2Mo.",
             'available_from.required' => 'La date de disponibilité est obligatoire.',
             'available_until.required' => 'La date de fin de disponibilité est obligatoire.',
             'available_until.after_or_equal' => 'La date de fin doit être égale ou après la date de début.',
-        ];
+        ] + ImageUpload::messages('images.*');
 
         $validated = $request->validate([
             'title'           => 'required|string|max:255',
@@ -178,7 +176,7 @@ class AdController extends Controller
             'images'   => 'nullable|array',
             'summary' => 'nullable|string|max:500',
             'description' => 'nullable|string',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images.*' => ImageUpload::rules(),
             'available_from'  => $estVente ? 'nullable|date' : 'required|date',
             'available_until' => $estVente ? 'nullable|date' : 'required|date|after_or_equal:available_from',
         ], $messages);
@@ -193,7 +191,7 @@ class AdController extends Controller
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
-                $path = $image->store('ads', 'public');
+                $path = ImageUpload::store($image, 'ads');
 
                 $ad->images()->create([
                     'path' => $path
@@ -254,13 +252,10 @@ class AdController extends Controller
             'price_per_day.numeric'  => 'Le prix doit être un nombre.',
             'description.string' => 'La description doit être un texte.',
             'summary.string' => "L'aperçu doit être un texte.",
-            'images.*.image' => "Chaque fichier doit être une image.",
-            'images.*.mimes' => "Les images doivent être au format :values.",
-            'images.*.max' => "Chaque image ne peut pas dépasser 2Mo.",
             'available_from.required' => 'La date de disponibilité est obligatoire.',
             'available_until.required' => 'La date de fin de disponibilité est obligatoire.',
             'available_until.after_or_equal' => 'La date de fin doit être égale ou après la date de début.',
-        ];
+        ] + ImageUpload::messages('images.*');
 
         $validated = $request->validate([
             'title'           => 'required|string|max:255',
@@ -276,7 +271,7 @@ class AdController extends Controller
             'images'   => 'nullable|array',
             'summary' => 'nullable|string|max:500',
             'description' => 'nullable|string',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images.*' => ImageUpload::rules(),
             'available_from'  => $estVente ? 'nullable|date' : 'required|date',
             'available_until' => $estVente ? 'nullable|date' : 'required|date|after_or_equal:available_from',
         ], $messages);
@@ -295,7 +290,7 @@ class AdController extends Controller
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $file) {
-                $path = $file->store('images', 'public');
+                $path = ImageUpload::store($file, 'ads');
                 $ad->images()->create(['path' => $path]);
             }
         }

@@ -5421,12 +5421,16 @@ product-card:hover {
   color: var(--color-primary, #FF4D1C);
 }
 
-/* Bas de page */
+/* Bas de page : copyright, liens legaux et credit sur une ligne */
 .footer-bottom {
   max-width: 1360px;
   margin: 0 auto;
   padding: 24px 0;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 24px;
 }
 
 .footer-bottom p {
@@ -5435,11 +5439,50 @@ product-card:hover {
   margin: 0;
 }
 
+/* Liens vers les pages legales */
+.footer-legal {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+}
+
+.footer-legal a {
+  font-size: 13px;
+  color: #6B6259;
+  text-decoration: none;
+}
+
+.footer-legal a:hover {
+  color: var(--color-primary, #FF4D1C);
+  text-decoration: underline;
+}
+
+/* Credit de l'agence */
+.footer-credit a {
+  font-weight: 600;
+  color: #15110D;
+  text-decoration: none;
+}
+
+.footer-credit a:hover {
+  color: var(--color-primary, #FF4D1C);
+  text-decoration: underline;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 992px) {
   .footer-container {
     grid-template-columns: 1fr 1fr;
     row-gap: 40px;
+  }
+}
+
+/* Petit ecran : les trois blocs du bas de page s'empilent, centres */
+@media (max-width: 768px) {
+  .footer-bottom {
+    flex-direction: column;
+    text-align: center;
   }
 }
 
@@ -9731,6 +9774,106 @@ body.cs-modal-open {
 .cv-trip-fee strong {
     font-weight: 700;
     color: var(--color-black, #111);
+}
+
+/* ---- Alerte trajet (<x-services.trip-alert />) ---- */
+.cv-alert {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 24px;
+    padding: 18px 20px;
+    border: 1px solid #ffe0d2;
+    border-radius: 16px;
+    background: #fff5f1;
+}
+
+.cv-alert.is-active {
+    border-color: #cfe9da;
+    background: #f1faf5;
+}
+
+.cv-alert-icon {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: #fff;
+    color: var(--color-primary);
+    font-size: 18px;
+}
+
+.cv-alert.is-active .cv-alert-icon {
+    color: #2f9e5f;
+}
+
+.cv-alert-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.cv-alert-body strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    color: #16191d;
+}
+
+.cv-alert-body p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #5b6470;
+}
+
+.cv-alert-body a {
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.cv-alert-error {
+    color: #b42318 !important;
+    font-weight: 600;
+}
+
+.cv-alert-form {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.cv-alert-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 18px;
+    border: none;
+    border-radius: 11px;
+    background: var(--color-primary);
+    color: var(--color-white);
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background var(--transition-speed) ease;
+}
+
+.cv-alert-btn:hover {
+    background: var(--color-primary-dark);
+}
+
+@media (max-width: 640px) {
+    .cv-alert {
+        flex-wrap: wrap;
+    }
+
+    .cv-alert-form,
+    .cv-alert-btn {
+        width: 100%;
+        justify-content: center;
+    }
 }
 
 .cv-trip-btn {

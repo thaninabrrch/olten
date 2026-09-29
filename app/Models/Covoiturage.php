@@ -57,12 +57,27 @@ class Covoiturage extends Model
         'return_date' => 'datetime',
         'return_time' => 'string',
         'return_itinerary' => 'array',
+        'places_reservees_aller' => 'integer',
+        'places_reservees_retour' => 'integer',
     ];
 
     /**
      * Slug du service auquel tout trajet appartient.
      */
     public const SERVICE_SLUG = 'covoiturage';
+
+    /**
+     * Prix affiché d'une place en SQL : le total quand le conducteur en
+     * publie un, le prix par place sinon (même règle que seat_price).
+     */
+    public const PRICE_SQL = 'COALESCE(NULLIF(prix_total_affiche, 0), prix_place)';
+
+    /**
+     * Places libres en SQL, sur le sens le moins rempli (même règle que
+     * seatsLeft()). CASE plutôt que LEAST/GREATEST : SQLite ne les a pas.
+     */
+    public const SEATS_LEFT_SQL = 'nb_places - CASE WHEN retour AND places_reservees_retour < places_reservees_aller'
+        . ' THEN places_reservees_retour ELSE places_reservees_aller END';
 
     /**
      * Un trajet est toujours rattache au service « covoiturage ». Le lien est
@@ -73,6 +88,49 @@ class Covoiturage extends Model
     {
         static::creating(function (Covoiturage $covoiturage) {
             $covoiturage->service_id ??= Service::where('slug', self::SERVICE_SLUG)->value('id');
+        });
+
+        // Ville de départ et d'arrivée en slug : les listes regroupent les
+        // trajets par liaison et les alertes les comparent en SQL.
+        static::saving(function (Covoiturage $covoiturage) {
+            if ($covoiturage->isDirty('depart') || ! $covoiturage->depart_slug) {
+                $covoiturage->depart_slug = self::citySlug($covoiturage->depart);
+            }
+
+            if ($covoiturage->isDirty('destination') || ! $covoiturage->destination_slug) {
+                $covoiturage->destination_slug = self::citySlug($covoiturage->destination);
+            }
+        });
+
+        // Nouveau trajet : les membres qui guettent cette liaison sont
+        // prévenus (cloche du header). Un échec d'envoi ne doit pas faire
+        // échouer la publication, le trajet est déjà enregistré.
+        static::created(function (Covoiturage $covoiturage) {
+            try {
+                TripAlert::notifyFor($covoiturage);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        });
+
+        // Trajet qui change de liaison ou de jour de départ, ou qui est remis
+        // en ligne : c'est une offre nouvelle pour ceux qui guettent sa
+        // liaison et ce jour-là, ils sont prévenus comme à la publication.
+        // (Un trajet réservé ne peut plus changer de date ni d'itinéraire.)
+        static::updated(function (Covoiturage $covoiturage) {
+            $moved = $covoiturage->wasChanged(['depart_slug', 'destination_slug'])
+                || $covoiturage->getOriginal('date_depart')?->toDateString() !== $covoiturage->date_depart?->toDateString()
+                || ($covoiturage->wasChanged('statut') && $covoiturage->getOriginal('statut') === 'inactif');
+
+            if (! $moved) {
+                return;
+            }
+
+            try {
+                TripAlert::notifyFor($covoiturage, updated: true);
+            } catch (\Throwable $e) {
+                report($e);
+            }
         });
     }
 
@@ -99,6 +157,19 @@ class Covoiturage extends Model
     public function isPast(): bool
     {
         return $this->date_depart !== null && $this->date_depart->copy()->startOfDay()->lt(today());
+    }
+
+    /** Trajets où il reste au moins $seats places sur un sens. */
+    public function scopeWithSeats(Builder $query, int $seats = 1): Builder
+    {
+        return $query->whereRaw(self::SEATS_LEFT_SQL . ' >= ?', [max(1, $seats)]);
+    }
+
+    /** Trajets d'une liaison, comparée par ville (« Lyon » = « Lyon, Rhône, … »). */
+    public function scopeOnRoute(Builder $query, string $from, string $to): Builder
+    {
+        return $query->where('depart_slug', self::citySlug($from))
+                     ->where('destination_slug', self::citySlug($to));
     }
 
     public function service()
@@ -133,6 +204,12 @@ class Covoiturage extends Model
         return trim(Str::before($adresse, ',')) ?: $adresse;
     }
 
+    /** Clé de comparaison d'une ville : « Évry, Essonne, … » → « evry ». */
+    public static function citySlug(?string $adresse): string
+    {
+        return Str::slug(self::villeCourte($adresse));
+    }
+
     public function photoConducteur(): Attribute
     {
         return Attribute::make(
@@ -144,10 +221,26 @@ class Covoiturage extends Model
 
     public function bookings() { return $this->hasMany(TripBooking::class, 'trip_id', 'covoiturage_id'); }
     public function driver()   { return $this->belongsTo(User::class, 'conducteur_id'); }
-    /** Seules les réservations payées occupent une place : une annulée la libère. */
+    /**
+     * Réservations payées et non remboursées : confirmées, ou en attente de
+     * l'accord du conducteur. Les unes comme les autres occupent leur place ;
+     * une annulée, refusée ou expirée la libère.
+     */
     public function paidBookings()
     {
-        return $this->bookings()->where('status', 'paid');
+        return $this->bookings()->whereIn('status', TripBooking::HOLDING);
+    }
+
+    /** Demandes en attente de l'accord du conducteur (validation manuelle). */
+    public function pendingBookings()
+    {
+        return $this->bookings()->where('status', 'pending');
+    }
+
+    /** Validation manuelle : chaque réservation attend l'accord du conducteur. */
+    public function isManual(): bool
+    {
+        return $this->booking_mode === 'manual';
     }
 
     public function getSeatsLeftAttribute(): int
@@ -165,29 +258,99 @@ class Covoiturage extends Model
             ->max();
     }
 
-    /** Places payées sur un sens : une réservation peut en compter plusieurs. */
-    public function seatsBooked(string $leg): int
+    /**
+     * Places libres en toutes lettres : « 3 places restantes », ou, quand les
+     * deux sens diffèrent, « Aller complet · 1 place au retour ». Un trajet
+     * reste en ligne tant qu'un de ses sens a une place (SEATS_LEFT_SQL).
+     */
+    public function seatsLeftLabel(): string
     {
-        return (int) $this->paidBookings
-            ->filter(fn ($b) => in_array($leg, (array) $b->legs, true))
-            ->sum('seats');
+        $aller  = $this->seatsLeft('aller');
+        $retour = $this->retour ? $this->seatsLeft('retour') : $aller;
+
+        if ($aller === $retour) {
+            return $aller > 0 ? $aller . ' place' . ($aller > 1 ? 's' : '') . ' restante' . ($aller > 1 ? 's' : '') : 'Complet';
+        }
+
+        $leg = fn (int $left, string $where, string $name) => $left > 0
+            ? $left . ' place' . ($left > 1 ? 's' : '') . ' ' . $where
+            : $name . ' complet';
+
+        return $leg($aller, "à l'aller", 'Aller') . ' · ' . $leg($retour, 'au retour', 'Retour');
     }
 
     /**
-     * Un trajet réservé engage le conducteur : il ne peut plus l'annuler, ni
-     * en retirer un sens réservé. Seul le passager annule sa réservation.
-     *
-     * Lecture fraîche en base (et non la relation déjà chargée) : la réponse
-     * décide d'une suppression. Le filtre sur le sens se fait en PHP, les
-     * requêtes JSON n'étant pas portables entre MySQL, PostgreSQL et SQLite.
+     * Places payées sur un sens, lues sur les compteurs du trajet : aucune
+     * requête, et les listes peuvent filtrer dessus en SQL (SEATS_LEFT_SQL).
      */
+    public function seatsBooked(string $leg): int
+    {
+        return (int) ($leg === 'retour' ? $this->places_reservees_retour : $this->places_reservees_aller);
+    }
+
+    /**
+     * Places payées sur un sens, recomptées sur les réservations elles-mêmes.
+     * C'est la source de vérité : le paiement s'y fie, jamais aux compteurs.
+     * Chaque réservation porte ses places par sens (seats_aller,
+     * seats_retour) : 2 à l'aller et 1 au retour se comptent chacune sur
+     * son sens, et la somme se fait en SQL.
+     */
+    public function countPaidSeats(string $leg): int
+    {
+        return (int) $this->paidBookings()->sum($leg === 'retour' ? 'seats_retour' : 'seats_aller');
+    }
+
+    /**
+     * Remet les compteurs d'accord avec les réservations. Appelé par
+     * TripBooking à chaque réservation, annulation ou suppression ; la
+     * commande `covoiturage:recompter-places` le rejoue sur tous les trajets.
+     */
+    public function recountSeats(): void
+    {
+        $this->forceFill([
+            'places_reservees_aller'  => $this->countPaidSeats('aller'),
+            'places_reservees_retour' => $this->countPaidSeats('retour'),
+        ])->saveQuietly();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Trajet réservé : ce qui ne bouge plus
+    |--------------------------------------------------------------------------
+    | Dès qu'une place est payée sur un sens, ce sens engage le conducteur :
+    | le passager a payé pour une date, un itinéraire et un prix, qui ne
+    | changent plus, et le trajet ne peut plus être annulé. Seul l'horaire
+    | peut encore glisser, dans la marge de config('carpool.booked_time_shift')
+    | minutes, et les passagers concernés en sont prévenus.
+    */
+
+    /**
+     * Sens sur lesquels au moins une place est payée. Lecture fraîche en base
+     * (et non la relation déjà chargée) : la réponse autorise ou refuse une
+     * modification.
+     *
+     * @return string[]
+     */
+    public function bookedLegs(): array
+    {
+        return $this->paidBookings()->get(['legs'])
+            ->flatMap(fn ($b) => (array) $b->legs)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public function isBooked(?string $leg = null): bool
     {
-        $bookings = $this->paidBookings()->get();
+        $legs = $this->bookedLegs();
 
-        return $leg
-            ? $bookings->contains(fn ($b) => in_array($leg, (array) $b->legs, true))
-            : $bookings->isNotEmpty();
+        return $leg ? in_array($leg, $legs, true) : $legs !== [];
+    }
+
+    /** Décalage d'horaire accepté sur un sens réservé, en minutes. */
+    public static function bookedTimeShift(): int
+    {
+        return (int) config('carpool.booked_time_shift', 30);
     }
 
     /** @return string[] les sens proposés : l'aller, et le retour s'il existe */

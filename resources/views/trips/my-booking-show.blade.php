@@ -43,6 +43,10 @@
         'upcoming'  => ['Confirmée', 'fa-solid fa-circle-check'],
         'past'      => ['Terminée',  'fa-solid fa-flag-checkered'],
         'cancelled' => ['Annulée · remboursée', 'fa-solid fa-ban'],
+        // Libellés de la validation manuelle, lus sur le statut
+        'pending'   => ["En attente de l'accord du conducteur", 'fa-solid fa-hourglass-half'],
+        'refused'   => ['Refusée · remboursée', 'fa-solid fa-circle-xmark'],
+        'expired'   => ['Sans réponse · remboursée', 'fa-solid fa-clock-rotate-left'],
     ];
 
     $modes = [
@@ -56,7 +60,11 @@
     // Seul le passager annule sa réservation : le conducteur s'est engagé envers lui.
     $canCancel = $state === 'upcoming' && ! $isDriver;
     $sens      = count($legs) > 1 ? 'Aller & retour' : (($legs['retour'] ?? null) ? 'Retour' : 'Aller');
-    $cancelMsg = 'Annuler votre réservation ? Vous serez intégralement remboursé.';
+    $cancelMsg = $booking->isPending()
+        ? 'Annuler votre demande ? Vous serez intégralement remboursé.'
+        : 'Annuler votre réservation ? Vous serez intégralement remboursé.';
+    // Pastille : l'état, précisé par le statut (en attente d'accord, refusée, sans réponse)
+    $badge     = in_array($booking->status, ['pending', 'refused', 'expired'], true) ? $booking->status : $state;
 @endphp
 
 @section('content')
@@ -85,8 +93,8 @@
             <p class="sp-subtitle">Réservation #{{ $booking->id }} · {{ $sens }}</p>
         </div>
 
-        <span class="bkd-status bkd-status--{{ $state }}">
-            <i class="{{ $states[$state][1] }}"></i> {{ $states[$state][0] }}
+        <span class="bkd-status bkd-status--{{ $badge }}">
+            <i class="{{ $states[$badge][1] }}"></i> {{ $states[$badge][0] }}
         </span>
     </header>
 
@@ -174,7 +182,24 @@
                               data-booking-cancel data-message="{{ $cancelMsg }}">
                             @csrf
                             <button type="submit" class="bkd-cancel">
-                                <i class="fa-solid fa-ban"></i> Annuler la réservation
+                                <i class="fa-solid fa-ban"></i> {{ $booking->isPending() ? 'Annuler ma demande' : 'Annuler la réservation' }}
+                            </button>
+                        </form>
+                    @elseif ($isDriver && $booking->isPending())
+                        {{-- Validation manuelle : le conducteur accepte ou refuse la demande --}}
+                        <form action="{{ route('bookings.approve', $booking) }}" method="POST">
+                            @csrf
+                            <button type="submit" class="bkd-accept">
+                                <i class="fa-solid fa-check"></i> Approuver la réservation
+                            </button>
+                        </form>
+                        <form action="{{ route('bookings.refuse', $booking) }}" method="POST"
+                              data-booking-cancel data-title="Refuser cette demande ?"
+                              data-message="Refuser cette demande ? Le passager sera intégralement remboursé."
+                              data-confirm-label="Oui, refuser" data-keep-label="Revenir">
+                            @csrf
+                            <button type="submit" class="bkd-cancel">
+                                <i class="fa-solid fa-xmark"></i> Refuser la demande
                             </button>
                         </form>
                     @elseif ($isDriver && $state === 'upcoming')
@@ -324,7 +349,12 @@
                 <div class="bkd-info">
                     <span class="bkd-info-icon is-blue"><i class="fa-solid fa-user-group"></i></span>
                     <span class="bkd-info-text">
-                        <strong>{{ $booking->seats }} place{{ $booking->seats > 1 ? 's' : '' }} réservée{{ $booking->seats > 1 ? 's' : '' }}</strong>
+                        @php
+                            // « 2 places réservées », ou « 2 places à l'aller · 1 au retour »
+                            $splitSeats = $booking->seatsOn('aller') && $booking->seatsOn('retour')
+                                && $booking->seatsOn('aller') !== $booking->seatsOn('retour');
+                        @endphp
+                        <strong>{{ $booking->seatsLabel() }}{{ $splitSeats ? '' : ' réservée' . ($booking->seats > 1 ? 's' : '') }}</strong>
                         <small>
                             @if ($state === 'cancelled')
                                 {{ $booking->seats > 1 ? 'Places libérées' : 'Place libérée' }}
@@ -406,7 +436,8 @@
                     <p class="bkd-about">{{ \Illuminate\Support\Str::limit($other->about_me, 220) }}</p>
                 @endif
 
-                @if ($state !== 'cancelled' && $otherPhone)
+                {{-- Coordonnées échangées une fois la réservation confirmée --}}
+                @if ($state !== 'cancelled' && ! $booking->isPending() && $otherPhone)
                     <div class="bkd-phone">
                         <span class="bkd-phone-ico"><i class="fa-solid fa-phone"></i></span>
                         <span class="bkd-phone-text">
@@ -527,6 +558,9 @@
     .bkd-status--upcoming  { background: rgba(26, 157, 92, .12); color: var(--bkd-ok); }
     .bkd-status--past      { background: #f1f3f5; color: #6b7280; }
     .bkd-status--cancelled { background: rgba(180, 35, 24, .1); color: var(--bkd-danger); }
+    .bkd-status--pending   { background: #fef0c7; color: #b54708; }
+    .bkd-status--refused,
+    .bkd-status--expired   { background: rgba(180, 35, 24, .1); color: var(--bkd-danger); }
 
     /* ---- Carte ---- */
     .bkd-mapcard { position: relative; padding: 0; overflow: hidden; }
@@ -640,6 +674,26 @@
         transition: background .2s ease;
     }
     .bkd-cancel:hover { background: #fdeceb; }
+
+    .bkd-accept {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        width: 100%;
+        margin-top: 18px;
+        padding: 13px 20px;
+        border: 0;
+        border-radius: 13px;
+        background: #1a9d5c;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background .2s ease;
+    }
+    .bkd-accept:hover { background: #148a50; }
+    .bkd-accept + form .bkd-cancel { margin-top: 10px; }
 
     .bkd-vehicle { display: flex; align-items: center; gap: 14px; padding: 16px 18px; }
     .bkd-vehicle-icon {
@@ -872,12 +926,12 @@
                 }
 
                 Swal.fire({
-                    title: 'Annuler cette réservation ?',
-                    text: message.replace(/^Annuler[^?]*\?\s*/, ''),
+                    title: form.dataset.title || 'Annuler cette réservation ?',
+                    text: message.replace(/^[^?]*\?\s*/, ''),
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonText: 'Oui, annuler',
-                    cancelButtonText: 'Garder la réservation',
+                    confirmButtonText: form.dataset.confirmLabel || 'Oui, annuler',
+                    cancelButtonText: form.dataset.keepLabel || 'Garder la réservation',
                     confirmButtonColor: '#c0392b',
                     cancelButtonColor: '#6c757d',
                     reverseButtons: true,

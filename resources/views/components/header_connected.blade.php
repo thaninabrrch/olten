@@ -60,6 +60,8 @@
         'vehicle.edit'              => ['Mon véhicule', 'Chauffeur VTC'],
         'trips.myBookings'          => ['Mes trajets réservés', 'Mes achats'],
         'trips.myBookings.show'     => ['Détail de la réservation', 'Covoiturage'],
+        'trips.alerts.index'        => ['Mes alertes trajet', 'Mes achats'],
+        'notifications.index'       => ['Notifications', 'Mon activité'],
     ];
 
     // Page non listee : le titre de l'onglet, sans le nom du site
@@ -86,6 +88,7 @@
     </div>
 
     <div class="header-right">
+        <x-notification-bell />
         <x-user-dropdown compact />
     </div>
 </header>

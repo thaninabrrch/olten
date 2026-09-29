@@ -32,6 +32,8 @@
          header, donc present sur toutes les pages publiques. La feuille
          porte aussi la page de resultats (/recherche). --}}
     <link rel="stylesheet" href="{{ asset('assets/css/search.css') }}?v={{ @filemtime(public_path('assets/css/search.css')) ?: 1 }}">
+    {{-- Cloche des notifications du header (<x-notification-bell />) --}}
+    <link rel="stylesheet" href="{{ asset('assets/css/notifications.css') }}?v={{ @filemtime(public_path('assets/css/notifications.css')) ?: 1 }}">
 
     {{-- Feuilles de style poussees par les vues (@push('styles')) --}}
     @stack('styles')
@@ -47,6 +49,7 @@
 
     <x-footer />
     <script src="{{ asset('assets/js/script.js') }}"></script>
+    <script src="{{ asset('assets/js/notifications.js') }}?v={{ @filemtime(public_path('assets/js/notifications.js')) ?: 1 }}"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     {{-- Les boutons du header (sidebar, recherche mobile, menu utilisateur)
