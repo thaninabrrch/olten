@@ -185,9 +185,13 @@
                     @endif
 
                     <div class="dt-actions">
-                        <a class="dt-action" href="mailto:{{ $seller->email ?? '' }}">
-                            <i class="fa-regular fa-comment"></i> Message
-                        </a>
+                        @auth
+                            <button type="button"
+                                    class="dt-action"
+                                    id="openContactSeller">
+                                <i class="fa-regular fa-comment"></i> Message
+                            </button>
+                        @endauth
 
                         <a class="dt-action" href="tel:{{ $seller->phone ?? '' }}">
                             <i class="fa-solid fa-phone"></i> Appeler
@@ -283,7 +287,7 @@
             @if ($seller)
                 <section class="dt-card">
                     <h2 class="dt-card-title">Vendu par</h2>
-
+{{$seller->email}}
                     <div class="dt-owner">
                         @if ($avatar)
                             <img src="{{ $avatar }}" alt="{{ $seller->name }}">
@@ -304,7 +308,75 @@
         </div>
     </div>
 </div>
+@auth
+<div class="modal fade"
+     id="contactSellerModal"
+     tabindex="-1"
+     aria-labelledby="contactSellerModalLabel"
+     aria-hidden="true">
 
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="contactSellerModalLabel">
+                    Contacter {{ $seller->name }}
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Fermer">
+                </button>
+            </div>
+
+            <form action="{{ route('contact.owner') }}" method="POST">
+                @csrf
+
+                <input type="hidden"
+                       name="owner_id"
+                       value="{{ $seller->id }}">
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">Sujet</label>
+                        <input type="text"
+                               name="subject"
+                               class="form-control"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Message</label>
+                        <textarea name="message"
+                                  class="form-control"
+                                  rows="5"
+                                  required></textarea>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Annuler
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        <i class="fa-regular fa-paper-plane"></i>
+                        Envoyer
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+@endauth
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -416,6 +488,45 @@
             qty.addEventListener('input', refresh);
             refresh();
         }
+
+        const contactModal = document.getElementById('contactSellerModal');
+        const openContactSeller = document.getElementById('openContactSeller');
+        const closeContactSeller = document.getElementById('closeContactSeller');
+        const cancelContactSeller = document.getElementById('cancelContactSeller');
+
+        function openContactModal() {
+            if (!contactModal) return;
+
+            contactModal.style.display = 'block';
+            contactModal.classList.add('show');
+            contactModal.removeAttribute('aria-hidden');
+
+            document.body.classList.add('modal-open');
+
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            backdrop.id = 'contactModalBackdrop';
+
+            document.body.appendChild(backdrop);
+
+            backdrop.addEventListener('click', closeContactModal);
+        }
+
+        function closeContactModal() {
+            if (!contactModal) return;
+
+            contactModal.style.display = 'none';
+            contactModal.classList.remove('show');
+            contactModal.setAttribute('aria-hidden', 'true');
+
+            document.body.classList.remove('modal-open');
+
+            document.getElementById('contactModalBackdrop')?.remove();
+        }
+
+        openContactSeller?.addEventListener('click', openContactModal);
+        closeContactSeller?.addEventListener('click', closeContactModal);
+        cancelContactSeller?.addEventListener('click', closeContactModal);
     });
 </script>
 @endpush

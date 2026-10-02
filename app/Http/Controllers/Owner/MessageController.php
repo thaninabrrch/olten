@@ -37,7 +37,7 @@ class MessageController extends Controller
                 'time' => $lastMessage->created_at->diffForHumans()
             ];
         })->values();
-
+        
         return response()->json($conversations);
     }
 

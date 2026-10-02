@@ -117,6 +117,7 @@ Route::get('/compte-en-attente', function () { return view('auth.pending-approva
 Route::get('/verify-email', function () { return view('auth.verify-email');})->name('account.verify');
 
 Route::middleware('auth')->group(function () {
+    Route::post('/contact/owner', [ContactController::class, 'ownerMessage'])->name('contact.owner');
     Route::post('/ads/{ad}/favorite', [FavoriteController::class, 'toggle'])->name('ads.favorite');
     Route::post('/products/{product}/favorite', [FavoriteController::class, 'toggleProduct'])->name('products.favorite');
     Route::get('/favoris', [FavoriteController::class, 'index'])->name('favoris');
