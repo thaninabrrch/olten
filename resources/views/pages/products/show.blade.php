@@ -185,13 +185,19 @@
                     @endif
 
                     <div class="dt-actions">
-                        @auth
-                            <button type="button"
-                                    class="dt-action"
-                                    id="openContactSeller">
+                        {{-- Popin « Message » : <x-contact-owner> en bas de page. Le
+                             proprietaire n'a personne a qui ecrire ici : il rejoint
+                             sa messagerie. --}}
+                        @if ($isOwner)
+                            <a class="dt-action" href="{{ route('messages') }}">
+                                <i class="fa-regular fa-comments"></i> Mes messages
+                            </a>
+                        @elseif ($seller)
+                            <button type="button" class="dt-action" data-cm-open aria-haspopup="dialog"
+                                    @guest data-auth-required data-auth-redirect="{{ request()->fullUrlWithQuery(['contacter' => 1]) }}" @endguest>
                                 <i class="fa-regular fa-comment"></i> Message
                             </button>
-                        @endauth
+                        @endif
 
                         <a class="dt-action" href="tel:{{ $seller->phone ?? '' }}">
                             <i class="fa-solid fa-phone"></i> Appeler
@@ -287,7 +293,7 @@
             @if ($seller)
                 <section class="dt-card">
                     <h2 class="dt-card-title">Vendu par</h2>
-{{$seller->email}}
+
                     <div class="dt-owner">
                         @if ($avatar)
                             <img src="{{ $avatar }}" alt="{{ $seller->name }}">
@@ -308,75 +314,16 @@
         </div>
     </div>
 </div>
-@auth
-<div class="modal fade"
-     id="contactSellerModal"
-     tabindex="-1"
-     aria-labelledby="contactSellerModalLabel"
-     aria-hidden="true">
 
-    <div class="modal-dialog">
-        <div class="modal-content">
+<x-contact-owner :owner="$seller"
+                 listing-type="product"
+                 :listing-id="$product->id"
+                 :title="$product->name"
+                 :price="number_format((float) $product->price, 2, ',', ' ') . ' €'"
+                 price-label="l'unité"
+                 :image="$sources[0]"
+                 kind="vente" />
 
-            <div class="modal-header">
-                <h5 class="modal-title" id="contactSellerModalLabel">
-                    Contacter {{ $seller->name }}
-                </h5>
-
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Fermer">
-                </button>
-            </div>
-
-            <form action="{{ route('contact.owner') }}" method="POST">
-                @csrf
-
-                <input type="hidden"
-                       name="owner_id"
-                       value="{{ $seller->id }}">
-
-                <div class="modal-body">
-
-                    <div class="mb-3">
-                        <label class="form-label">Sujet</label>
-                        <input type="text"
-                               name="subject"
-                               class="form-control"
-                               required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Message</label>
-                        <textarea name="message"
-                                  class="form-control"
-                                  rows="5"
-                                  required></textarea>
-                    </div>
-
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button"
-                            class="btn btn-secondary"
-                            data-bs-dismiss="modal">
-                        Annuler
-                    </button>
-
-                    <button type="submit"
-                            class="btn btn-primary">
-                        <i class="fa-regular fa-paper-plane"></i>
-                        Envoyer
-                    </button>
-                </div>
-
-            </form>
-
-        </div>
-    </div>
-</div>
-@endauth
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -488,45 +435,6 @@
             qty.addEventListener('input', refresh);
             refresh();
         }
-
-        const contactModal = document.getElementById('contactSellerModal');
-        const openContactSeller = document.getElementById('openContactSeller');
-        const closeContactSeller = document.getElementById('closeContactSeller');
-        const cancelContactSeller = document.getElementById('cancelContactSeller');
-
-        function openContactModal() {
-            if (!contactModal) return;
-
-            contactModal.style.display = 'block';
-            contactModal.classList.add('show');
-            contactModal.removeAttribute('aria-hidden');
-
-            document.body.classList.add('modal-open');
-
-            const backdrop = document.createElement('div');
-            backdrop.className = 'modal-backdrop fade show';
-            backdrop.id = 'contactModalBackdrop';
-
-            document.body.appendChild(backdrop);
-
-            backdrop.addEventListener('click', closeContactModal);
-        }
-
-        function closeContactModal() {
-            if (!contactModal) return;
-
-            contactModal.style.display = 'none';
-            contactModal.classList.remove('show');
-            contactModal.setAttribute('aria-hidden', 'true');
-
-            document.body.classList.remove('modal-open');
-
-            document.getElementById('contactModalBackdrop')?.remove();
-        }
-
-        openContactSeller?.addEventListener('click', openContactModal);
-        closeContactSeller?.addEventListener('click', closeContactModal);
-        cancelContactSeller?.addEventListener('click', closeContactModal);
     });
 </script>
 @endpush

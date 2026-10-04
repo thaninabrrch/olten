@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 use App\Mail\ContactMessageMail;
+use App\Mail\OwnerMessageMail;
 use Illuminate\Support\Facades\Mail;
+use App\Models\Ad;
+use App\Models\ContactMessage;
 use App\Models\Message;
+use App\Models\Product;
 use Illuminate\Http\Request;
-use App\Models\User;
 
 class ContactController extends Controller
 {
@@ -33,43 +36,83 @@ class ContactController extends Controller
             ->with('success', 'Votre message a été envoyé avec succès.');
     }
 
+    /**
+     * Message envoye depuis la popin « Message » d'une fiche produit ou annonce.
+     *
+     * Le destinataire se deduit de l'offre, jamais d'un identifiant poste : on
+     * ne peut ecrire qu'au proprietaire d'une offre, et l'objet de l'e-mail
+     * parti au nom d'Olten reste celui de la plateforme, pas un texte libre.
+     */
     public function ownerMessage(Request $request)
     {
         $validated = $request->validate([
-            'owner_id' => 'required|exists:users,id',
-            'subject'  => 'required|string|max:255',
-            'message'  => 'required|string',
+            'listing_type' => 'required|in:product,ad',
+            'listing_id'   => 'required|integer',
+            'message'      => 'required|string|min:2|max:2000',
+        ], [
+            'message.required' => 'Écrivez votre message avant de l’envoyer.',
+            'message.min'      => 'Votre message est un peu court.',
+            'message.max'      => 'Votre message ne doit pas dépasser 2 000 caractères.',
         ]);
 
-        $owner = User::findOrFail($validated['owner_id']);
-
-        if (!$owner->email) {
-            return back()->with('error', 'Ce propriétaire n’a pas d’adresse email.');
+        if ($validated['listing_type'] === 'product') {
+            $listing = Product::findOrFail($validated['listing_id']);
+            $title   = $listing->name;
+            $url     = route('products.show', $listing);
+        } else {
+            $listing = Ad::findOrFail($validated['listing_id']);
+            $title   = $listing->title;
+            $url     = route('ads.show', $listing);
         }
 
-        $user = auth()->user();
+        $owner  = $listing->user;
+        $sender = $request->user();
 
-        $data = [
-            'name'    => $user->name,
-            'email'   => $user->email,
-            'subject' => $validated['subject'],
-            'message' => $validated['message'],
-        ];
+        if (! $owner) {
+            return $this->refuse($request, 'Cet annonceur ne peut pas encore être contacté.');
+        }
 
+        if ($owner->id === $sender->id) {
+            return $this->refuse($request, 'Il s’agit de votre propre offre.');
+        }
+
+        // L'offre ouvre le message : dans la messagerie, le proprietaire sait
+        // d'emblee de quel bien on lui parle (la table n'a pas de lien vers l'offre).
         Message::create([
-            'sender_id'   => $user->id,
+            'sender_id'   => $sender->id,
             'receiver_id' => $owner->id,
-            'content'     => $validated['message'],
+            'content'     => 'À propos de « ' . $title . ' »' . "\n\n" . $validated['message'],
             'is_read'     => false,
         ]);
 
-        Mail::to($owner->email)->send(
-            new ContactMessageMail($data)
-        );
+        // L'e-mail ne fait que prevenir : le message est deja dans la
+        // messagerie. Un SMTP en panne ne doit donc pas faire croire a un echec.
+        if ($owner->email) {
+            try {
+                Mail::to($owner->email)->send(
+                    new OwnerMessageMail($sender, $owner, $title, $url, $validated['message'])
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
 
-        return back()->with(
-            'success',
-            'Votre message a été envoyé avec succès.'
-        );
+        $text = 'Votre message a bien été envoyé à ' . ($owner->firstname ?: $owner->name) . '.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message'          => $text,
+                'conversation_url' => route('messages', ['avec' => $owner->id]),
+            ]);
+        }
+
+        return back()->with('success', $text);
+    }
+
+    private function refuse(Request $request, string $text)
+    {
+        return $request->expectsJson()
+            ? response()->json(['message' => $text], 422)
+            : back()->with('error', $text);
     }
 }

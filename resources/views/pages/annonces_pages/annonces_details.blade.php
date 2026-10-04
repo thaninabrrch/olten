@@ -188,9 +188,24 @@
                     @endif
 
                     <div class="dt-actions">
-                        <a class="dt-action" href="mailto:{{ $owner->email ?? '' }}">
-                            <i class="fa-regular fa-comment"></i> Message
-                        </a>
+                        {{-- Popin « Message » : <x-contact-owner> en bas de page. Le
+                             proprietaire n'a personne a qui ecrire ici : il rejoint
+                             sa messagerie. Une annonce non revendiquee n'a pas de
+                             proprietaire a contacter. --}}
+                        @if ($isOwner)
+                            <a class="dt-action" href="{{ route('messages') }}">
+                                <i class="fa-regular fa-comments"></i> Mes messages
+                            </a>
+                        @elseif ($owner)
+                            <button type="button" class="dt-action" data-cm-open aria-haspopup="dialog"
+                                    @guest data-auth-required data-auth-redirect="{{ request()->fullUrlWithQuery(['contacter' => 1]) }}" @endguest>
+                                <i class="fa-regular fa-comment"></i> Message
+                            </button>
+                        @else
+                            <button type="button" class="dt-action" disabled title="Annonceur non inscrit sur Olten">
+                                <i class="fa-regular fa-comment"></i> Message
+                            </button>
+                        @endif
 
                         <a class="dt-action" href="tel:{{ $owner->phone ?? '' }}">
                             <i class="fa-solid fa-phone"></i> Appeler
@@ -429,6 +444,15 @@
         </div>
     </div>
 </div>
+
+<x-contact-owner :owner="$owner"
+                 listing-type="ad"
+                 :listing-id="$ad->id"
+                 :title="$ad->title"
+                 :price="number_format((float) $ad->price_per_day, 2, ',', ' ') . ' €'"
+                 :price-label="$estVente ? null : 'par jour'"
+                 :image="$sources[0]"
+                 :kind="$estVente ? 'vente' : 'location'" />
 
 @push('scripts')
 <script>

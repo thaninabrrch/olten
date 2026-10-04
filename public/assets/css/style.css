@@ -3758,6 +3758,12 @@ textarea {
     color: var(--color-primary, #ff3c00);
 }
 
+.dt-action:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .dt-report {
     display: block;
     width: 100%;

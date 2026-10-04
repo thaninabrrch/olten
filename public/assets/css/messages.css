@@ -1,0 +1,1256 @@
+/* ==========================================================================
+   Messagerie de l'espace connecte (/mes-messages)
+   (resources/views/pages/locateur/messages.blade.php, assets/js/messages.js)
+
+   Une application plutot qu'une page : la messagerie occupe toute la hauteur
+   sous le header, conversations a gauche, fil a droite. Sous 900px, un seul
+   panneau a la fois, le fil passant en plein ecran.
+
+   Les selecteurs sont tous prefixes par .ib : le layout connecte charge le
+   CDN Tailwind, dont la remise a zero ([type=button] { background: … }),
+   injectee apres cette feuille, l'emporterait sur une classe seule.
+   ========================================================================== */
+
+.ib {
+    --ib-primary: var(--color-primary, #ff3c00);
+    --ib-primary-dark: #e13800;
+    --ib-tint: #fff1e9;
+    --ib-ink: #16191d;
+    --ib-text: #4a5057;
+    --ib-muted: #6c757d;
+    --ib-faint: #9aa1a9;
+    --ib-border: #e9ecef;
+    --ib-field: #e3e6ea;
+    --ib-bg: #f5f6f8;
+    --ib-read: #2b7de9;
+
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    height: calc(100vh - 182px);
+    height: calc(100dvh - 182px);
+    min-height: 520px;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid var(--ib-border);
+    border-radius: 20px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 12px 32px -12px rgba(16, 24, 40, .12);
+    color: var(--ib-ink);
+}
+
+/* La page tient dans l'ecran : la marge basse reservee a la pastille de
+   publication ferait defiler la fenetre pour rien, et la pastille elle-meme
+   recouvrirait le bouton d'envoi. */
+.dashboard-content:has(.ib) {
+    padding-bottom: 24px;
+}
+
+body:has(.ib) .publish-fab {
+    display: none;
+}
+
+.ib .ib-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Avatars
+   -------------------------------------------------------------------------- */
+.ib .ib-avatar {
+    --h: 20;
+    flex: 0 0 auto;
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 50%;
+    background: hsl(var(--h) 70% 92%);
+    color: hsl(var(--h) 45% 32%);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .01em;
+    user-select: none;
+}
+
+.ib .ib-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ib .ib-avatar.is-md {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+}
+
+.ib .ib-avatar.is-lg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 6px;
+    font-size: 21px;
+}
+
+/* --------------------------------------------------------------------------
+   Colonne des conversations
+   -------------------------------------------------------------------------- */
+.ib .ib-side {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    border-right: 1px solid var(--ib-border);
+    background: #fff;
+}
+
+.ib .ib-side-head {
+    padding: 20px 18px 10px;
+}
+
+.ib .ib-side-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.ib .ib-side-title h1 {
+    margin: 0;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--ib-ink);
+}
+
+.ib .ib-pill {
+    display: inline-grid;
+    place-items: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--ib-primary);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+.ib .ib-search {
+    position: relative;
+    display: block;
+    margin: 0;
+}
+
+.ib .ib-search i {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    font-size: 13px;
+    color: var(--ib-faint);
+    pointer-events: none;
+}
+
+.ib .ib-search input {
+    width: 100%;
+    height: 40px;
+    padding: 0 14px 0 38px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: #f3f4f6;
+    font-family: inherit;
+    font-size: 13.5px;
+    color: var(--ib-ink);
+    transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.ib .ib-search input::placeholder {
+    color: var(--ib-faint);
+}
+
+.ib .ib-search input:focus {
+    outline: none;
+    background: #fff;
+    border-color: var(--ib-primary);
+    box-shadow: 0 0 0 4px rgba(255, 60, 0, .1);
+}
+
+.ib .ib-filters {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.ib .ib-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 13px;
+    border: 1px solid var(--ib-border);
+    border-radius: 999px;
+    background: #fff;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ib-text);
+    cursor: pointer;
+    transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.ib .ib-filter:hover {
+    border-color: #d3d7dc;
+    color: var(--ib-ink);
+}
+
+.ib .ib-filter.is-active {
+    border-color: var(--ib-ink);
+    background: var(--ib-ink);
+    color: #fff;
+}
+
+.ib .ib-filter-count:not(:empty) {
+    display: inline-grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--ib-primary);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+}
+
+.ib .ib-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 6px 10px 12px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.ib .ib-conv {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin: 0 0 2px;
+    padding: 11px 12px;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+.ib .ib-conv:hover {
+    background: #f5f6f8;
+}
+
+.ib .ib-conv:focus-visible {
+    outline: 2px solid var(--ib-primary);
+    outline-offset: -2px;
+}
+
+.ib .ib-conv.is-active {
+    background: var(--ib-tint);
+}
+
+.ib .ib-conv-main {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.ib .ib-conv-top,
+.ib .ib-conv-bottom {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.ib .ib-conv-top {
+    justify-content: space-between;
+}
+
+.ib .ib-conv-name {
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ib-ink);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ib .ib-conv-time {
+    flex: 0 0 auto;
+    font-size: 11.5px;
+    color: var(--ib-faint);
+}
+
+.ib .ib-conv-last {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 13px;
+    color: var(--ib-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ib .ib-conv-you {
+    color: var(--ib-faint);
+}
+
+.ib .ib-conv.is-unread .ib-conv-name {
+    font-weight: 700;
+}
+
+.ib .ib-conv.is-unread .ib-conv-last {
+    font-weight: 600;
+    color: var(--ib-ink);
+}
+
+.ib .ib-conv.is-unread .ib-conv-time {
+    font-weight: 700;
+    color: var(--ib-primary);
+}
+
+.ib .ib-conv-count {
+    flex: 0 0 auto;
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--ib-primary);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.ib .ib-conv-tick {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--ib-faint);
+}
+
+.ib .ib-conv-tick.is-read {
+    color: var(--ib-read);
+}
+
+/* Squelette de chargement */
+.ib .ib-skel {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 12px;
+}
+
+.ib .ib-skel-avatar,
+.ib .ib-skel-lines span,
+.ib .ib-loading span {
+    background: linear-gradient(90deg, #eef0f3 0%, #f7f8fa 45%, #eef0f3 90%);
+    background-size: 220% 100%;
+    animation: ib-shimmer 1.3s linear infinite;
+}
+
+.ib .ib-skel-avatar {
+    flex: 0 0 46px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+}
+
+.ib .ib-skel-lines {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ib .ib-skel-lines span {
+    display: block;
+    width: 55%;
+    height: 10px;
+    border-radius: 6px;
+}
+
+.ib .ib-skel-lines span + span {
+    width: 85%;
+}
+
+/* Etats vides et erreurs */
+.ib .ib-list-empty,
+.ib .ib-thread-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 44px 22px;
+    text-align: center;
+}
+
+.ib .ib-thread-state {
+    margin: auto;
+    padding: 60px 20px;
+}
+
+.ib .ib-list-empty strong,
+.ib .ib-thread-state strong {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ib-ink);
+}
+
+.ib .ib-list-empty p,
+.ib .ib-thread-state p {
+    max-width: 270px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ib-muted);
+}
+
+.ib .ib-list-empty-icon {
+    width: 54px;
+    height: 54px;
+    margin-bottom: 6px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--ib-tint);
+    color: var(--ib-primary);
+    font-size: 20px;
+}
+
+.ib .ib-list-empty-icon.is-green {
+    background: #e7f6ec;
+    color: #1a9d5c;
+}
+
+.ib .ib-list-empty-icon.is-red {
+    background: #fdecec;
+    color: #b42318;
+}
+
+.ib .ib-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 10px 18px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: var(--ib-primary);
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .18s ease, border-color .18s ease;
+}
+
+.ib .ib-btn:hover {
+    background: var(--ib-primary-dark);
+    color: #fff;
+}
+
+.ib .ib-btn.is-ghost {
+    border-color: var(--ib-border);
+    background: #fff;
+    color: var(--ib-text);
+}
+
+.ib .ib-btn.is-ghost:hover {
+    border-color: #c6cbd2;
+    background: #f8f9fa;
+}
+
+/* --------------------------------------------------------------------------
+   Fil de discussion
+   -------------------------------------------------------------------------- */
+.ib .ib-thread {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: var(--ib-bg);
+}
+
+/* Aucun fil ouvert */
+.ib .ib-welcome {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 40px 32px;
+    text-align: center;
+}
+
+.ib .ib-welcome h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ib-ink);
+}
+
+.ib .ib-welcome p {
+    max-width: 380px;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ib-muted);
+}
+
+.ib .ib-welcome .ib-welcome-tip {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 9px;
+    max-width: 420px;
+    margin-top: 16px;
+    padding: 11px 14px;
+    border: 1px solid #dfe9f8;
+    border-radius: 12px;
+    background: #f1f6fd;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #4a5b74;
+    text-align: left;
+}
+
+.ib .ib-welcome-tip i {
+    margin-top: 2px;
+    color: #3b6fb6;
+}
+
+.ib .ib-welcome-art {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 220px;
+    margin-bottom: 22px;
+}
+
+.ib .ib-art-bubble {
+    display: block;
+    height: 32px;
+    border-radius: 16px;
+}
+
+.ib .ib-art-bubble.is-in {
+    width: 74%;
+    border: 1px solid #e3e6ea;
+    border-bottom-left-radius: 5px;
+    background: #fff;
+    box-shadow: 0 6px 16px -8px rgba(16, 24, 40, .18);
+}
+
+.ib .ib-art-bubble.is-out {
+    align-self: flex-end;
+    width: 58%;
+    border-bottom-right-radius: 5px;
+    background: var(--ib-ink);
+}
+
+.ib .ib-art-bubble.is-short {
+    width: 44%;
+}
+
+.ib .ib-art-icon {
+    position: absolute;
+    top: -20px;
+    right: -22px;
+    width: 50px;
+    height: 50px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #ff6a33, var(--ib-primary));
+    color: #fff;
+    font-size: 19px;
+    box-shadow: 0 12px 26px -8px rgba(255, 60, 0, .55);
+    animation: ib-float 3.2s ease-in-out infinite;
+}
+
+/* En-tete du fil */
+.ib .ib-head {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 20px;
+    border-bottom: 1px solid var(--ib-border);
+    background: #fff;
+}
+
+/* Retour a la liste : utile seulement quand le fil est en plein ecran.
+   Trois classes, pour passer devant `.ib .ib-icon-btn` declare plus bas. */
+.ib .ib-head .ib-back {
+    display: none;
+    margin-left: -8px;
+}
+
+.ib .ib-head-avatar {
+    display: flex;
+}
+
+.ib .ib-head-text {
+    min-width: 0;
+}
+
+.ib .ib-head-text h2 {
+    margin: 0;
+    overflow: hidden;
+    font-size: 15.5px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--ib-ink);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ib .ib-head-text p {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px 8px;
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: var(--ib-muted);
+}
+
+.ib .ib-verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 600;
+    color: #1a9d5c;
+}
+
+.ib .ib-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #c6cbd2;
+}
+
+/* Corps du fil */
+.ib .ib-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 8px 24px 14px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.ib .ib-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-width: 840px;
+    min-height: 100%;
+    margin: 0 auto;
+}
+
+/* Separateur de date */
+.ib .ib-day {
+    display: flex;
+    justify-content: center;
+    margin: 16px 0 8px;
+    pointer-events: none;
+}
+
+.ib .ib-day span {
+    padding: 4px 12px;
+    border: 1px solid var(--ib-border);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .94);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ib-muted);
+    box-shadow: 0 2px 6px rgba(16, 24, 40, .05);
+}
+
+/* Bulles : celles d'un meme auteur, a moins de 5 min, sont accolees et ne
+   portent qu'une heure, sous la derniere. */
+.ib .ib-msg {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-width: min(76%, 560px);
+}
+
+.ib .ib-msg.is-mine {
+    align-self: flex-end;
+    align-items: flex-end;
+}
+
+.ib .ib-msg.is-first {
+    margin-top: 8px;
+}
+
+.ib .ib-bubble {
+    max-width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #eaecef;
+    border-radius: 6px 18px 18px 6px;
+    background: #fff;
+    color: var(--ib-ink);
+    font-size: 14px;
+    line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .05);
+}
+
+.ib .ib-msg.is-theirs.is-first .ib-bubble {
+    border-top-left-radius: 18px;
+}
+
+.ib .ib-msg.is-mine .ib-bubble {
+    border-color: transparent;
+    border-radius: 18px 6px 6px 18px;
+    background: linear-gradient(160deg, #262a31, var(--ib-ink));
+    color: #fff;
+}
+
+.ib .ib-msg.is-mine.is-first .ib-bubble {
+    border-top-right-radius: 18px;
+}
+
+.ib .ib-text {
+    display: block;
+    white-space: pre-wrap;
+}
+
+.ib .ib-text a {
+    color: var(--ib-primary-dark);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.ib .ib-msg.is-mine .ib-text a {
+    color: #ffc2ad;
+}
+
+.ib .ib-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 4px 6px 4px;
+    font-size: 11px;
+    color: var(--ib-faint);
+}
+
+.ib .ib-meta i {
+    font-size: 10px;
+}
+
+.ib .ib-meta .is-read {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+    color: var(--ib-read);
+}
+
+.ib .ib-meta.is-error {
+    color: #b42318;
+}
+
+.ib .ib-meta button {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: 700;
+    color: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.ib .ib-msg.is-pending .ib-bubble {
+    opacity: .72;
+}
+
+.ib .ib-msg.is-failed .ib-bubble {
+    opacity: .8;
+    box-shadow: 0 0 0 1.5px #f5c2c3;
+}
+
+/* Etiquette « À propos de » d'un message envoye depuis une fiche */
+.ib .ib-context {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: -2px -4px 8px;
+    padding: 7px 10px;
+    border-radius: 10px;
+    background: var(--ib-tint);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--ib-primary-dark);
+}
+
+.ib .ib-context small {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    opacity: .75;
+}
+
+.ib .ib-msg.is-mine .ib-context {
+    background: rgba(255, 255, 255, .1);
+    color: #ffd2c2;
+}
+
+/* Pieces jointes */
+.ib .ib-img {
+    display: block;
+    margin: -4px -8px 6px;
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+.ib .ib-img:last-child {
+    margin-bottom: -4px;
+}
+
+.ib .ib-img img {
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    max-height: 300px;
+    object-fit: cover;
+}
+
+.ib .ib-attach {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 220px;
+    max-width: 100%;
+    margin: 0 -6px 4px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: #f5f6f8;
+    color: var(--ib-ink);
+    text-decoration: none;
+}
+
+.ib .ib-attach:last-child {
+    margin-bottom: -2px;
+}
+
+.ib .ib-msg.is-mine .ib-attach {
+    background: rgba(255, 255, 255, .1);
+    color: #fff;
+}
+
+.ib .ib-attach-icon {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: #fff;
+    color: var(--ib-primary);
+    font-size: 15px;
+}
+
+.ib .ib-attach-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.ib .ib-attach-text strong {
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ib .ib-attach-text small {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    opacity: .6;
+}
+
+.ib .ib-attach-dl {
+    font-size: 12px;
+    opacity: .55;
+}
+
+/* Chargement du fil */
+.ib .ib-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 28px 0;
+}
+
+.ib .ib-loading span {
+    display: block;
+    width: 52%;
+    height: 40px;
+    border-radius: 16px;
+}
+
+.ib .ib-loading .is-out {
+    align-self: flex-end;
+    width: 38%;
+}
+
+.ib .ib-loading .is-short {
+    width: 30%;
+}
+
+/* « Nouveaux messages » quand le membre a remonte le fil */
+.ib .ib-jump {
+    position: absolute;
+    left: 50%;
+    bottom: 104px;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ib-ink);
+    color: #fff;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    box-shadow: 0 10px 24px -8px rgba(16, 24, 40, .45);
+    transform: translateX(-50%);
+    cursor: pointer;
+    animation: ib-rise .2s ease-out;
+}
+
+/* --------------------------------------------------------------------------
+   Zone de saisie
+   -------------------------------------------------------------------------- */
+.ib .ib-composer {
+    flex: 0 0 auto;
+    padding: 12px 20px 12px;
+    border-top: 1px solid var(--ib-border);
+    background: #fff;
+}
+
+.ib .ib-composer-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    padding: 5px;
+    border: 1.5px solid var(--ib-field);
+    border-radius: 16px;
+    background: #fff;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.ib .ib-composer-row:focus-within {
+    border-color: var(--ib-primary);
+    box-shadow: 0 0 0 4px rgba(255, 60, 0, .1);
+}
+
+.ib .ib-composer textarea {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 40px;
+    max-height: 160px;
+    margin: 0;
+    padding: 9px 4px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ib-ink);
+    resize: none;
+    box-shadow: none;
+}
+
+.ib .ib-composer textarea::placeholder {
+    color: var(--ib-faint);
+}
+
+.ib .ib-icon-btn {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--ib-muted);
+    font-size: 16px;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+}
+
+.ib .ib-icon-btn:hover {
+    background: #f3f4f6;
+    color: var(--ib-ink);
+}
+
+.ib .ib-send {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: var(--ib-primary);
+    color: #fff;
+    font-size: 15px;
+    box-shadow: 0 8px 18px -6px rgba(255, 60, 0, .55);
+    cursor: pointer;
+    transition: background .18s ease, box-shadow .18s ease, transform .12s ease;
+}
+
+.ib .ib-send:hover {
+    background: var(--ib-primary-dark);
+    transform: translateY(-1px);
+}
+
+.ib .ib-send:active {
+    transform: scale(.94);
+}
+
+.ib .ib-send:disabled {
+    background: #eceef1;
+    color: #a9afb6;
+    box-shadow: none;
+    transform: none;
+    cursor: default;
+}
+
+.ib .ib-icon-btn:focus-visible,
+.ib .ib-send:focus-visible,
+.ib .ib-filter:focus-visible,
+.ib .ib-btn:focus-visible,
+.ib .ib-jump:focus-visible {
+    outline: 2px solid var(--ib-primary);
+    outline-offset: 2px;
+}
+
+.ib .ib-composer-hint {
+    margin: 6px 6px 0;
+    font-size: 11px;
+    color: var(--ib-faint);
+}
+
+.ib .ib-composer-hint kbd {
+    display: inline-block;
+    padding: 0 5px;
+    border: 1px solid var(--ib-border);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: #f8f9fa;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ib-text);
+    box-shadow: none;
+}
+
+.ib .ib-composer-error {
+    margin: 0 0 8px;
+    padding: 8px 12px;
+    border: 1px solid #f5c2c3;
+    border-radius: 10px;
+    background: #fdecec;
+    font-size: 12.5px;
+    color: #8f2226;
+}
+
+.ib .ib-file {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 380px;
+    margin-bottom: 8px;
+    padding: 7px 6px 7px 8px;
+    border: 1px solid var(--ib-border);
+    border-radius: 12px;
+    background: #f8f9fa;
+}
+
+.ib .ib-file-icon {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ib-primary);
+    font-size: 14px;
+}
+
+.ib .ib-file-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.ib .ib-file-text strong {
+    overflow: hidden;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ib-ink);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ib .ib-file-text small {
+    font-size: 11px;
+    color: var(--ib-muted);
+}
+
+.ib .ib-file .ib-icon-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+}
+
+/* --------------------------------------------------------------------------
+   Animations
+   -------------------------------------------------------------------------- */
+@keyframes ib-shimmer {
+    from { background-position: 120% 0; }
+    to   { background-position: -120% 0; }
+}
+
+@keyframes ib-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-5px); }
+}
+
+@keyframes ib-rise {
+    from { opacity: 0; transform: translate(-50%, 8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ib .ib-skel-avatar,
+    .ib .ib-skel-lines span,
+    .ib .ib-loading span,
+    .ib .ib-art-icon,
+    .ib .ib-jump {
+        animation: none;
+    }
+}
+
+@media (pointer: coarse) {
+    .ib .ib-composer-hint {
+        display: none;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+@media (max-width: 1199.98px) {
+    .ib {
+        grid-template-columns: 300px minmax(0, 1fr);
+    }
+}
+
+/* Un panneau a la fois : la liste, puis le fil en plein ecran (z-index 1000,
+   au-dessus du header ; voir la pastille de publication). */
+@media (max-width: 899.98px) {
+    .ib {
+        grid-template-columns: minmax(0, 1fr);
+        height: calc(100vh - 150px);
+        height: calc(100dvh - 150px);
+        min-height: 420px;
+        border-radius: 18px;
+    }
+
+    .ib .ib-side {
+        border-right: 0;
+    }
+
+    .ib .ib-thread {
+        display: none;
+    }
+
+    .ib.is-thread-open .ib-thread {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        padding-top: env(safe-area-inset-top, 0px);
+        background: var(--ib-bg);
+    }
+
+    body:has(.ib.is-thread-open) {
+        overflow: hidden;
+    }
+
+    .ib .ib-head .ib-back {
+        display: grid;
+    }
+
+    .ib .ib-head {
+        padding: 10px 14px;
+    }
+
+    .ib .ib-scroll {
+        padding: 4px 12px 12px;
+    }
+
+    .ib .ib-msg {
+        max-width: 86%;
+    }
+
+    .ib .ib-composer {
+        padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .ib .ib-jump {
+        bottom: 80px;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-content:has(.ib) {
+        padding-bottom: 16px;
+    }
+}

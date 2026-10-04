@@ -1,375 +1,941 @@
 // messages.js
 //
-// Messagerie de l'espace connecte : liste des conversations a gauche,
-// fil de discussion a droite. Les appels reseau sont inchanges
-// (GET /messages, GET /messages/{id}, POST /messages/{id}) ; seul le
-// balisage produit suit desormais le design de l'espace connecte (.sp-*).
+// Messagerie de l'espace connecte (pages/locateur/messages.blade.php) :
+// conversations a gauche, fil a droite ; sous 900px, un seul panneau a la
+// fois, le fil passant en plein ecran.
+//
+// Les adresses viennent des data-* de la vue (noms de route). Le fil ouvert
+// est interroge toutes les 8 s et la liste toutes les 25 s, seulement quand
+// l'onglet est visible ; `?after=` ne ramene que les nouveaux messages.
+// L'envoi est optimiste : le message s'affiche aussitot, puis se confirme.
 
 document.addEventListener('DOMContentLoaded', function () {
-    initMessagesApp();
+    const root = document.querySelector('[data-ib]');
+    if (root) initInbox(root);
 });
 
-function initMessagesApp() {
-    loadMessagesList();
-    initConversationSearch();
-}
+function initInbox(root) {
+    const q = sel => root.querySelector(sel);
 
-// ===================================
-// OUTILS
-// ===================================
-function esc(value) {
-    return String(value == null ? '' : value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
+    const el = {
+        total:       q('[data-ib-total]'),
+        search:      q('[data-ib-search]'),
+        filters:     Array.from(root.querySelectorAll('[data-ib-filter]')),
+        unreadCount: q('[data-ib-unread-count]'),
+        list:        q('[data-ib-list]'),
+        welcome:     q('[data-ib-welcome]'),
+        head:        q('[data-ib-head]'),
+        headAvatar:  q('[data-ib-head-avatar]'),
+        headName:    q('[data-ib-head-name]'),
+        headMeta:    q('[data-ib-head-meta]'),
+        back:        q('[data-ib-back]'),
+        scroll:      q('[data-ib-scroll]'),
+        messages:    q('[data-ib-messages]'),
+        jump:        q('[data-ib-jump]'),
+        composer:    q('[data-ib-composer]'),
+        input:       q('[data-ib-input]'),
+        send:        q('[data-ib-send]'),
+        attach:      q('[data-ib-attach]'),
+        fileInput:   q('[data-ib-file-input]'),
+        file:        q('[data-ib-file]'),
+        fileName:    q('[data-ib-file-name]'),
+        fileSize:    q('[data-ib-file-size]'),
+        fileRemove:  q('[data-ib-file-remove]'),
+        error:       q('[data-ib-error]'),
+        live:        q('[data-ib-live]'),
+    };
 
-function getInitials(name) {
-    const parts = String(name || '?').trim().split(/\s+/);
-    if (parts.length === 1) return (parts[0][0] || '?').toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
+    const listUrl     = root.dataset.listUrl;
+    const threadUrl   = id => root.dataset.threadUrl.replace('__ID__', encodeURIComponent(id));
+    const me          = parseInt(root.dataset.me, 10);
+    const csrf        = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const finePointer = window.matchMedia('(pointer: fine)').matches;
+    const narrow      = window.matchMedia('(max-width: 899.98px)');
+    const baseTitle   = document.title;
 
-// Couleur d'avatar stable : meme personne, meme teinte d'une page a l'autre.
-function getColorFromInitials(initials) {
-    let hash = 0;
-    for (let i = 0; i < initials.length; i++) {
-        hash = initials.charCodeAt(i) + ((hash << 5) - hash);
+    const MAX_FILE  = 10 * 1024 * 1024;
+    const FILE_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'];
+    const GROUP_GAP = 5 * 60 * 1000;
+
+    const state = {
+        conversations: [],
+        loaded: false,
+        filter: 'all',
+        query: '',
+        activeId: null,
+        user: null,
+        messages: [],
+        lastId: 0,
+        readUpTo: 0,
+        token: 0,
+        tmp: 0,
+        drafts: {},
+    };
+
+    // =====================================================================
+    // OUTILS
+    // =====================================================================
+    function esc(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
-    const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, 45%, 42%)`;
-}
+    // Recherche insensible a la casse et aux accents
+    function normalize(value) {
+        return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    }
 
-function avatarMarkup(name, extraClass) {
-    const initials = getInitials(name);
-    return `<span class="sp-avatar ${extraClass || ''}" style="background-color:${getColorFromInitials(initials)}">${esc(initials)}</span>`;
-}
+    function initials(name) {
+        const parts = String(name || '?').trim().split(/\s+/);
+        if (parts.length === 1) return (parts[0][0] || '?').toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
 
-// Apercu decoratif du fil vide : trois bulles vides, sans image
-function threadGhost() {
-    return `
-        <div class="sp-thread-ghost" aria-hidden="true">
-            <span class="sp-ghost-line is-in"></span>
-            <span class="sp-ghost-line is-out"></span>
-            <span class="sp-ghost-line is-in is-short"></span>
-        </div>
-    `;
-}
+    // Teinte stable : meme personne, meme couleur d'une visite a l'autre
+    function hue(name) {
+        let hash = 0;
+        const s = String(name || '');
+        for (let i = 0; i < s.length; i++) hash = s.charCodeAt(i) + ((hash << 5) - hash);
+        return Math.abs(hash) % 360;
+    }
 
-// Separateur de date entre deux groupes de messages
-function dayLabel(value) {
-    const date = new Date(value);
-    if (isNaN(date)) return '';
+    function avatarHtml(name, url, size) {
+        const cls = 'ib-avatar' + (size ? ' ' + size : '');
 
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
+        if (url) {
+            return `<span class="${cls}" data-name="${esc(name)}"><img src="${esc(url)}" alt="" loading="lazy"></span>`;
+        }
 
-    const same = (a, b) => a.toDateString() === b.toDateString();
+        return `<span class="${cls}" style="--h:${hue(name)}" aria-hidden="true">${esc(initials(name))}</span>`;
+    }
 
-    if (same(date, today)) return "Aujourd'hui";
-    if (same(date, yesterday)) return 'Hier';
+    function capitalize(s) {
+        return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+    }
 
-    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-}
+    function sameDay(a, b) {
+        return a.toDateString() === b.toDateString();
+    }
 
-function formatTime(value) {
-    const date = new Date(value);
-    if (isNaN(date)) return '';
+    function dayKey(iso) {
+        const d = new Date(iso);
+        return isNaN(d) ? '' : d.toDateString();
+    }
 
-    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-}
+    function dayLabel(iso) {
+        const d = new Date(iso);
+        if (isNaN(d)) return '';
 
-// ===================================
-// LISTE DES CONVERSATIONS
-// ===================================
-async function loadMessagesList() {
-    const messagesList = document.getElementById('messagesList');
-    if (!messagesList) return;
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
 
-    messagesList.innerHTML = '<p class="sp-conv-loading">Chargement des conversations...</p>';
+        if (sameDay(d, today)) return "Aujourd'hui";
+        if (sameDay(d, yesterday)) return 'Hier';
 
-    try {
-        const response = await fetch('/messages');
-        if (!response.ok) throw new Error('Erreur réseau');
-        const conversations = await response.json();
+        const opts = { weekday: 'long', day: 'numeric', month: 'long' };
+        if (d.getFullYear() !== today.getFullYear()) opts.year = 'numeric';
 
-        messagesList.innerHTML = '';
+        return capitalize(d.toLocaleDateString('fr-FR', opts));
+    }
 
-        if (!conversations.length) {
-            messagesList.innerHTML = `
-                <div class="sp-conv-empty">
-                    <strong>Aucune conversation</strong>
-                    Vos échanges apparaîtront ici dès le premier message.
-                </div>
-            `;
-            updateCounter(0);
+    function timeLabel(iso) {
+        const d = new Date(iso);
+        return isNaN(d) ? '' : d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function fullDate(iso) {
+        const d = new Date(iso);
+        return isNaN(d) ? '' : capitalize(d.toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' }));
+    }
+
+    // Heure du dernier message dans la liste : « 14:32 », « Hier », « lun. »…
+    function listTime(iso) {
+        const d = new Date(iso);
+        if (isNaN(d)) return '';
+
+        const now = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(now.getDate() - 1);
+
+        if (sameDay(d, now)) return timeLabel(iso);
+        if (sameDay(d, yesterday)) return 'Hier';
+        if (now - d < 6 * 864e5) return d.toLocaleDateString('fr-FR', { weekday: 'short' });
+        if (d.getFullYear() === now.getFullYear()) return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+
+        return d.toLocaleDateString('fr-FR');
+    }
+
+    function ext(name) {
+        const m = /\.([a-z0-9]+)$/i.exec(name || '');
+        return m ? m[1].toLowerCase() : '';
+    }
+
+    function fileIcon(name) {
+        const e = ext(name);
+        if (e === 'pdf') return 'fa-file-pdf';
+        if (e === 'doc' || e === 'docx') return 'fa-file-word';
+        if (e === 'xls' || e === 'xlsx') return 'fa-file-excel';
+        if (e === 'txt') return 'fa-file-lines';
+        if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(e)) return 'fa-file-image';
+        return 'fa-file';
+    }
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' o';
+        if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' Ko';
+        return (bytes / 1024 / 1024).toFixed(1).replace('.', ',') + ' Mo';
+    }
+
+    // Liens cliquables. Le texte est deja echappe : les guillemets y sont
+    // des entites, un lien ne peut donc pas sortir de son attribut.
+    function linkify(html) {
+        return html.replace(/\bhttps?:\/\/[^\s<]+/g, function (url) {
+            const trail = url.match(/[.,;:!?)]+$/);
+            const clean = trail ? url.slice(0, -trail[0].length) : url;
+            return `<a href="${clean}" target="_blank" rel="noopener noreferrer nofollow">${clean}</a>` + (trail ? trail[0] : '');
+        });
+    }
+
+    // Un message envoye depuis une fiche commence par « À propos de « … » » :
+    // on l'affiche comme une etiquette au-dessus du texte.
+    const CONTEXT_RE = /^À propos de « (.+?) »[ \t]*\n/;
+
+    function splitContext(content) {
+        const m = String(content || '').match(CONTEXT_RE);
+        if (!m) return { context: null, text: String(content || '') };
+        return { context: m[1], text: content.slice(m[0].length).replace(/^\s*\n/, '') };
+    }
+
+    function announce(text) {
+        el.live.textContent = '';
+        setTimeout(function () { el.live.textContent = text; }, 60);
+    }
+
+    function maxId(messages) {
+        return messages.reduce((max, m) => (typeof m.id === 'number' && m.id > max ? m.id : max), 0);
+    }
+
+    async function getJson(url) {
+        const res = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+    }
+
+    // =====================================================================
+    // LISTE DES CONVERSATIONS
+    // =====================================================================
+    async function loadList() {
+        try {
+            const data = await getJson(listUrl);
+
+            // Le fil ouvert est lu a l'ecran : son compteur reste a zero
+            state.conversations = data.map(c => (c.user_id === state.activeId ? Object.assign({}, c, { unread: 0 }) : c));
+            state.loaded = true;
+
+            renderList();
+            updateTotals();
+
+            // Fil ouvert depuis l'URL avant que la liste n'arrive : son nom
+            // est maintenant connu.
+            if (state.activeId && !state.user) {
+                const conv = state.conversations.find(c => c.user_id === state.activeId);
+                if (conv) fillHead({ name: conv.name, avatar: conv.avatar });
+            }
+        } catch (err) {
+            console.error('Conversations :', err);
+
+            if (!state.loaded) {
+                el.list.innerHTML = `
+                    <div class="ib-list-empty">
+                        <span class="ib-list-empty-icon is-red"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                        <strong>Chargement impossible</strong>
+                        <p>Vos conversations n'ont pas pu être chargées.</p>
+                        <button type="button" class="ib-btn is-ghost" data-ib-retry>Réessayer</button>
+                    </div>`;
+            }
+        }
+    }
+
+    function convHtml(c) {
+        const active = c.user_id === state.activeId;
+        const you = c.last_mine ? '<span class="ib-conv-you">Vous : </span>' : '';
+
+        let status = '';
+
+        if (c.unread > 0) {
+            status = `<span class="ib-conv-count" aria-label="${c.unread} non lu${c.unread > 1 ? 's' : ''}">${c.unread > 99 ? '99+' : c.unread}</span>`;
+        } else if (c.last_mine) {
+            status = c.last_read
+                ? '<i class="fa-solid fa-check-double ib-conv-tick is-read" title="Lu" aria-label="Lu"></i>'
+                : '<i class="fa-solid fa-check ib-conv-tick" title="Envoyé" aria-label="Envoyé"></i>';
+        }
+
+        return `
+            <button type="button" class="ib-conv${active ? ' is-active' : ''}${c.unread ? ' is-unread' : ''}"
+                    data-id="${c.user_id}"${active ? ' aria-current="true"' : ''}>
+                ${avatarHtml(c.name, c.avatar)}
+                <span class="ib-conv-main">
+                    <span class="ib-conv-top">
+                        <span class="ib-conv-name">${esc(c.name)}</span>
+                        <time class="ib-conv-time" datetime="${esc(c.at || '')}">${esc(listTime(c.at))}</time>
+                    </span>
+                    <span class="ib-conv-bottom">
+                        <span class="ib-conv-last">${you}${esc(c.last_message || '')}</span>
+                        ${status}
+                    </span>
+                </span>
+            </button>`;
+    }
+
+    function renderList() {
+        if (!state.loaded) return;
+
+        const needle = normalize(state.query.trim());
+        let items = state.conversations;
+
+        if (state.filter === 'unread') items = items.filter(c => c.unread > 0);
+        if (needle) items = items.filter(c => normalize(c.name + ' ' + c.last_message).includes(needle));
+
+        if (!items.length) {
+            const tpl = !state.conversations.length ? 'ib-empty-all' : (needle ? 'ib-empty-search' : 'ib-empty-unread');
+            el.list.replaceChildren(document.getElementById(tpl).content.cloneNode(true));
             return;
         }
 
-        conversations.forEach(conv => {
-            const card = document.createElement('button');
-            card.type = 'button';
-            card.className = 'sp-conv';
-            card.dataset.id = conv.user_id;
-            card.dataset.name = conv.name || '';
-
-            card.innerHTML = `
-                ${avatarMarkup(conv.name)}
-                <span class="sp-conv-body">
-                    <span class="sp-conv-top">
-                        <span class="sp-conv-name">${esc(conv.name)}</span>
-                        <span class="sp-conv-time">${esc(conv.time)}</span>
-                    </span>
-                    <span class="sp-conv-last">${esc(conv.last_message)}</span>
-                </span>
-            `;
-
-            card.addEventListener('click', () => showConversation(conv.user_id));
-            messagesList.appendChild(card);
-        });
-
-        updateCounter(conversations.length);
-
-    } catch (error) {
-        console.error('Erreur lors du chargement des conversations :', error);
-        messagesList.innerHTML = '<p class="sp-conv-empty">Impossible de charger les conversations.</p>';
+        el.list.innerHTML = items.map(convHtml).join('');
     }
-}
 
-function updateCounter(n) {
-    const counter = document.getElementById('convCounter');
-    if (counter) counter.textContent = n > 0 ? n : '';
-}
+    function updateTotals() {
+        const total = state.conversations.reduce((sum, c) => sum + (c.unread || 0), 0);
 
-// Filtre local sur les conversations deja chargees
-function initConversationSearch() {
-    const input = document.getElementById('convSearch');
-    const list = document.getElementById('messagesList');
-    if (!input || !list) return;
+        el.total.hidden = total === 0;
+        el.total.textContent = total > 99 ? '99+' : total;
+        el.unreadCount.textContent = total ? total : '';
+        document.title = total ? '(' + total + ') ' + baseTitle : baseTitle;
+    }
 
-    input.addEventListener('input', function () {
-        const needle = input.value.trim().toLowerCase();
-        let visible = 0;
+    // Le dernier message envoye remonte la conversation en tete de liste
+    function bumpConversation(message) {
+        const conv = state.conversations.find(c => c.user_id === state.activeId);
 
-        list.querySelectorAll('.sp-conv').forEach(function (card) {
-            const match = !needle || (card.dataset.name || '').toLowerCase().includes(needle);
-            card.style.display = match ? '' : 'none';
-            if (match) visible++;
+        if (!conv) {
+            loadList();
+            return;
+        }
+
+        const { text } = splitContext(message.content);
+        conv.last_message = text.trim()
+            ? text.trim().replace(/\s+/g, ' ')
+            : (message.attachment ? 'Pièce jointe : ' + message.attachment.name : '');
+        conv.last_mine = true;
+        conv.last_read = false;
+        conv.at = message.at;
+
+        state.conversations = [conv].concat(state.conversations.filter(c => c !== conv));
+        renderList();
+    }
+
+    el.list.addEventListener('click', function (e) {
+        if (e.target.closest('[data-ib-retry]')) {
+            loadList();
+            return;
+        }
+
+        const item = e.target.closest('.ib-conv');
+        if (item) openThread(parseInt(item.dataset.id, 10));
+    });
+
+    // Fleches haut / bas pour parcourir la liste au clavier
+    el.list.addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+
+        const items = Array.from(el.list.querySelectorAll('.ib-conv'));
+        const index = items.indexOf(document.activeElement);
+        if (index === -1) return;
+
+        e.preventDefault();
+        items[Math.max(0, Math.min(items.length - 1, index + (e.key === 'ArrowDown' ? 1 : -1)))].focus();
+    });
+
+    el.search.addEventListener('input', function () {
+        state.query = el.search.value;
+        renderList();
+    });
+
+    el.filters.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            state.filter = btn.dataset.ibFilter;
+
+            el.filters.forEach(function (b) {
+                const on = b === btn;
+                b.classList.toggle('is-active', on);
+                b.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+
+            renderList();
         });
+    });
 
-        const empty = list.querySelector('.sp-conv-empty[data-search]');
+    // =====================================================================
+    // FIL DE DISCUSSION
+    // =====================================================================
+    function fillHead(user) {
+        el.headAvatar.innerHTML = avatarHtml(user.name, user.avatar, 'is-md');
+        el.headName.textContent = user.name || '';
 
-        if (!visible && !empty) {
-            const p = document.createElement('p');
-            p.className = 'sp-conv-empty';
-            p.dataset.search = '1';
-            p.textContent = 'Aucun contact ne correspond à cette recherche.';
-            list.appendChild(p);
-        } else if (visible && empty) {
-            empty.remove();
+        const meta = [];
+        if (user.verified) meta.push('<span class="ib-verified"><i class="fa-solid fa-circle-check"></i> Profil vérifié</span>');
+        if (user.since) meta.push('<span>Membre depuis ' + esc(user.since) + '</span>');
+
+        el.headMeta.innerHTML = meta.join('<span class="ib-dot" aria-hidden="true"></span>');
+        el.headMeta.hidden = meta.length === 0;
+    }
+
+    function showThread(on) {
+        el.welcome.hidden = on;
+        el.head.hidden = !on;
+        el.scroll.hidden = !on;
+        el.composer.hidden = !on;
+        el.jump.hidden = true;
+        root.classList.toggle('is-thread-open', on);
+    }
+
+    function syncUrl(id, fromHistory) {
+        if (fromHistory) return;
+
+        const url = new URL(window.location.href);
+        if (id) url.searchParams.set('avec', id); else url.searchParams.delete('avec');
+
+        // Sur telephone, le fil est un ecran a part : le bouton retour du
+        // navigateur doit ramener a la liste.
+        if (id && narrow.matches && !(history.state && history.state.ib)) {
+            history.pushState({ ib: id }, '', url);
+        } else {
+            history.replaceState(id ? { ib: id } : null, '', url);
+        }
+    }
+
+    async function openThread(id, fromHistory) {
+        if (!id || id === me) return;
+
+        if (state.activeId) state.drafts[state.activeId] = el.input.value;
+
+        state.activeId = id;
+        state.user = null;
+        state.messages = [];
+        state.lastId = 0;
+        state.readUpTo = 0;
+        const token = ++state.token;
+
+        const conv = state.conversations.find(c => c.user_id === id);
+        if (conv) conv.unread = 0;
+        renderList();
+        updateTotals();
+
+        showThread(true);
+        fillHead(conv ? { name: conv.name, avatar: conv.avatar } : { name: 'Conversation' });
+        el.messages.innerHTML = `
+            <div class="ib-loading" aria-label="Chargement de la conversation">
+                <span class="is-in"></span><span class="is-out"></span><span class="is-in is-short"></span>
+            </div>`;
+
+        el.input.value = state.drafts[id] || '';
+        clearFile();
+        hideError();
+        autosize();
+        updateSend();
+        syncUrl(id, fromHistory);
+
+        try {
+            const data = await getJson(threadUrl(id));
+            if (token !== state.token) return;
+
+            state.user = data.user;
+            state.messages = data.messages;
+            state.lastId = maxId(data.messages);
+            state.readUpTo = data.read_up_to || 0;
+
+            fillHead(data.user);
+            renderMessages();
+            scrollToBottom(false);
+
+            if (finePointer) el.input.focus();
+        } catch (err) {
+            if (token !== state.token) return;
+            console.error('Conversation :', err);
+
+            el.messages.innerHTML = `
+                <div class="ib-thread-state">
+                    <span class="ib-list-empty-icon is-red"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                    <strong>Conversation indisponible</strong>
+                    <p>Elle n'a pas pu être chargée.</p>
+                    <button type="button" class="ib-btn is-ghost" data-ib-reload>Réessayer</button>
+                </div>`;
+        }
+    }
+
+    function closeThread(fromHistory) {
+        if (state.activeId) state.drafts[state.activeId] = el.input.value;
+
+        state.activeId = null;
+        state.user = null;
+        state.token++;
+
+        showThread(false);
+        renderList();
+        syncUrl(null, fromHistory);
+    }
+
+    el.back.addEventListener('click', function () {
+        if (history.state && history.state.ib && narrow.matches) {
+            history.back();
+        } else {
+            closeThread();
         }
     });
-}
 
-// ===================================
-// FIL DE DISCUSSION
-// ===================================
-async function showConversation(userId) {
-    const detail = document.getElementById('conversationDetail');
-    if (!detail) return;
+    window.addEventListener('popstate', function () {
+        const id = parseInt(new URLSearchParams(window.location.search).get('avec'), 10);
 
-    document.querySelectorAll('.sp-conv').forEach(card => card.classList.remove('is-active'));
-    const activeCard = document.querySelector(`.sp-conv[data-id="${userId}"]`);
-    if (activeCard) activeCard.classList.add('is-active');
+        if (id) {
+            if (id !== state.activeId) openThread(id, true);
+        } else if (state.activeId) {
+            closeThread(true);
+        }
+    });
 
-    try {
-        const response = await fetch(`/messages/${userId}`);
-        if (!response.ok) throw new Error('Erreur réseau');
-        const messages = await response.json();
+    // ---- Messages ----
+    function isRead(m) {
+        return m.is_read || (typeof m.id === 'number' && m.id <= state.readUpTo);
+    }
 
-        const userName = activeCard ? (activeCard.dataset.name || 'Contact') : 'Contact';
+    function attachmentHtml(a) {
+        if (a.is_image && a.url) {
+            return `<a class="ib-img" href="${esc(a.url)}" target="_blank" rel="noopener">
+                        <img src="${esc(a.url)}" alt="${esc(a.name)}" loading="lazy">
+                    </a>`;
+        }
 
+        const inner = `
+            <span class="ib-attach-icon"><i class="fa-solid ${fileIcon(a.name)}"></i></span>
+            <span class="ib-attach-text">
+                <strong>${esc(a.name)}</strong>
+                <small>${esc((ext(a.name) || 'fichier').toUpperCase())}</small>
+            </span>`;
+
+        return a.url
+            ? `<a class="ib-attach" href="${esc(a.url)}" target="_blank" rel="noopener">${inner}<i class="fa-solid fa-arrow-down ib-attach-dl" aria-hidden="true"></i></a>`
+            : `<span class="ib-attach">${inner}</span>`;
+    }
+
+    function messageHtml(m, first, last, showStatus) {
+        const cls = ['ib-msg', m.mine ? 'is-mine' : 'is-theirs'];
+        if (first) cls.push('is-first');
+        if (last) cls.push('is-last');
+        if (m.pending) cls.push('is-pending');
+        if (m.failed) cls.push('is-failed');
+
+        const { context, text } = splitContext(m.content);
+        let body = '';
+
+        if (context) {
+            body += `<span class="ib-context"><i class="fa-solid fa-tag" aria-hidden="true"></i>
+                        <span><small>À propos de</small>${esc(context)}</span></span>`;
+        }
+        if (m.attachment) body += attachmentHtml(m.attachment);
+        if (text.trim()) body += `<span class="ib-text">${linkify(esc(text))}</span>`;
+
+        let meta = '';
+
+        if (m.failed) {
+            meta = `<span class="ib-meta is-error">
+                        <i class="fa-solid fa-circle-exclamation"></i> Non envoyé ·
+                        <button type="button" data-ib-resend="${esc(m.id)}">Réessayer</button>
+                    </span>`;
+        } else if (last) {
+            let status = '';
+
+            if (showStatus) {
+                status = m.pending
+                    ? ' · Envoi…'
+                    : (isRead(m)
+                        ? ' · <span class="is-read"><i class="fa-solid fa-check-double"></i> Lu</span>'
+                        : ' · <i class="fa-solid fa-check"></i> Envoyé');
+            }
+
+            meta = `<span class="ib-meta">${esc(timeLabel(m.at))}${status}</span>`;
+        }
+
+        return `
+            <div class="${cls.join(' ')}" data-id="${esc(m.id)}">
+                <div class="ib-bubble" title="${esc(fullDate(m.at))}">${body}</div>
+                ${meta}
+            </div>`;
+    }
+
+    function renderMessages() {
+        const msgs = state.messages;
+
+        if (!msgs.length) {
+            const user = state.user || { name: el.headName.textContent };
+
+            el.messages.innerHTML = `
+                <div class="ib-thread-state">
+                    ${avatarHtml(user.name, user.avatar, 'is-lg')}
+                    <strong>Démarrez la conversation</strong>
+                    <p>Présentez-vous et posez votre question à ${esc(user.name)}.</p>
+                </div>`;
+            return;
+        }
+
+        // Statut « Envoyé / Lu » sous mon dernier message parti seulement
+        let lastMine = null;
+        for (let i = msgs.length - 1; i >= 0; i--) {
+            if (msgs[i].mine && !msgs[i].failed) { lastMine = msgs[i]; break; }
+        }
+
+        let html = '';
         let lastDay = null;
 
-        const messagesHtml = messages.map(msg => {
-            const mine = msg.sender_id === AUTH_ID;
-            const author = mine ? AUTH_NAME : userName;
+        msgs.forEach(function (m, i) {
+            const day = dayKey(m.at);
 
-            const day = dayLabel(msg.created_at);
-            const separator = day && day !== lastDay
-                ? `<div class="sp-day"><span>${esc(day)}</span></div>`
-                : '';
-            lastDay = day || lastDay;
+            if (day !== lastDay) {
+                html += `<div class="ib-day"><span>${esc(dayLabel(m.at))}</span></div>`;
+                lastDay = day;
+            }
 
-            const file = msg.attachment_path
-                ? `<a class="sp-bubble-file" href="/storage/${esc(msg.attachment_path)}" target="_blank" rel="noopener">${esc(msg.attachment_name || 'Pièce jointe')}</a>`
-                : '';
+            // Messages consecutifs du meme auteur, a moins de 5 min : une
+            // seule heure, des bulles accolees. Un envoi en echec reste a
+            // part, pour que le precedent garde son heure et son statut.
+            const prev = msgs[i - 1];
+            const next = msgs[i + 1];
+            const linked = (a, b) => a && b && a.mine === b.mine && !a.failed && !b.failed
+                && dayKey(a.at) === dayKey(b.at)
+                && Math.abs(new Date(b.at) - new Date(a.at)) < GROUP_GAP;
 
-            return `
-                ${separator}
-                <div class="sp-msg ${mine ? 'is-mine' : ''}">
-                    ${avatarMarkup(author)}
-                    <div class="sp-bubble">
-                        <div class="sp-bubble-name">${mine ? 'Vous' : esc(userName)}</div>
-                        <div class="sp-bubble-text">${esc(msg.content || '')}</div>
-                        ${file}
-                        <div class="sp-bubble-time">${esc(formatTime(msg.created_at))}</div>
-                    </div>
-                </div>
-            `;
-        }).join('');
+            html += messageHtml(m, !linked(prev, m), !linked(m, next), m === lastMine);
+        });
 
-        detail.innerHTML = `
-            <div class="sp-thread-head">
-                <div class="sp-thread-user">
-                    ${avatarMarkup(userName)}
-                    <div>
-                        <h3>${esc(userName)}</h3>
-                        <p>${messages.length} message${messages.length > 1 ? 's' : ''} échangé${messages.length > 1 ? 's' : ''}</p>
-                    </div>
-                </div>
-
-                <button type="button" class="sp-act is-ghost" id="hideConversationBtn">Fermer</button>
-            </div>
-
-            <div class="sp-thread-body" id="conversationMessages">
-                ${messagesHtml || '<div class="sp-conv-empty"><strong>Aucun message</strong>Écrivez le premier message ci-dessous.</div>'}
-            </div>
-
-            <div class="sp-composer">
-                <div class="sp-composer-row">
-                    <textarea id="messageInput" placeholder="Écrivez votre message..." aria-label="Votre message"></textarea>
-                    <button type="button" class="sp-act is-ghost" id="attachFileBtn">Joindre</button>
-                    <button type="button" class="sp-act is-edit" id="sendMessageBtn">Envoyer</button>
-                    <input type="file" id="fileInput" style="display:none;">
-                </div>
-                <div class="sp-composer-file" id="filePreview"></div>
-            </div>
-        `;
-
-        bindComposer(userId);
-        scrollToBottom();
-
-    } catch (error) {
-        console.error('Erreur lors du chargement de la conversation :', error);
+        el.messages.innerHTML = html;
     }
-}
 
-function bindComposer(userId) {
-    const attachBtn = document.getElementById('attachFileBtn');
-    const fileInput = document.getElementById('fileInput');
-    const preview = document.getElementById('filePreview');
-    const sendBtn = document.getElementById('sendMessageBtn');
-    const messageInput = document.getElementById('messageInput');
-    const hideBtn = document.getElementById('hideConversationBtn');
+    // ---- Defilement ----
+    function nearBottom() {
+        return el.scroll.scrollHeight - el.scroll.scrollTop - el.scroll.clientHeight < 90;
+    }
 
-    if (attachBtn && fileInput) {
-        attachBtn.addEventListener('click', () => fileInput.click());
+    function scrollToBottom(smooth) {
+        el.scroll.scrollTo({ top: el.scroll.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+        el.jump.hidden = true;
+    }
 
-        fileInput.addEventListener('change', function () {
-            const file = fileInput.files[0];
+    // `stick` : le membre est en bas du fil. Une image chargee apres coup
+    // allonge alors le fil sans l'en decoller.
+    let stick = true;
 
-            if (!file) {
-                preview.innerHTML = '';
+    el.scroll.addEventListener('scroll', function () {
+        stick = nearBottom();
+        if (stick) el.jump.hidden = true;
+    }, { passive: true });
+
+    el.jump.addEventListener('click', function () {
+        scrollToBottom(true);
+    });
+
+    el.messages.addEventListener('load', function (e) {
+        if (e.target.tagName === 'IMG' && stick) scrollToBottom(false);
+    }, true);
+
+    // Photo de profil introuvable : retour aux initiales
+    root.addEventListener('error', function (e) {
+        const img = e.target;
+        if (img.tagName !== 'IMG' || !img.parentElement?.classList.contains('ib-avatar')) return;
+
+        const span = img.parentElement;
+        span.style.setProperty('--h', hue(span.dataset.name));
+        span.textContent = initials(span.dataset.name);
+    }, true);
+
+    el.messages.addEventListener('click', function (e) {
+        if (e.target.closest('[data-ib-reload]')) {
+            openThread(state.activeId, true);
+            return;
+        }
+
+        const resend = e.target.closest('[data-ib-resend]');
+        if (!resend) return;
+
+        const temp = state.messages.find(m => String(m.id) === resend.dataset.ibResend);
+        if (!temp) return;
+
+        temp.failed = false;
+        temp.pending = true;
+        renderMessages();
+        deliver(temp);
+    });
+
+    // ---- Actualisation du fil ouvert ----
+    let polling = false;
+
+    async function pollThread() {
+        if (!state.activeId || !state.user || polling || document.hidden) return;
+
+        polling = true;
+        const id = state.activeId;
+        const token = state.token;
+
+        try {
+            const data = await getJson(threadUrl(id) + '?after=' + state.lastId);
+            if (token !== state.token) return;
+
+            const known = new Set(state.messages.map(m => m.id));
+            const fresh = data.messages.filter(m => !known.has(m.id));
+            const readChanged = (data.read_up_to || 0) !== state.readUpTo;
+
+            state.readUpTo = data.read_up_to || 0;
+            if (!fresh.length && !readChanged) return;
+
+            const wasNear = nearBottom();
+            const temps = state.messages.filter(m => m.pending || m.failed);
+
+            state.messages = state.messages.filter(m => !m.pending && !m.failed).concat(fresh, temps);
+            state.lastId = Math.max(state.lastId, maxId(fresh));
+            renderMessages();
+
+            const incoming = fresh.filter(m => !m.mine);
+
+            if (incoming.length) {
+                announce('Nouveau message de ' + (state.user?.name || 'votre contact'));
+                if (wasNear) scrollToBottom(true); else el.jump.hidden = false;
+                loadList();
+            }
+        } catch (err) {
+            // Reseau coupe : on retentera au prochain passage
+        } finally {
+            polling = false;
+        }
+    }
+
+    setInterval(pollThread, 8000);
+    setInterval(function () { if (!document.hidden) loadList(); }, 25000);
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) return;
+        pollThread();
+        loadList();
+    });
+
+    // =====================================================================
+    // SAISIE ET ENVOI
+    // =====================================================================
+    function autosize() {
+        el.input.style.height = 'auto';
+        el.input.style.height = Math.min(el.input.scrollHeight, 160) + 'px';
+    }
+
+    function updateSend() {
+        el.send.disabled = !(el.input.value.trim() || el.fileInput.files.length);
+    }
+
+    function showError(message) {
+        el.error.textContent = message;
+        el.error.hidden = false;
+    }
+
+    function hideError() {
+        el.error.hidden = true;
+    }
+
+    function clearFile() {
+        el.fileInput.value = '';
+        el.file.hidden = true;
+        updateSend();
+    }
+
+    function setFile(file) {
+        if (!file) {
+            clearFile();
+            return;
+        }
+
+        if (!FILE_EXTS.includes(ext(file.name))) {
+            clearFile();
+            showError('Formats acceptés : images, PDF, Word, Excel ou texte.');
+            return;
+        }
+
+        if (file.size > MAX_FILE) {
+            clearFile();
+            showError('La pièce jointe ne doit pas dépasser 10 Mo.');
+            return;
+        }
+
+        hideError();
+        el.fileName.textContent = file.name;
+        el.fileSize.textContent = formatSize(file.size);
+        el.file.querySelector('.ib-file-icon i').className = 'fa-solid ' + fileIcon(file.name);
+        el.file.hidden = false;
+        updateSend();
+    }
+
+    el.input.addEventListener('input', function () {
+        autosize();
+        updateSend();
+        hideError();
+        if (state.activeId) state.drafts[state.activeId] = el.input.value;
+    });
+
+    // Entree envoie, Maj + Entree va a la ligne. Sur ecran tactile, Entree
+    // reste un retour a la ligne : on envoie avec le bouton.
+    el.input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && finePointer) {
+            e.preventDefault();
+            send();
+        }
+    });
+
+    el.attach.addEventListener('click', function () {
+        el.fileInput.click();
+    });
+
+    el.fileInput.addEventListener('change', function () {
+        setFile(el.fileInput.files[0]);
+    });
+
+    el.fileRemove.addEventListener('click', function () {
+        clearFile();
+        el.input.focus();
+    });
+
+    el.composer.addEventListener('submit', function (e) {
+        e.preventDefault();
+        send();
+    });
+
+    function send() {
+        const text = el.input.value.trim();
+        const file = el.fileInput.files[0] || null;
+
+        if ((!text && !file) || !state.activeId || !state.user) return;
+
+        const temp = {
+            id: 'tmp-' + (++state.tmp),
+            mine: true,
+            content: text,
+            at: new Date().toISOString(),
+            pending: true,
+            attachment: file ? { name: file.name, url: null, is_image: false } : null,
+            to: state.activeId,
+            file: file,
+        };
+
+        state.messages.push(temp);
+        state.drafts[state.activeId] = '';
+        el.input.value = '';
+        clearFile();
+        hideError();
+        autosize();
+        updateSend();
+
+        renderMessages();
+        scrollToBottom(true);
+        deliver(temp);
+    }
+
+    // Remet un envoi refuse dans le champ, pour le corriger
+    function restore(temp) {
+        el.input.value = temp.content;
+
+        if (temp.file && window.DataTransfer) {
+            try {
+                const dt = new DataTransfer();
+                dt.items.add(temp.file);
+                el.fileInput.files = dt.files;
+                setFile(temp.file);
+            } catch (err) { /* navigateur ancien : le fichier est a rejoindre */ }
+        }
+
+        autosize();
+        updateSend();
+    }
+
+    async function deliver(temp) {
+        const body = new FormData();
+        body.append('message', temp.content);
+        if (temp.file) body.append('file', temp.file);
+
+        try {
+            const res = await fetch(threadUrl(temp.to), {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' },
+                body: body,
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            // Le membre a change de fil entre-temps : la liste suffit
+            if (temp.to !== state.activeId) {
+                loadList();
                 return;
             }
 
-            preview.innerHTML = `Fichier joint : ${esc(file.name)} <button type="button" id="removeFile">Retirer</button>`;
-
-            document.getElementById('removeFile').addEventListener('click', function () {
-                fileInput.value = '';
-                preview.innerHTML = '';
-            });
-        });
-    }
-
-    if (hideBtn) hideBtn.addEventListener('click', hideConversation);
-
-    if (sendBtn) sendBtn.addEventListener('click', () => sendMessage(userId));
-
-    if (messageInput) {
-        messageInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage(userId);
+            if (res.status === 419 || res.status === 401) {
+                temp.pending = false;
+                temp.failed = true;
+                showError('Votre session a expiré : rechargez la page pour continuer.');
+                renderMessages();
+                return;
             }
-        });
-    }
-}
 
-// ===================================
-// FERMER LA CONVERSATION
-// ===================================
-function hideConversation() {
-    const detail = document.getElementById('conversationDetail');
-    if (!detail) return;
+            // Refus de validation : inutile de reessayer tel quel, le texte
+            // revient dans le champ avec l'explication.
+            if (res.status === 422) {
+                state.messages.splice(state.messages.indexOf(temp), 1);
+                renderMessages();
+                restore(temp);
+                const first = data.errors ? Object.values(data.errors)[0]?.[0] : null;
+                showError(first || data.message || "Le message n'a pas pu être envoyé.");
+                return;
+            }
 
-    detail.innerHTML = `
-        <div class="sp-thread-empty">
-            ${threadGhost()}
-            <h3>Sélectionnez une conversation</h3>
-            <p>Choisissez un contact dans la liste pour afficher vos échanges.</p>
-        </div>
-    `;
+            if (!res.ok) throw new Error('HTTP ' + res.status);
 
-    document.querySelectorAll('.sp-conv').forEach(card => card.classList.remove('is-active'));
-}
+            const index = state.messages.indexOf(temp);
 
-// ===================================
-// ENVOYER UN MESSAGE
-// ===================================
-async function sendMessage(userId) {
-    const messageInput = document.getElementById('messageInput');
-    const fileInput = document.getElementById('fileInput');
-    if (!messageInput) return;
+            // L'actualisation a pu ramener ce message avant la reponse
+            if (state.messages.some(m => m.id === data.id)) {
+                state.messages.splice(index, 1);
+            } else {
+                state.messages.splice(index, 1, data);
+            }
 
-    const messageText = messageInput.value.trim();
-    const file = fileInput ? fileInput.files[0] : null;
-
-    if (!messageText && !file) return; // message ou fichier obligatoire
-
-    const formData = new FormData();
-    formData.append('message', messageText);
-    if (file) formData.append('file', file);
-
-    try {
-        const response = await fetch(`/messages/${userId}`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: formData
-        });
-
-        if (response.ok) {
-            messageInput.value = '';
-            if (fileInput) fileInput.value = '';
-            // la liste d'abord : elle recree les cartes, donc l'etat actif
-            await loadMessagesList();
-            showConversation(userId);
+            state.lastId = Math.max(state.lastId, data.id);
+            renderMessages();
+            bumpConversation(data);
+        } catch (err) {
+            console.error('Envoi :', err);
+            temp.pending = false;
+            temp.failed = true;
+            if (temp.to === state.activeId) renderMessages();
         }
-    } catch (error) {
-        console.error('Erreur lors de l\'envoi du message :', error);
     }
-}
 
-// ===================================
-// SCROLL VERS LE BAS
-// ===================================
-function scrollToBottom() {
-    setTimeout(() => {
-        const messagesContainer = document.getElementById('conversationMessages');
-        if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }, 100);
-}
+    // =====================================================================
+    // DEMARRAGE
+    // =====================================================================
+    // Lien profond ?avec={id} : la popin « Message » d'une fiche et l'e-mail
+    // envoye au proprietaire ouvrent directement le bon fil.
+    const startId = parseInt(new URLSearchParams(window.location.search).get('avec'), 10);
 
-window.messagesApp = {
-    loadMessagesList,
-    showConversation,
-    hideConversation,
-    sendMessage
-};
+    loadList();
+
+    // Sans etat d'historique : sur telephone, la fleche du fil ramene a la
+    // liste au lieu de quitter la page.
+    if (startId && startId !== me) openThread(startId, true);
+}
