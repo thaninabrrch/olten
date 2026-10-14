@@ -8,6 +8,7 @@ use App\Models\Ad;
 use App\Models\ContactMessage;
 use App\Models\Message;
 use App\Models\Product;
+use App\Models\ServiceProposal;
 use Illuminate\Http\Request;
 
 class ContactController extends Controller
@@ -42,11 +43,15 @@ class ContactController extends Controller
      * Le destinataire se deduit de l'offre, jamais d'un identifiant poste : on
      * ne peut ecrire qu'au proprietaire d'une offre, et l'objet de l'e-mail
      * parti au nom d'Olten reste celui de la plateforme, pas un texte libre.
+     *
+     * Une proposition de prestation (listing_type « proposal ») relie deux
+     * membres : le client qui a publie la demande et le prestataire qui y a
+     * repondu. Chacun ecrit a l'autre, et eux seuls peuvent l'utiliser.
      */
     public function ownerMessage(Request $request)
     {
         $validated = $request->validate([
-            'listing_type' => 'required|in:product,ad',
+            'listing_type' => 'required|in:product,ad,proposal',
             'listing_id'   => 'required|integer',
             'message'      => 'required|string|min:2|max:2000',
         ], [
@@ -55,18 +60,35 @@ class ContactController extends Controller
             'message.max'      => 'Votre message ne doit pas dépasser 2 000 caractères.',
         ]);
 
+        $sender = $request->user();
+
         if ($validated['listing_type'] === 'product') {
             $listing = Product::findOrFail($validated['listing_id']);
             $title   = $listing->name;
             $url     = route('products.show', $listing);
+            $owner   = $listing->user;
+        } elseif ($validated['listing_type'] === 'proposal') {
+            $proposal = ServiceProposal::with(['ad.user', 'provider'])->findOrFail($validated['listing_id']);
+            $listing  = $proposal->ad;
+            $title    = $listing->title;
+            $toClient = (int) $sender->id === (int) $proposal->user_id;
+
+            if (! $toClient && (int) $sender->id !== (int) $listing->user_id) {
+                return $this->refuse($request, 'Vous ne participez pas à cette demande.');
+            }
+
+            // Le client retrouve la proposition dans sa comparaison, le
+            // prestataire la demande a laquelle il a repondu.
+            $owner = $toClient ? $listing->user : $proposal->provider;
+            $url   = $toClient
+                ? route('ads.proposals', $listing) . '#proposition-' . $proposal->id
+                : route('ads.show', $listing) . '#proposition';
         } else {
             $listing = Ad::findOrFail($validated['listing_id']);
             $title   = $listing->title;
             $url     = route('ads.show', $listing);
+            $owner   = $listing->user;
         }
-
-        $owner  = $listing->user;
-        $sender = $request->user();
 
         if (! $owner) {
             return $this->refuse($request, 'Cet annonceur ne peut pas encore être contacté.');

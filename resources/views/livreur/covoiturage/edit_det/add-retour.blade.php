@@ -793,8 +793,9 @@
             L.control.zoom({
                 position: 'bottomright'
             }).addTo(maps[key]);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '©OpenStreetMap'
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap'
             }).addTo(maps[key]);
         }
 

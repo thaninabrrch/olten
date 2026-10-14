@@ -222,6 +222,8 @@
                                     {{-- Une annonce de vente affiche un prix ferme --}}
                                     @if ($ad->priceSuffix())
                                         <small>{{ $ad->priceSuffix() }}</small>
+                                    @elseif ($ad->isPrestation())
+                                        <small>budget</small>
                                     @endif
                                 </div>
                             </div>
@@ -254,7 +256,15 @@
                         <div class="sp-actions">
                             <a href="{{ route('ads.edit', $ad) }}" class="sp-act is-edit">Modifier</a>
 
-                            <a href="{{ route('ads.ical', $ad) }}" class="sp-act is-ghost" title="Exporter le calendrier">iCal</a>
+                            {{-- Une demande de prestation n'a pas de calendrier de
+                                 reservation : elle recoit des propositions. --}}
+                            @if ($ad->isPrestation())
+                                <a href="{{ route('ads.proposals', $ad) }}" class="sp-act is-ghost" title="Comparer les propositions reçues">
+                                    Propositions ({{ $ad->proposals_count }})
+                                </a>
+                            @else
+                                <a href="{{ route('ads.ical', $ad) }}" class="sp-act is-ghost" title="Exporter le calendrier">iCal</a>
+                            @endif
 
                             <button type="button" class="sp-act is-delete"
                                     data-bs-toggle="modal" data-bs-target="#deleteAdModal"

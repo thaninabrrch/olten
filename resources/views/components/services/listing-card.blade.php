@@ -33,14 +33,18 @@
     <div class="cs-card-media">
         <img src="{{ $listing['image'] }}" alt="{{ $listing['title'] }}" loading="lazy">
 
-        <span class="cs-badge-type {{ $typeClass }}">
-            <i class="fa-solid {{ $typeIcon }}"></i>
-            {{ $listing['type_label'] }}
-        </span>
+        {{-- Le type puis le service, sur une rangee qui passe a la ligne
+             quand la carte est etroite (voir .cs-card-badges). --}}
+        <div class="cs-card-badges">
+            <span class="cs-badge-type {{ $typeClass }}">
+                <i class="fa-solid {{ $typeIcon }}"></i>
+                {{ $listing['type_label'] }}
+            </span>
 
-        @if($badge)
-            <span class="cs-badge-location">{{ $badge }}</span>
-        @endif
+            @if($badge)
+                <span class="cs-badge-location">{{ $badge }}</span>
+            @endif
+        </div>
 
         @if($listing['delivery'])
             <span class="cs-badge-delivery">

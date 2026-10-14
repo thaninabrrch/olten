@@ -13,7 +13,13 @@
        lui demande deja plus de dates ; l'affichage suit la meme regle. */
     $estVente = $ad->isVente();
 
-    $bookable = ! $expired && ! $isOwner && ! $estVente;
+    /* Une annonce de prestation est une demande : le client decrit son besoin,
+       les prestataires lui font leurs propositions (encart proposals.box).
+       Le prix y est un budget, la periode la fenetre de realisation. */
+    $estPrestation = $ad->isPrestation();
+    $prestation    = $prestation ?? null;
+
+    $bookable = ! $expired && ! $isOwner && ! $estVente && ! $estPrestation;
     $favorited = auth()->check() && auth()->user()->hasFavorited($ad);
 
     $avatar = $owner?->profile_photo ? asset('storage/' . $owner->profile_photo) : null;
@@ -74,12 +80,18 @@
                     @if ($ad->delivery_active)
                         <span class="dt-chip is-solid"><i class="fa-solid fa-truck-fast"></i> Livraison possible</span>
                     @endif
+                    @if ($prestation)
+                        <span class="dt-chip is-solid">
+                            <i class="fa-solid fa-hand-holding-dollar"></i>
+                            {{ $prestation['count'] }} proposition{{ $prestation['count'] > 1 ? 's' : '' }}
+                        </span>
+                    @endif
                 </div>
             </div>
 
             <div class="dt-head-price">
                 <strong>{{ number_format((float) $ad->price_per_day, 2, ',', ' ') }} €</strong>
-                <small>{{ $estVente ? 'prix de vente' : 'par jour' }}</small>
+                <small>{{ $estVente ? 'prix de vente' : ($estPrestation ? 'budget indicatif' : 'par jour') }}</small>
             </div>
         </header>
 
@@ -134,7 +146,7 @@
                     @if ($expired)
                         <div class="dt-note is-danger">
                             <i class="fa-solid fa-circle-exclamation"></i>
-                            <span>Cette annonce a expiré le {{ \Carbon\Carbon::parse($ad->expires_at)->translatedFormat('d F Y') }} : la réservation n'est plus possible.</span>
+                            <span>Cette {{ $estPrestation ? 'demande' : 'annonce' }} a expiré le {{ \Carbon\Carbon::parse($ad->expires_at)->translatedFormat('d F Y') }} : {{ $estPrestation ? "elle n'accepte plus de propositions" : "la réservation n'est plus possible" }}.</span>
                         </div>
                     @elseif ($isOwner)
                         <div class="dt-note is-info">
@@ -152,11 +164,18 @@
                     @endif
 
                     <div class="dt-box-price">
+                        @if ($estPrestation)
+                            <small>Budget indicatif</small>
+                        @endif
                         <strong>{{ number_format((float) $ad->price_per_day, 2, ',', ' ') }} €</strong>
-                        @unless ($estVente)
+                        @unless ($estVente || $estPrestation)
                             <small>/ jour</small>
                         @endunless
                     </div>
+
+                    @if ($prestation)
+                        @include('proposals.box')
+                    @endif
 
                     @if ($bookable)
                         {{-- `data-auth-required` : un visiteur non connecte voit la
@@ -241,7 +260,7 @@
                         <span class="dt-fact-icon"><i class="fa-solid fa-euro-sign"></i></span>
                         <span class="dt-fact-text">
                             <strong>{{ number_format((float) $ad->price_per_day, 2, ',', ' ') }} €</strong>
-                            <small>{{ $estVente ? 'prix de vente' : 'par jour de location' }}</small>
+                            <small>{{ $estVente ? 'prix de vente' : ($estPrestation ? 'budget indicatif' : 'par jour de location') }}</small>
                         </span>
                     </div>
 
@@ -256,11 +275,12 @@
                                         Sur demande
                                     @endif
                                 </strong>
-                                <small>période de disponibilité</small>
+                                <small>{{ $estPrestation ? 'période de réalisation' : 'période de disponibilité' }}</small>
                             </span>
                         </div>
                     @endunless
 
+                    @unless ($estPrestation)
                     <div class="dt-fact">
                         <span class="dt-fact-icon {{ $ad->delivery_active ? 'is-green' : 'is-grey' }}">
                             <i class="fa-solid fa-truck-fast"></i>
@@ -278,6 +298,7 @@
                             <small>livraison</small>
                         </span>
                     </div>
+                    @endunless
 
                     <div class="dt-fact">
                         <span class="dt-fact-icon is-grey"><i class="fa-regular fa-clock"></i></span>
@@ -332,7 +353,7 @@
             {{-- Propriétaire --}}
             @if ($owner)
                 <section class="dt-card">
-                    <h2 class="dt-card-title">Proposé par</h2>
+                    <h2 class="dt-card-title">{{ $estPrestation ? 'Demandé par' : 'Proposé par' }}</h2>
 
                     <div class="dt-owner">
                         @if ($avatar)
@@ -450,9 +471,15 @@
                  :listing-id="$ad->id"
                  :title="$ad->title"
                  :price="number_format((float) $ad->price_per_day, 2, ',', ' ') . ' €'"
-                 :price-label="$estVente ? null : 'par jour'"
+                 :price-label="$estVente ? null : ($estPrestation ? 'budget' : 'par jour')"
                  :image="$sources[0]"
-                 :kind="$estVente ? 'vente' : 'location'" />
+                 :kind="$estVente ? 'vente' : ($estPrestation ? 'prestation' : 'location')" />
+
+@if ($prestation)
+    @push('styles')
+        <link rel="stylesheet" href="{{ asset('assets/css/proposals.css') }}?v={{ @filemtime(public_path('assets/css/proposals.css')) ?: 1 }}">
+    @endpush
+@endif
 
 @push('scripts')
 <script>

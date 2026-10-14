@@ -45,6 +45,20 @@
         ],
     ];
 
+    /* Prestations de services : la demande est une annonce, les propositions
+       des prestataires ont leur page. Compteur : propositions recues qui
+       attendent le choix du client. */
+    $proposalsTab = request()->routeIs('proposals.index') ? request('onglet') : null;
+
+    $sections[] = [
+        'label' => 'Prestations',
+        'icon'  => 'fa-screwdriver-wrench',
+        'items' => [
+            ['Propositions reçues',   'fa-inbox',       route('proposals.index', ['onglet' => 'recues']), $proposalsTab === 'recues' || request()->routeIs('ads.proposals'), false, $user->pendingServiceProposals()->count()],
+            ['Propositions envoyées', 'fa-paper-plane', route('proposals.index'),                         request()->routeIs('proposals.index') && $proposalsTab !== 'recues', false],
+        ],
+    ];
+
     $sections[] = [
         'label' => 'Locations',
         'icon'  => 'fa-calendar-check',

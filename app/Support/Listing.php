@@ -93,8 +93,8 @@ class Listing
      *
      * Il n'a ni categorie, ni stock, ni compteur de vues : ces champs restent
      * presents mais vides, la carte s'appuyant sur `type` pour savoir quoi
-     * afficher. Le prix montre est celui d'une place — c'est ce que paie le
-     * passager.
+     * afficher. Le prix montre est celui d'une place, frais de service
+     * compris — c'est ce que paie le passager.
      */
     public static function fromTrip(Covoiturage $trip): array
     {
@@ -110,7 +110,7 @@ class Listing
             // La table `covoiturages` ne date pas ses lignes : c'est la date
             // de depart qui situe le trajet dans le temps.
             'created_at'   => $trip->date_depart,
-            'price'        => (float) ($trip->prix_total_affiche ?: $trip->prix_place),
+            'price'        => $trip->passenger_price,
             'price_label'  => 'Par place',
             'price_suffix' => '',
             'delivery'     => false,

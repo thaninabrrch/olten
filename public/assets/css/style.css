@@ -1771,13 +1771,6 @@ body {
   padding-top: 0;
 }
 
-/* Frais de service ajoutes au prix de la place */
-.card-fee {
-  font-size: 11px;
-  color: #98A2B3;
-  white-space: nowrap;
-}
-
 /* ==========================================================================
    CAROUSEL
    ========================================================================== */
@@ -7479,11 +7472,25 @@ body.cs-modal-open {
     transform: scale(1.04);
 }
 
-/* Nature de l'offre : la grille melange annonces (location) et produits (vente) */
-.cs-badge-type {
+/* Etiquettes du haut de la carte : le type de l'offre, puis son service.
+   Elles partagent une rangee qui passe a la ligne quand la carte est
+   etroite. Posees chacune de son cote (le service ancre a droite), elles se
+   chevauchaient des que le nom du service etait long (« Prestations de
+   services »). La rangee s'arrete avant le bouton favori. */
+.cs-card-badges {
     position: absolute;
     top: 12px;
     left: 12px;
+    right: 52px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 6px;
+    pointer-events: none;
+}
+
+/* Nature de l'offre : la grille melange annonces (location) et produits (vente) */
+.cs-badge-type {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -7510,11 +7517,13 @@ body.cs-modal-open {
     background: rgba(26, 157, 92, .92);
 }
 
-/* Le badge du service passe a droite pour ne pas chevaucher celui du type */
+/* Service de l'offre, a la suite du type. Un nom trop long pour la carte
+   est coupe plutot que d'ecrire sur deux lignes dans la pastille. */
 .cs-badge-location {
-    position: absolute;
-    top: 12px;
-    right: 52px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     background: var(--color-primary);
     color: var(--color-white);
     font-size: 11px;
@@ -9762,24 +9771,12 @@ body.cs-modal-open {
     color: var(--color-grey-dark);
 }
 
-/* Prix de la place, frais de service et total, empiles */
+/* Prix de la place, frais de service compris */
 .cv-trip-pricing {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 2px;
-}
-
-.cv-trip-fee {
-    font-size: 11.5px;
-    font-weight: 500;
-    color: var(--color-grey-dark);
-    white-space: nowrap;
-}
-
-.cv-trip-fee strong {
-    font-weight: 700;
-    color: var(--color-black, #111);
 }
 
 /* ---- Alerte trajet (<x-services.trip-alert />) ---- */
@@ -10603,28 +10600,16 @@ body.cs-modal-open {
     margin: 0;
 }
 
-/* ---- Recapitulatif : prix du trajet et frais de service ---- */
-.cvd-recap-lines {
-    margin-top: 14px;
-}
-
-.cvd-recap-line {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 3px 2px;
-    font-size: 12.5px;
-    color: rgba(255, 255, 255, .7);
-}
-
-.cvd-recap-line span:last-child {
-    white-space: nowrap;
-    color: var(--color-white);
-    font-weight: 600;
-}
-
-.cvd-recap-lines + .cvd-recap-total {
-    margin-top: 10px;
+/* ---- Recapitulatif : places choisies sous le total ----
+   Le total est celui paye, frais de service compris : pas de ligne de
+   frais a part, seulement les places sous le libelle. */
+.cvd-recap-total small {
+    display: block;
+    margin-top: 4px;
+    font-size: 11.5px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: rgba(255, 255, 255, .5);
 }
 
 /* ---- Panneau tarifaire ---- */

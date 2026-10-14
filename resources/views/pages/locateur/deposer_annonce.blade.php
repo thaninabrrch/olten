@@ -17,7 +17,9 @@
     <header class="sp-head">
         <div>
             <h1 class="sp-title">Déposer une annonce</h1>
-            <p class="sp-subtitle" id="page-subtitle">Décrivez votre bien, indiquez vos disponibilités et votre tarif : votre annonce part en validation.</p>
+            <p class="sp-subtitle" id="page-subtitle" data-mode-text
+               data-vente="Décrivez votre bien et fixez son prix : votre annonce part en validation."
+               data-prestation="Décrivez votre besoin, quand et où le réaliser, et votre budget : les prestataires vous feront leurs propositions.">Décrivez votre bien, indiquez vos disponibilités et votre tarif : votre annonce part en validation.</p>
         </div>
 
         <a href="{{ route('ads.index') }}" class="sp-btn-primary">
@@ -47,21 +49,23 @@
                 <span class="sp-step">1</span>
                 <div>
                     <h2>Informations</h2>
-                    <p>Le titre et la catégorie déterminent où votre annonce sera visible.</p>
+                    <p data-mode-text data-prestation="Le titre et la catégorie permettent aux prestataires concernés de trouver votre demande.">Le titre et la catégorie déterminent où votre annonce sera visible.</p>
                 </div>
             </div>
 
             <div class="sp-form-grid">
                 <div class="sp-field">
-                    <label class="sp-label" for="title">Titre de l'annonce <span class="sp-req">*</span></label>
+                    <label class="sp-label" for="title"><span data-mode-text data-prestation="Votre besoin">Titre de l'annonce</span> <span class="sp-req">*</span></label>
                     <input type="text" name="title" id="title" class="sp-input"
-                           placeholder="Ex. Mini-pelle 1,5 T avec godet"
+                           placeholder="Ex. Mini-pelle 1,5 T avec godet" data-mode-placeholder
+                           data-prestation="Ex. Monter une cuisine en kit de 3 mètres"
                            value="{{ old('title') }}" required>
                 </div>
 
                 <div class="sp-field">
                     <label class="sp-label" for="category_id">Catégorie <span class="sp-req">*</span></label>
-                    <select name="category_id" id="category_id" class="sp-input" required>
+                    <select name="category_id" id="category_id" class="sp-input" required
+                            data-autocomplete="Rechercher une catégorie…">
                         <option value="">Choisir une catégorie</option>
                         {{-- Les categories sont des sous-parties d'un service --}}
                         @forelse($categories->groupBy(fn ($c) => $c->service->display_name ?? 'Autres') as $serviceName => $group)
@@ -69,6 +73,8 @@
                                 @foreach($group as $category)
                                     <option value="{{ $category->id }}"
                                             data-service="{{ $category->service->slug ?? '' }}"
+                                            data-service-name="{{ $serviceName }}"
+                                            data-icon="{{ $category->icon_class }}"
                                             @selected(old('category_id') == $category->id)>
                                         {{ $category->nom }}
                                     </option>
@@ -78,6 +84,7 @@
                             <option value="" disabled>Aucune catégorie disponible</option>
                         @endforelse
                     </select>
+                    <x-select-autocomplete />
                 </div>
             </div>
 
@@ -90,6 +97,8 @@
             <div class="sp-field">
                 <label class="sp-label" for="description">Description</label>
                 <textarea name="description" id="description" placeholder="État du matériel, conditions de location, équipements fournis...">{{ old('description') }}</textarea>
+                <span class="sp-help" data-mode-hide="location vente" hidden>Précisez le travail attendu : surface, quantités, matériel fourni, accès, contraintes… Plus votre demande est claire, plus les propositions seront justes.</span>
+                <x-ai-description target="annonce" />
             </div>
 
             <div class="sp-field">
@@ -99,25 +108,26 @@
             </div>
         </section>
 
-        {{-- 2. Disponibilites — masquee pour une categorie de vente --}}
-        <section class="sp-form-section" id="section-disponibilites">
+        {{-- 2. Disponibilites — masquee pour une categorie de vente ; pour une
+             prestation, fenetre dans laquelle le travail doit etre realise --}}
+        <section class="sp-form-section" id="section-disponibilites" data-mode-hide="vente">
             <div class="sp-form-head">
                 <span class="sp-step">2</span>
                 <div>
-                    <h2>Disponibilités</h2>
-                    <p>La période pendant laquelle votre bien peut être réservé.</p>
+                    <h2 data-mode-text data-prestation="Période de réalisation">Disponibilités</h2>
+                    <p data-mode-text data-prestation="Quand la prestation doit-elle être réalisée ? Votre demande reste en ligne jusqu'à la date limite.">La période pendant laquelle votre bien peut être réservé.</p>
                 </div>
             </div>
 
             <div class="sp-form-grid">
                 <div class="sp-field">
-                    <label class="sp-label" for="available_from">Disponible à partir du <span class="sp-req">*</span></label>
+                    <label class="sp-label" for="available_from"><span data-mode-text data-prestation="À réaliser à partir du">Disponible à partir du</span> <span class="sp-req">*</span></label>
                     <input type="date" name="available_from" id="available_from" class="sp-input"
                            min="{{ now()->format('Y-m-d') }}" value="{{ old('available_from') }}" required>
                 </div>
 
                 <div class="sp-field">
-                    <label class="sp-label" for="available_until">Disponible jusqu'au <span class="sp-req">*</span></label>
+                    <label class="sp-label" for="available_until"><span data-mode-text data-prestation="Au plus tard le">Disponible jusqu'au</span> <span class="sp-req">*</span></label>
                     <input type="date" name="available_until" id="available_until" class="sp-input"
                            min="{{ now()->format('Y-m-d') }}" value="{{ old('available_until') }}" required>
                 </div>
@@ -130,7 +140,7 @@
                 <span class="sp-step">3</span>
                 <div>
                     <h2>Adresse</h2>
-                    <p>Le point de retrait du bien. Sélectionnez une suggestion pour placer le repère.</p>
+                    <p data-mode-text data-prestation="Le lieu où la prestation sera réalisée. Sélectionnez une suggestion pour placer le repère.">Le point de retrait du bien. Sélectionnez une suggestion pour placer le repère.</p>
                 </div>
             </div>
 
@@ -163,8 +173,10 @@
             <div class="sp-form-head">
                 <span class="sp-step">4</span>
                 <div>
-                    <h2>Tarif et livraison</h2>
-                    <p id="tarif-intro">Le prix affiché aux locataires, et la possibilité de faire livrer le bien.</p>
+                    <h2 data-mode-text data-prestation="Votre budget">Tarif et livraison</h2>
+                    <p id="tarif-intro" data-mode-text
+                       data-vente="Le prix affiché aux acheteurs, et la possibilité de faire livrer le bien."
+                       data-prestation="Le montant que vous envisagez. Chaque prestataire vous répondra avec son propre prix.">Le prix affiché aux locataires, et la possibilité de faire livrer le bien.</p>
                 </div>
             </div>
 
@@ -174,19 +186,22 @@
                 <div class="sp-box">
                     <div class="sp-box-head">
                         <label class="sp-label" for="price_per_day">
-                            <span id="price-label">Prix par jour</span> <span class="sp-req">*</span>
+                            <span id="price-label" data-mode-text data-vente="Prix" data-prestation="Budget indicatif">Prix par jour</span> <span class="sp-req">*</span>
                         </label>
-                        <span class="sp-help" id="price-help">Le tarif journalier affiché aux locataires.</span>
+                        <span class="sp-help" id="price-help" data-mode-text
+                              data-vente="Le prix de vente affiché aux acheteurs."
+                              data-prestation="Il aide les prestataires à calibrer leur proposition.">Le tarif journalier affiché aux locataires.</span>
                     </div>
 
                     <div class="sp-input-group">
                         <input type="number" name="price_per_day" id="price_per_day" class="sp-input"
                                placeholder="0,00" step="0.01" min="0" value="{{ old('price_per_day') }}" required>
-                        <span class="sp-input-suffix" id="price-suffix">€ / jour</span>
+                        <span class="sp-input-suffix" id="price-suffix" data-mode-text data-vente="€" data-prestation="€">€ / jour</span>
                     </div>
                 </div>
 
-                <div class="sp-box is-row">
+                {{-- Une prestation ne se livre pas --}}
+                <div class="sp-box is-row" data-mode-hide="prestation">
                     <div class="sp-box-head">
                         <label class="sp-label" for="livraisonActive">Proposez-vous une livraison ?</label>
                         <span class="sp-help">Les livreurs de la plateforme pourront se proposer pour l'acheminement.</span>
@@ -203,7 +218,7 @@
         {{-- Barre d'action --}}
         <div class="sp-form-actions">
             <a href="{{ route('ads.index') }}" class="sp-act is-ghost">Annuler</a>
-            <button type="submit" class="sp-btn-primary">Publier l'annonce</button>
+            <button type="submit" class="sp-btn-primary" data-mode-text data-prestation="Publier ma demande">Publier l'annonce</button>
         </div>
 
         <input type="hidden" name="distance_km" id="distanceKm">
@@ -211,75 +226,8 @@
     </form>
 </div>
 
-{{-- Bascule location / vente.
-     Une categorie de vente n'a pas de periode de location : le bloc
-     « Disponibilites » disparait et ses champs cessent d'etre exiges, sinon le
-     navigateur bloquerait l'envoi sur un champ invisible. Le prix passe de
-     tarif journalier a prix ferme. La meme regle est rejouee cote serveur
-     dans AdController. --}}
-<script>
-(function () {
-    const categorie   = document.getElementById('category_id');
-    const dispos      = document.getElementById('section-disponibilites');
-    const libellePrix = document.getElementById('price-label');
-    const aidePrix    = document.getElementById('price-help');
-    const suffixePrix = document.getElementById('price-suffix');
-
-    if (!categorie || !dispos) return;
-
-    const champsDates = dispos.querySelectorAll('input[type="date"]');
-
-    function appliquer() {
-        const option = categorie.selectedOptions[0];
-        const vente  = option ? option.dataset.service === 'vente' : false;
-
-        dispos.hidden = vente;
-
-        champsDates.forEach(champ => {
-            champ.required = !vente;
-            if (vente) champ.value = '';
-        });
-
-        libellePrix.textContent = vente ? 'Prix' : 'Prix par jour';
-        suffixePrix.textContent = vente ? '€' : '€ / jour';
-        aidePrix.textContent    = vente
-            ? 'Le prix de vente affiché aux acheteurs.'
-            : 'Le tarif journalier affiché aux locataires.';
-
-        // Deux textes de presentation parlaient de location : ils suivent.
-        const intro = document.getElementById('tarif-intro');
-        if (intro) {
-            intro.textContent = vente
-                ? "Le prix affiché aux acheteurs, et la possibilité de faire livrer le bien."
-                : "Le prix affiché aux locataires, et la possibilité de faire livrer le bien.";
-        }
-
-        const chapeau = document.getElementById('page-subtitle');
-        if (chapeau) {
-            chapeau.textContent = vente
-                ? "Décrivez votre bien et fixez son prix : votre annonce part en validation."
-                : "Décrivez votre bien, indiquez vos disponibilités et votre tarif : votre annonce part en validation.";
-        }
-
-        renumeroter();
-    }
-
-    // Les etapes sont numerotees a la main dans le balisage : masquer la
-    // deuxieme laisserait la suite en 1, 3, 4. On renumerote ce qui reste.
-    function renumeroter() {
-        const sections = document.querySelectorAll('.sp-form-section');
-        let numero = 0;
-
-        sections.forEach(section => {
-            if (section.hidden) return;
-            const puce = section.querySelector('.sp-step');
-            if (puce) puce.textContent = ++numero;
-        });
-    }
-
-    categorie.addEventListener('change', appliquer);
-    appliquer();
-})();
-</script>
+{{-- Bascule location / vente / prestation : assets/js/ad-form.js. La meme
+     regle est rejouee cote serveur dans AdController. --}}
+<script src="{{ asset('assets/js/ad-form.js') }}?v={{ @filemtime(public_path('assets/js/ad-form.js')) ?: 1 }}"></script>
 
 @endsection

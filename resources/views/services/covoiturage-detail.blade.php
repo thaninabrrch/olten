@@ -77,13 +77,15 @@
                     // Places libres par sens : un sens complet ne peut plus être coché.
                     $leftByLeg = collect($legs)->map(fn ($leg, $key) => $trip->seatsLeft($key));
 
-                    // Montants de départ (une place, sens encore libres) ; le script
-                    // les recalcule à chaque changement, avec la même règle d'arrondi
-                    // que le paiement.
-                    $rate     = \App\Models\Covoiturage::serviceRate();
-                    $subtotal = collect($legs)->filter(fn ($leg, $key) => $leftByLeg[$key] > 0)->sum('total');
-                    $fee      = \App\Models\Covoiturage::serviceFee($subtotal);
-                    $euros    = fn ($amount) => number_format((float) $amount, 2, ',', ' ') . ' €';
+                    // Montants de départ (une place, sens encore libres), frais de
+                    // service compris : le passager lit ce qu'il paiera, sans ligne
+                    // de frais à part. Le script les recalcule à chaque changement,
+                    // avec la même règle d'arrondi que le paiement.
+                    $rate       = \App\Models\Covoiturage::serviceRate();
+                    $recapTotal = \App\Models\Covoiturage::passengerPrice(
+                        collect($legs)->filter(fn ($leg, $key) => $leftByLeg[$key] > 0)->sum('total')
+                    );
+                    $euros      = fn ($amount) => number_format((float) $amount, 2, ',', ' ') . ' €';
                 @endphp
 
                 <div class="cvd-recap" data-cvd-recap data-cvd-rate="{{ $rate }}">
@@ -119,8 +121,9 @@
                                 </small>
                             </span>
 
+                            {{-- Prix d'une place sur ce sens, frais de service compris --}}
                             <span class="cvd-recap-leg-price">
-                                {{ $euros($leg['total']) }}
+                                {{ $euros(\App\Models\Covoiturage::passengerPrice($leg['total'])) }}
                             </span>
                         </label>
                     @endforeach
@@ -153,20 +156,14 @@
                         @endforeach
                     @endunless
 
-                    <div class="cvd-recap-lines">
-                        <div class="cvd-recap-line">
-                            <span data-cvd-subtotal-label>Trajet · 1 place</span>
-                            <span data-cvd-subtotal>{{ $euros($subtotal) }}</span>
-                        </div>
-                        <div class="cvd-recap-line">
-                            <span>Frais de service ({{ rtrim(rtrim(number_format($rate, 2, ',', ''), '0'), ',') }} %)</span>
-                            <span data-cvd-fee>{{ $euros($fee) }}</span>
-                        </div>
-                    </div>
-
+                    {{-- Le total est celui payé, frais de service compris : pas de
+                         ligne de frais, seulement les places choisies. --}}
                     <div class="cvd-recap-total">
-                        <span>Total</span>
-                        <strong data-cvd-total>{{ $euros($subtotal + $fee) }}</strong>
+                        <span>
+                            Total
+                            <small data-cvd-seats-label>1 place</small>
+                        </span>
+                        <strong data-cvd-total>{{ $euros($recapTotal) }}</strong>
                     </div>
 
                     {{-- La destination reste la meme pour tous : un visiteur non
@@ -281,6 +278,13 @@
                                     {{ count($leg['segments']) > 1 ? 'Escales et tarifs' : 'Tarif' }}
                                 </span>
 
+                                @php
+                                    // Prix frais de service compris, comme au récapitulatif :
+                                    // les escales se partagent le prix passager du sens.
+                                    $legPrice  = \App\Models\Covoiturage::passengerPrice($leg['total']);
+                                    $segPrices = \App\Models\Covoiturage::passengerSegmentPrices($leg['segments'], $leg['total']);
+                                @endphp
+
                                 @forelse ($leg['segments'] as $segment)
                                     @php
                                         // Les trajets anterieurs au formulaire actuel n'ont pas
@@ -297,25 +301,24 @@
                                                 Étape {{ $loop->iteration }}
                                             @endif
                                         </span>
-                                        <strong>{{ number_format((float) ($segment['price'] ?? 0), 0, ',', ' ') }}€</strong>
+                                        <strong>{{ number_format($segPrices[$loop->index], 2, ',', ' ') }}€</strong>
                                     </div>
                                 @empty
                                     <div class="cvd-price-row">
                                         <span>Trajet complet</span>
-                                        <strong>{{ number_format($leg['total'], 0, ',', ' ') }}€</strong>
+                                        <strong>{{ number_format($legPrice, 2, ',', ' ') }}€</strong>
                                     </div>
                                 @endforelse
 
                                 <div class="cvd-price-total">
                                     <span>Total {{ $leg['key'] === 'retour' ? 'retour' : 'aller' }}</span>
-                                    <strong>{{ number_format($leg['total'], 2, ',', ' ') }}€</strong>
+                                    <strong>{{ number_format($legPrice, 2, ',', ' ') }}€</strong>
                                 </div>
 
                                 <div class="cvd-price-note">
                                     <i class="fa-solid fa-circle-info"></i>
                                     <span>
-                                        Prix par place, fixé par le conducteur. Le paiement se règle
-                                        directement avec lui, aucun frais n'est ajouté par Olten.
+                                        Prix par place. Il se règle en ligne, à la réservation.
                                     </span>
                                 </div>
                             </div>
@@ -576,15 +579,15 @@
         // ---- Recapitulatif : sens coches, nombre de places et montants ----
         // Les montants se calculent en centimes, avec le meme arrondi que le
         // paiement (TripBookingController::amounts) : la page de paiement
-        // affiche donc exactement le total vu ici.
+        // affiche donc exactement le total vu ici. data-cvd-price porte le
+        // prix conducteur d'une place ; les frais s'ajoutent une fois sur la
+        // somme, et seul le total frais compris s'affiche.
         const recap = document.querySelector('[data-cvd-recap]');
         const rate = parseFloat(recap?.dataset.cvdRate || '0');
         const checks = document.querySelectorAll('[data-cvd-leg]');
         const steps = document.querySelectorAll('[data-cvd-step]');
         const seatInputs = document.querySelectorAll('[data-cvd-seats]');
-        const subtotalLabel = document.querySelector('[data-cvd-subtotal-label]');
-        const subtotalEl = document.querySelector('[data-cvd-subtotal]');
-        const feeEl = document.querySelector('[data-cvd-fee]');
+        const seatsLabel = document.querySelector('[data-cvd-seats-label]');
         const totalEl = document.querySelector('[data-cvd-total]');
         const bookBtn = document.querySelector('[data-cvd-book]');
         const hintEl = document.querySelector('[data-cvd-hint]');
@@ -599,7 +602,7 @@
         }
 
         function refreshTotal() {
-            let subtotalCents = 0;
+            let driverCents = 0;
             const picked = [];
 
             checks.forEach(function (check) {
@@ -626,23 +629,23 @@
                     });
                 }
 
-                subtotalCents += Math.round(parseFloat(check.dataset.cvdPrice || '0') * 100) * seats;
+                driverCents += Math.round(parseFloat(check.dataset.cvdPrice || '0') * 100) * seats;
                 picked.push({ leg: leg, seats: seats });
             });
 
             const selected = picked.map(p => p.leg);
-            const feeCents = Math.round(subtotalCents * rate / 100);
+            const totalCents = driverCents + Math.round(driverCents * rate / 100);
 
-            // « Trajet · 2 places », ou « Aller × 2 · Retour × 1 » quand les
-            // deux sens different.
-            if (subtotalLabel) {
-                subtotalLabel.textContent = picked.length > 1 && picked[0].seats !== picked[1].seats
-                    ? picked.map(p => (p.leg === 'retour' ? 'Retour' : 'Aller') + ' × ' + p.seats).join(' · ')
-                    : 'Trajet · ' + plural(picked.length ? picked[0].seats : 1, 'place');
+            // « 2 places », ou « 2 places à l'aller · 1 au retour » quand les
+            // deux sens different (meme libelle que TripBooking::describeSeats).
+            if (seatsLabel) {
+                const aller = picked.find(p => p.leg === 'aller');
+                const retour = picked.find(p => p.leg === 'retour');
+                seatsLabel.textContent = aller && retour && aller.seats !== retour.seats
+                    ? plural(aller.seats, 'place') + " à l'aller · " + retour.seats + ' au retour'
+                    : plural(picked.length ? picked[0].seats : 1, 'place');
             }
-            if (subtotalEl) subtotalEl.textContent = euros(subtotalCents);
-            if (feeEl) feeEl.textContent = euros(feeCents);
-            if (totalEl) totalEl.textContent = euros(subtotalCents + feeCents);
+            if (totalEl) totalEl.textContent = euros(totalCents);
 
             if (bookBtn) {
                 const base = bookBtn.dataset.cvdHref || '#';

@@ -287,7 +287,7 @@
                         <option value="">Choisir un rôle</option>
                         <option value="locateur|vendeur">Utilisateur standard</option>
                         <option value="livreur">Livreur</option>
-                        <option value="chauffeur_vtc">Chauffeur VTC</option>
+                        <option value="chauffeur_vtc">Conducteur</option>
                     </select>
                 </div>
 

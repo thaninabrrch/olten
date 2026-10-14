@@ -6,11 +6,40 @@
 // Le message part en fetch : le membre reste sur la fiche et voit la
 // confirmation sur place. Un texte commence puis abandonne (fermeture,
 // clic a cote) est conserve jusqu'a l'envoi.
+//
+// Une page peut porter plusieurs popins : la comparaison des propositions en
+// a une par prestataire. Un bouton vise la sienne par son id
+// (data-cm-open="cm-proposal-12") ; sans valeur, il ouvre la premiere, celle
+// de la fiche.
 
 document.addEventListener('DOMContentLoaded', function () {
-    const modal = document.querySelector('[data-cm]');
-    if (!modal) return;
+    const popins = Array.from(document.querySelectorAll('[data-cm]')).map(setupContactPopin);
+    if (!popins.length) return;
 
+    function find(id) {
+        return (id && popins.find(function (popin) { return popin.id === id; })) || popins[0];
+    }
+
+    document.querySelectorAll('[data-cm-open]').forEach(function (trigger) {
+        trigger.addEventListener('click', function (e) {
+            e.preventDefault();
+            find(trigger.dataset.cmOpen).open();
+        });
+    });
+
+    // ---- Retour de la popin de connexion : ?contacter=1 (ou l'id d'une popin) ----
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.has('contacter')) {
+        const target = params.get('contacter');
+        params.delete('contacter');
+        const query = params.toString();
+        history.replaceState(null, '', window.location.pathname + (query ? '?' + query : '') + window.location.hash);
+        find(target).open();
+    }
+});
+
+function setupContactPopin(modal) {
     const card       = modal.querySelector('[data-cm-card]');
     const form       = modal.querySelector('[data-cm-form]');
     const done       = modal.querySelector('[data-cm-done]');
@@ -92,13 +121,6 @@ document.addEventListener('DOMContentLoaded', function () {
         alertBox.hidden = true;
         refresh();
     }
-
-    document.querySelectorAll('[data-cm-open]').forEach(function (trigger) {
-        trigger.addEventListener('click', function (e) {
-            e.preventDefault();
-            open();
-        });
-    });
 
     modal.querySelectorAll('[data-cm-close]').forEach(function (el) {
         el.addEventListener('click', close);
@@ -204,10 +226,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!state) refresh();
     }
 
-    // Retour sur la fiche apres connexion, popin rouverte
+    // Retour sur la page apres connexion, cette popin rouverte
     function loginUrl() {
         const url = new URL(window.location.href);
-        url.searchParams.set('contacter', '1');
+        url.searchParams.set('contacter', modal.id || '1');
         return url.toString();
     }
 
@@ -238,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             // Session expiree pendant la redaction : le texte reste dans le
-            // champ, le membre se reconnecte puis revient sur la fiche.
+            // champ, le membre se reconnecte puis revient sur la page.
             if (res.status === 401 || res.status === 419) {
                 close();
                 window.openAuthModal?.('login', loginUrl());
@@ -267,13 +289,5 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // ---- Retour de la popin de connexion : ?contacter=1 ----
-    const params = new URLSearchParams(window.location.search);
-
-    if (params.has('contacter')) {
-        params.delete('contacter');
-        const query = params.toString();
-        history.replaceState(null, '', window.location.pathname + (query ? '?' + query : '') + window.location.hash);
-        open();
-    }
-});
+    return { id: modal.id, open: open };
+}

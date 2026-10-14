@@ -367,6 +367,10 @@ class Covoiturage extends Model
     | frais de service (config carpool.commission_rate, 20 % par défaut).
     | Le calcul se fait en centimes, comme au paiement : la liste, la fiche
     | et le tunnel de paiement affichent ainsi exactement le même montant.
+    |
+    | Le passager ne lit que des prix frais compris (passenger_price,
+    | passengerCents) : les frais n'ont pas de ligne à part. Le prix
+    | conducteur (seat_price) reste celui de son espace et de ses gains.
     */
 
     /** Prix d'une place sur l'aller, en euros, hors frais de service. */
@@ -375,19 +379,96 @@ class Covoiturage extends Model
         return (float) ($this->prix_total_affiche ?: $this->prix_place);
     }
 
+    /** Prix d'une place sur l'aller affiché au passager, frais de service compris. */
+    public function getPassengerPriceAttribute(): float
+    {
+        return self::passengerPrice($this->seat_price);
+    }
+
     /** Taux des frais de service, en pourcentage. */
     public static function serviceRate(): float
     {
         return (float) config('carpool.commission_rate');
     }
 
-    public static function serviceFeeCents(int $cents): int
+    /**
+     * Frais de service d'un montant conducteur, en centimes : au taux actuel,
+     * ou à celui d'une réservation (commission_rate, figé au paiement).
+     */
+    public static function serviceFeeCents(int $cents, ?float $rate = null): int
     {
-        return (int) round($cents * self::serviceRate() / 100);
+        return (int) round($cents * ($rate ?? self::serviceRate()) / 100);
     }
 
-    public static function serviceFee(float $amount): float
+    /** Montant payé par le passager pour un montant conducteur, frais compris, en centimes. */
+    public static function passengerCents(int $driverCents, ?float $rate = null): int
     {
-        return self::serviceFeeCents((int) round($amount * 100)) / 100;
+        return $driverCents + self::serviceFeeCents($driverCents, $rate);
+    }
+
+    /** Le même montant, en euros. */
+    public static function passengerPrice(float $driverAmount, ?float $rate = null): float
+    {
+        return self::passengerCents((int) round($driverAmount * 100), $rate) / 100;
+    }
+
+    /**
+     * Répartit le montant payé, frais compris, entre plusieurs montants
+     * conducteur en centimes : les sens d'une réservation, les escales d'un
+     * sens.
+     *
+     * Les frais se calculent une seule fois sur la somme, comme au paiement
+     * (TripBookingController::amounts) : arrondis ligne par ligne, ils
+     * pourraient s'écarter d'un centime du montant débité. La dernière ligne
+     * absorbe cet écart, et les lignes tombent juste sur le total.
+     *
+     * @param  array<array-key, int>  $driverCents
+     * @return array<array-key, int>
+     */
+    public static function splitPassengerCents(array $driverCents, ?float $rate = null): array
+    {
+        $lines = array_map(fn (int $cents) => self::passengerCents($cents, $rate), $driverCents);
+
+        if ($lines !== []) {
+            $lines[array_key_last($lines)] += self::passengerCents(array_sum($driverCents), $rate) - array_sum($lines);
+        }
+
+        return $lines;
+    }
+
+    /**
+     * Prix passager des escales d'un sens, en euros, frais compris.
+     *
+     * Les escales font d'ordinaire le prix du sens : elles s'en partagent
+     * alors le prix passager et tombent juste sur le total affiché. Un prix
+     * de sens retouché à part les laisse converties une à une.
+     *
+     * @return array<int, float>
+     */
+    public static function passengerSegmentPrices(array $segments, float $legTotal, ?float $rate = null): array
+    {
+        $cents = array_map(fn ($segment) => (int) round((float) ($segment['price'] ?? 0) * 100), array_values($segments));
+
+        $passenger = array_sum($cents) === (int) round($legTotal * 100)
+            ? self::splitPassengerCents($cents, $rate)
+            : array_map(fn (int $c) => self::passengerCents($c, $rate), $cents);
+
+        return array_map(fn (int $c) => $c / 100, $passenger);
+    }
+
+    /**
+     * Filtre sur le prix affiché au passager, frais de service compris.
+     *
+     * La base ne connaît que le prix conducteur (PRICE_SQL) : les bornes
+     * saisies sont ramenées hors frais. Le demi-centime suit l'arrondi des
+     * frais, pour que la borne s'applique au prix tel qu'il s'affiche.
+     */
+    public function scopePassengerPriceBetween(Builder $query, ?float $min, ?float $max): Builder
+    {
+        $coef = 1 + self::serviceRate() / 100;
+
+        return $query
+            ->when($min !== null, fn (Builder $q) => $q->whereRaw(self::PRICE_SQL . ' >= ?', [($min - 0.005) / $coef]))
+            ->when($max !== null, fn (Builder $q) => $q->whereRaw(self::PRICE_SQL . ' < ?', [($max + 0.005) / $coef]));
     }
 }

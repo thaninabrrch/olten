@@ -11,7 +11,10 @@
      | information juste. Aucune pastille de tendance n'est ecrite en dur.
      */
     $prenom = trim(explode(' ', trim($user->name ?? ''))[0] ?? '') ?: 'bienvenue';
-    $roles  = $user->roles->pluck('display_name')->filter()->values();
+    // Libelles membres (Role::publicLabel) : « Conducteur » et non le nom
+    // technique « chauffeur_vtc ». Un membre a la fois « conducteur » et
+    // « chauffeur_vtc » ne voit l'etiquette qu'une fois.
+    $roles  = $user->roles->map->public_label->filter()->unique()->values();
     $note   = is_numeric($noteClient ?? null) ? round((float) $noteClient, 1) : null;
 
     $mensuel   = $revenusMensuels ?? ['labels' => [], 'locations' => [], 'ventes' => [], 'livraisons' => []];

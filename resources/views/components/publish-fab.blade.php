@@ -35,6 +35,19 @@
             <span>Ajouter un produit</span>
             <i class="fa-solid fa-box"></i>
         </a>
+
+        {{-- Sans permis valide, la page explique comment completer le
+             dossier conducteur (middleware documents.approved:publish) --}}
+        <a href="{{ route('covoiturage.create') }}">
+            <span>Ajouter un trajet</span>
+            <i class="fa-solid fa-car-side"></i>
+        </a>
+
+        {{-- Raccourci des prestataires : les demandes de prestation publiees --}}
+        <a href="{{ route('services.show', \App\Models\ServiceProposal::SERVICE_SLUG) }}">
+            <span>Trouver des prestations</span>
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </a>
     </div>
 </details>
 

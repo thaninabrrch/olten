@@ -14,6 +14,8 @@ use App\Http\Controllers\Seller\SellerController;
 use App\Http\Controllers\Seller\SellerOrderController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\TripBookingController;
+use App\Http\Controllers\ServiceProposalController;
+use App\Http\Controllers\AiDescriptionController;
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\AdminDashboardController;
@@ -153,6 +155,23 @@ Route::middleware('auth', 'verified', 'approved')->group(function () {
     Route::delete('/ads/images/{image}', [AdController::class, 'destroyImgs'])->name('ads.images.destroy');
     Route::get('/stats/ads', [StatsController::class, 'adsStats'])->name('stats.ads');
     Route::get('/statistiques', function () {return view('pages.locateur.statistiques');})->name('statistiques');
+
+    // Prestations de services : une annonce publiee dans une categorie du
+    // service est une demande. Les prestataires y repondent par une
+    // proposition chiffree, le client compare puis choisit.
+    Route::get('/mes-propositions', [ServiceProposalController::class, 'index'])->name('proposals.index');
+    Route::get('/annonces/{ad}/propositions', [ServiceProposalController::class, 'compare'])->name('ads.proposals');
+    Route::post('/annonces/{ad}/propositions', [ServiceProposalController::class, 'store'])->name('proposals.store');
+    Route::put('/propositions/{proposal}', [ServiceProposalController::class, 'update'])->name('proposals.update');
+    Route::post('/propositions/{proposal}/retirer', [ServiceProposalController::class, 'withdraw'])->name('proposals.withdraw');
+    Route::post('/propositions/{proposal}/choisir', [ServiceProposalController::class, 'select'])->name('proposals.select');
+
+    // « Rediger avec l'IA » des formulaires d'annonce et de produit. Le niveau
+    // gratuit de Gemini a un quota partage par tout le site : 15 demandes par
+    // minute et par membre au plus.
+    Route::post('/ia/description', [AiDescriptionController::class, 'suggest'])
+        ->middleware('throttle:15,1')
+        ->name('ai.description');
 });
 
 // Espace livraison du livreur. « documents.approved:deliver » exige un permis

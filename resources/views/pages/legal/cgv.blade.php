@@ -34,8 +34,8 @@
         </li>
         <li>
             <strong>Covoiturage :</strong> le prix d'une place est fixé par le conducteur. La plateforme y ajoute
-            des frais de service de {{ $rate }} %, affichés séparément sur la liste des trajets, sur la fiche du
-            trajet et avant le paiement. Chaque sens est facturé selon le nombre de places réservées sur ce sens.
+            des frais de service de {{ $rate }} %, inclus dans le prix affiché sur la liste des trajets, sur la fiche
+            du trajet et avant le paiement. Chaque sens est facturé selon le nombre de places réservées sur ce sens.
         </li>
         <li><strong>Abonnements :</strong> voir l'article 7.</li>
     </ul>

@@ -78,7 +78,7 @@
                            max="{{ $criteria['max_price'] ? ceil($criteria['max_price']) : null }}"
                            value="{{ $filters['max_price'] ?: '' }}"
                            placeholder="{{ $criteria['max_price']
-                                ? "Jusqu'à " . number_format((float) $criteria['max_price'], 0, ',', ' ') . " €"
+                                ? "Jusqu'à " . number_format(ceil($criteria['max_price']), 0, ',', ' ') . " €"
                                 : 'Sans limite' }}">
                 </div>
             </div>
@@ -166,11 +166,9 @@
                                         ->addSeconds($duration)->format('H:i');
                         }
 
-                        // Prix d'une place fixé par le conducteur, et frais de service
-                        // ajoutés au paiement : le passager voit d'emblée ce qu'il paiera.
-                        $price = $trip->seat_price;
-                        $fee   = \App\Models\Covoiturage::serviceFee($price);
-                        $rate  = rtrim(rtrim(number_format(\App\Models\Covoiturage::serviceRate(), 2, ',', ''), '0'), ',');
+                        // Prix d'une place frais de service compris : le passager voit
+                        // d'emblée ce qu'il paiera.
+                        $price = $trip->passenger_price;
 
                         $modes = [
                             'womenOnly'     => ['fa-venus', 'Entre femmes'],
@@ -325,12 +323,6 @@
                                     <span class="cv-trip-price">
                                         {{ number_format((float) $price, 2, ',', ' ') }}&nbsp;€
                                         <small>/ place</small>
-                                    </span>
-                                    <span class="cv-trip-fee">
-                                        + {{ number_format($fee, 2, ',', ' ') }}&nbsp;€ de frais de service ({{ $rate }}&nbsp;%)
-                                    </span>
-                                    <span class="cv-trip-fee">
-                                        Soit <strong>{{ number_format($price + $fee, 2, ',', ' ') }}&nbsp;€</strong> la place
                                     </span>
                                 </span>
                                 <a href="{{ route('covoiturage.trip', $trip->covoiturage_id) }}" class="cv-trip-btn">

@@ -445,8 +445,10 @@ class ServicePageController extends Controller
         return [
             // Plus grand nombre de places encore libres sur un trajet
             'seats'     => (int) ($row->seats ?? 0),
-            'min_price' => isset($row->min_price) ? (float) $row->min_price : null,
-            'max_price' => isset($row->max_price) ? (float) $row->max_price : null,
+            // Bornes en prix affiche, frais de service compris : les frais
+            // suivent le prix, le plus petit et le plus grand le restent.
+            'min_price' => isset($row->min_price) ? Covoiturage::passengerPrice((float) $row->min_price) : null,
+            'max_price' => isset($row->max_price) ? Covoiturage::passengerPrice((float) $row->max_price) : null,
         ];
     }
 
@@ -472,11 +474,11 @@ class ServicePageController extends Controller
             ->when($filters['arrival'] ?? null, fn (Builder $q, $v) => $q->where('destination', 'like', '%' . $v . '%'))
             ->when($filters['start_date'] ?? null, fn (Builder $q, $v) => $q->whereDate('date_depart', '>=', $v))
             ->when($filters['end_date'] ?? null, fn (Builder $q, $v) => $q->whereDate('date_depart', '<=', $v))
-            // Prix affiche du trajet : le total quand le conducteur en publie
-            // un, le prix par place sinon (meme regle que les cartes).
-            ->when(($filters['max_price'] ?? 0) > 0, fn (Builder $q) => $q->whereRaw(
-                Covoiturage::PRICE_SQL . ' <= ?',
-                [$filters['max_price']]
+            // Plafond saisi sur le prix affiche, frais de service compris
+            // (meme regle que les cartes).
+            ->when(($filters['max_price'] ?? 0) > 0, fn (Builder $q) => $q->passengerPriceBetween(
+                null,
+                $filters['max_price']
             ));
     }
 
@@ -525,7 +527,8 @@ class ServicePageController extends Controller
                 'image'     => RouteImage::for($from, $to),
                 'count'     => (int) $route->trips,
                 'seats'     => (int) $route->seats,
-                'min_price' => $route->min_price !== null ? (float) $route->min_price : null,
+                // Prix d'appel affiche frais de service compris
+                'min_price' => $route->min_price !== null ? Covoiturage::passengerPrice((float) $route->min_price) : null,
                 'next'      => Carbon::parse($route->next_departure),
                 'drivers'   => $drivers->get($route->depart_slug . '::' . $route->destination_slug, collect()),
             ];

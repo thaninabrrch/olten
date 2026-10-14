@@ -31,9 +31,12 @@ class AdController extends Controller
             return redirect()->route('archives', ['type' => 'annonce'] + $request->only('search'));
         }
 
+        // Le nombre de propositions ne sert qu'aux demandes de prestation :
+        // il s'affiche sur leur carte, vers la page de comparaison.
         $query = Ad::where('user_id', Auth::id())
                 ->notExpired()
                 ->with(['category.service', 'images'])
+                ->withCount(['proposals as proposals_count' => fn ($q) => $q->visible()])
                 ->latest();
 
         if ($search) {
@@ -100,7 +103,22 @@ class AdController extends Controller
                     $reservedDates[] = $date->format('Y-m-d');
                 }
         }
-        return view('pages.annonces_pages.annonces_details', compact('ad','reservedDates'));
+
+        // Demande de prestation : l'encart de reservation laisse la place a
+        // celui des propositions (proposals.box). Il lui faut le nombre de
+        // propositions recues, le prestataire deja choisi s'il y en a un, et
+        // la proposition du visiteur s'il a deja repondu.
+        $prestation = null;
+
+        if ($ad->isPrestation()) {
+            $prestation = [
+                'count'    => $ad->proposals()->visible()->count(),
+                'accepted' => $ad->acceptedProposal()->with('provider')->first(),
+                'mine'     => Auth::check() ? $ad->proposals()->where('user_id', Auth::id())->first() : null,
+            ];
+        }
+
+        return view('pages.annonces_pages.annonces_details', compact('ad', 'reservedDates', 'prestation'));
     }
 
     public function create()
@@ -140,9 +158,14 @@ class AdController extends Controller
         | masque le bloc « Disponibilites », et la validation cesse de l'exiger.
         | Le controle est refait ici, cote serveur : masquer un champ dans la
         | page ne prouve rien sur ce qui arrive dans la requete.
+        |
+        | Une categorie de prestation fait de l'annonce une demande : la periode
+        | devient la fenetre de realisation, le prix le budget, et il n'y a
+        | pas de livraison.
         */
-        $estVente = Category::with('service')
-            ->find($request->input('category_id'))?->isVente() ?? false;
+        $categorie     = Category::with('service')->find($request->input('category_id'));
+        $estVente      = $categorie?->isVente() ?? false;
+        $estPrestation = $categorie?->isPrestation() ?? false;
 
         $messages = [
             'title.required' => 'Le titre est obligatoire.',
@@ -161,6 +184,10 @@ class AdController extends Controller
             'available_until.required' => 'La date de fin de disponibilité est obligatoire.',
             'available_until.after_or_equal' => 'La date de fin doit être égale ou après la date de début.',
         ] + ImageUpload::messages('images.*');
+
+        if ($estPrestation) {
+            $messages = $this->prestationMessages() + $messages;
+        }
 
         $validated = $request->validate([
             'title'           => 'required|string|max:255',
@@ -184,8 +211,12 @@ class AdController extends Controller
         // Une vente ne se perime pas a une fin de location : sans periode,
         // expires_at reste vide et l'annonce est comptee comme active.
         $validated['expires_at'] = $validated['available_until'] ?? null;
-        $validated['delivery_active'] = $request->has('delivery_active');
+        $validated['delivery_active'] = ! $estPrestation && $request->has('delivery_active');
         $validated['user_id'] = Auth::id();
+
+        if ($estPrestation) {
+            $validated = array_merge($validated, $this->withoutDelivery());
+        }
 
         $ad = Ad::create($validated);
 
@@ -215,7 +246,37 @@ class AdController extends Controller
             );
         }
 
-        return redirect()->route('ads.index')->with('success', 'Annonce créée avec succès !');
+        return redirect()->route('ads.index')->with('success', $estPrestation
+            ? 'Demande publiée : dès sa validation, les prestataires pourront vous faire leurs propositions.'
+            : 'Annonce créée avec succès !');
+    }
+
+    /**
+     * Messages d'erreur d'une demande de prestation : ses champs sont ceux
+     * d'une annonce, mais le formulaire les presente autrement (budget,
+     * fenetre de realisation).
+     */
+    private function prestationMessages(): array
+    {
+        return [
+            'price_per_day.required'         => 'Indiquez votre budget.',
+            'price_per_day.numeric'          => 'Le budget doit être un nombre.',
+            'available_from.required'        => 'Indiquez à partir de quand la prestation peut être réalisée.',
+            'available_until.required'       => 'Indiquez la date limite de réalisation.',
+            'available_until.after_or_equal' => 'La date limite doit être égale ou après la date de début.',
+        ];
+    }
+
+    /** Champs de livraison remis a vide : une prestation ne se livre pas. */
+    private function withoutDelivery(): array
+    {
+        return [
+            'delivery_active' => false,
+            'client_address'  => null,
+            'price_per_km'    => null,
+            'distance_km'     => null,
+            'delivery_cost'   => null,
+        ];
     }
 
     public function edit(Ad $ad)
@@ -239,9 +300,12 @@ class AdController extends Controller
         | masque le bloc « Disponibilites », et la validation cesse de l'exiger.
         | Le controle est refait ici, cote serveur : masquer un champ dans la
         | page ne prouve rien sur ce qui arrive dans la requete.
+        |
+        | Meme regle pour une demande de prestation (voir store()).
         */
-        $estVente = Category::with('service')
-            ->find($request->input('category_id'))?->isVente() ?? false;
+        $categorie     = Category::with('service')->find($request->input('category_id'));
+        $estVente      = $categorie?->isVente() ?? false;
+        $estPrestation = $categorie?->isPrestation() ?? false;
 
         $messages = [
             'title.required' => 'Le titre est obligatoire.',
@@ -256,6 +320,10 @@ class AdController extends Controller
             'available_until.required' => 'La date de fin de disponibilité est obligatoire.',
             'available_until.after_or_equal' => 'La date de fin doit être égale ou après la date de début.',
         ] + ImageUpload::messages('images.*');
+
+        if ($estPrestation) {
+            $messages = $this->prestationMessages() + $messages;
+        }
 
         $validated = $request->validate([
             'title'           => 'required|string|max:255',
@@ -279,7 +347,7 @@ class AdController extends Controller
         // Une vente ne se perime pas a une fin de location : sans periode,
         // expires_at reste vide et l'annonce est comptee comme active.
         $validated['expires_at'] = $validated['available_until'] ?? null;
-        $deliveryActive = $request->has('delivery_active');
+        $deliveryActive = ! $estPrestation && $request->has('delivery_active');
         $validated['delivery_active'] = $deliveryActive;
         if (! $deliveryActive) {
             $validated['client_address'] = null;

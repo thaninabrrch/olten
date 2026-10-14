@@ -61,13 +61,17 @@
 
                 <div class="sp-field">
                     <label class="sp-label" for="category_id">Catégorie <span class="sp-req">*</span></label>
-                    <select name="category_id" id="category_id" class="sp-input" required>
+                    <select name="category_id" id="category_id" class="sp-input" required
+                            data-autocomplete="Rechercher une catégorie…">
                         <option value="">Choisir une catégorie</option>
                         {{-- Les categories sont des sous-parties d'un service --}}
                         @forelse($categories->groupBy(fn ($c) => $c->service->display_name ?? 'Autres') as $serviceName => $group)
                             <optgroup label="{{ $serviceName }}">
                                 @foreach($group as $category)
-                                    <option value="{{ $category->id }}" @selected(old('category_id') == $category->id)>
+                                    <option value="{{ $category->id }}"
+                                            data-service-name="{{ $serviceName }}"
+                                            data-icon="{{ $category->icon_class }}"
+                                            @selected(old('category_id') == $category->id)>
                                         {{ $category->nom }}
                                     </option>
                                 @endforeach
@@ -76,6 +80,7 @@
                             <option value="" disabled>Aucune catégorie disponible</option>
                         @endforelse
                     </select>
+                    <x-select-autocomplete />
                 </div>
             </div>
 
@@ -83,6 +88,7 @@
                 <label class="sp-label" for="description">Description</label>
                 <textarea name="description" id="description"
                           placeholder="État, accessoires fournis, garantie...">{{ old('description') }}</textarea>
+                <x-ai-description target="produit" />
             </div>
 
             <div class="sp-field">

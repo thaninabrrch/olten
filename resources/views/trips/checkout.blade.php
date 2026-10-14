@@ -8,6 +8,14 @@
     $departVille      = \App\Models\Covoiturage::villeCourte($trip->depart);
     $destinationVille = \App\Models\Covoiturage::villeCourte($trip->destination);
     $legsCount        = $lines->count();
+
+    // Montants frais de service compris : le passager lit ce qu'il paie, sans
+    // ligne de frais à part. Chaque sens reçoit sa part du total payé, au
+    // centime près (Covoiturage::splitPassengerCents).
+    $lineCents = \App\Models\Covoiturage::splitPassengerCents(
+        $lines->map(fn ($line) => (int) round($line['price'] * 100) * $line['seats'])->all(),
+        $amounts['rate']
+    );
 @endphp
 
 @section('content')
@@ -189,23 +197,26 @@
                             @endif
                         </div>
 
-                        @foreach ($lines as $line)
+                        @foreach ($lines as $i => $line)
+                            @php
+                                // Le prix d'une place n'est rappelé que s'il tombe juste sur
+                                // la ligne : les frais s'arrondissent sur la somme.
+                                $unitCents = \App\Models\Covoiturage::passengerCents((int) round($line['price'] * 100), $amounts['rate']);
+                                $detail    = $unitCents * $line['seats'] === $lineCents[$i]
+                                    ? $line['seats'] . ' × ' . number_format($unitCents / 100, 2, ',', ' ') . ' €'
+                                    : $line['seats'] . ' places';
+                            @endphp
                             <div class="ck-line">
                                 <span>
                                     {{ $line['label'] }} · {{ \App\Models\Covoiturage::villeCourte($line['from']) }}
                                     → {{ \App\Models\Covoiturage::villeCourte($line['to']) }}
                                     @if ($line['seats'] > 1)
-                                        <small>({{ $line['seats'] }} × {{ number_format($line['price'], 2, ',', ' ') }} €)</small>
+                                        <small>({{ $detail }})</small>
                                     @endif
                                 </span>
-                                <span>{{ number_format($line['price'] * $line['seats'], 2, ',', ' ') }} €</span>
+                                <span>{{ number_format($lineCents[$i] / 100, 2, ',', ' ') }} €</span>
                             </div>
                         @endforeach
-
-                        <div class="ck-line">
-                            <span>Frais de service ({{ rtrim(rtrim(number_format($amounts['rate'], 2, ',', ''), '0'), ',') }} %)</span>
-                            <span>{{ number_format($amounts['commission'], 2, ',', ' ') }} €</span>
-                        </div>
 
                         <div class="ck-line ck-line--total">
                             <span>Total</span>

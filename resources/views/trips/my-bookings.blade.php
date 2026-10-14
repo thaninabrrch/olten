@@ -120,7 +120,6 @@
                         $initial = $driver
                             ? mb_strtoupper(mb_substr($driver->firstname ?? '?', 0, 1) . mb_substr($driver->lastname ?? '', 0, 1))
                             : '?';
-                        $rate    = rtrim(rtrim(number_format((float) $booking->commission_rate, 2, ',', ''), '0'), ',');
                         $sens    = $item['legs']->count() > 1 ? 'Aller & retour' : ($item['legs']->first()['label'] ?? 'Aller');
                     @endphp
 
@@ -222,15 +221,8 @@
                                     </span>
                                 </div>
 
+                                {{-- Montant payé, frais de service compris : pas de ligne de frais à part --}}
                                 <div class="mtb-pay">
-                                    <div class="mtb-pay-line">
-                                        <span>Prix du trajet</span>
-                                        <span>{{ number_format((float) $booking->driver_amount, 2, ',', ' ') }} €</span>
-                                    </div>
-                                    <div class="mtb-pay-line">
-                                        <span>Frais de service ({{ $rate }} %)</span>
-                                        <span>{{ number_format((float) $booking->commission, 2, ',', ' ') }} €</span>
-                                    </div>
                                     <div class="mtb-pay-line mtb-pay-line--total">
                                         <span>{{ $state === 'cancelled' ? 'Total remboursé' : 'Total payé' }}</span>
                                         <span>{{ number_format((float) $booking->total_price, 2, ',', ' ') }} €</span>
@@ -326,6 +318,8 @@
         border-top: 1px solid var(--color-divider, #e9ecef);
         color: var(--color-black, #111); font-weight: 800; font-size: 13.5px;
     }
+    /* Seule ligne du bloc (frais compris) : pas de filet au-dessus */
+    .mtb-pay-line--total:first-child { margin-top: 0; padding-top: 4px; border-top: 0; }
 </style>
 
 <script>

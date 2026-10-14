@@ -179,6 +179,20 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail
     public function tripBookings() { return $this->hasMany(TripBooking::class); }
     public function tripAlerts()   { return $this->hasMany(TripAlert::class); }
 
+    /** Propositions envoyées en tant que prestataire. */
+    public function serviceProposals() { return $this->hasMany(ServiceProposal::class); }
+
+    /**
+     * Propositions reçues sur ses demandes de prestation, en attente de son
+     * choix. Choisir un prestataire décline les autres : il n'en reste donc
+     * que sur les demandes où le choix n'est pas encore fait.
+     */
+    public function pendingServiceProposals()
+    {
+        return ServiceProposal::query()->pending()
+            ->whereHas('ad', fn ($q) => $q->where('user_id', $this->id));
+    }
+
     /** Demandes de réservation reçues sur ses trajets, en attente de sa réponse. */
     public function pendingTripRequests()
     {

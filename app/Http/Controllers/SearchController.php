@@ -373,17 +373,12 @@ class SearchController extends Controller
             });
         }
 
-        // Prix affiche du trajet : le total quand le conducteur en publie un,
-        // le prix par place sinon (meme regle que les pages covoiturage).
-        $affiche = 'COALESCE(NULLIF(prix_total_affiche, 0), prix_place)';
-
-        if ($request->filled('min_price')) {
-            $query->whereRaw($affiche . ' >= ?', [(float) $request->input('min_price')]);
-        }
-
-        if ($request->filled('max_price')) {
-            $query->whereRaw($affiche . ' <= ?', [(float) $request->input('max_price')]);
-        }
+        // Bornes saisies sur le prix affiche, frais de service compris (meme
+        // regle que les cartes et les pages covoiturage).
+        $query->passengerPriceBetween(
+            $request->filled('min_price') ? (float) $request->input('min_price') : null,
+            $request->filled('max_price') ? (float) $request->input('max_price') : null,
+        );
 
         // Seuls les trajets reservables remontent, comme sur la page
         // covoiturage (ServicePageController::tripQuery) : un trajet complet,

@@ -1,0 +1,392 @@
+/* ==========================================================================
+   Prestations de services — propositions des prestataires
+   - encart de la fiche d'une demande (proposals/box, layout public) ;
+   - comparaison des propositions (proposals/compare, espace membre) ;
+   - « Mes propositions » (proposals/index, espace membre).
+   Chargee par ces pages seules (@push('styles')). Tout est prefixe .pp- ;
+   l'espace membre reprend en plus les .sp- de style_connected.css.
+   ========================================================================== */
+
+:root {
+    --pp-ink: #16191d;
+    --pp-text: #475467;
+    --pp-muted: #6b7280;
+    --pp-line: #e9ecef;
+    --pp-soft: #f6f7f9;
+    --pp-primary: var(--color-primary, #ff3c00);
+    --pp-tint: #fff4ef;
+    --pp-ok: #067647;
+    --pp-ok-bg: #ecfdf3;
+    --pp-warn: #93370d;
+    --pp-warn-bg: #fff6ed;
+    --pp-error: #b42318;
+    --pp-error-bg: #fef3f2;
+}
+
+/* --------------------------------------------------------------------------
+   Pastilles communes
+   -------------------------------------------------------------------------- */
+.pp-badge,
+.pp-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+.pp-badge { background: var(--pp-soft); color: var(--pp-text); }
+.pp-badge.is-wait { background: #fffaeb; color: #b54708; }
+.pp-badge.is-ok { background: var(--pp-ok-bg); color: var(--pp-ok); }
+.pp-badge.is-online { background: #eff8ff; color: #175cd3; }
+.pp-badge.is-out { background: var(--pp-error-bg); color: var(--pp-error); }
+.pp-badge.is-muted { background: var(--pp-soft); color: var(--pp-muted); }
+
+.pp-tag { background: var(--pp-soft); color: var(--pp-text); font-weight: 500; }
+.pp-tag.is-ok { background: var(--pp-ok-bg); color: var(--pp-ok); }
+.pp-tag.is-warn { background: var(--pp-warn-bg); color: var(--pp-warn); }
+.pp-tag.is-best { background: var(--pp-tint); color: var(--pp-primary); font-weight: 700; }
+
+/* --------------------------------------------------------------------------
+   Encart de la fiche d'une demande
+   -------------------------------------------------------------------------- */
+.pp-box { scroll-margin-top: 110px; }
+
+.pp-flash {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+.pp-flash i { margin-top: 3px; }
+.pp-flash ul { margin: 0; padding-left: 16px; }
+.pp-flash.is-ok { background: var(--pp-ok-bg); border: 1px solid #abefc6; color: var(--pp-ok); }
+.pp-flash.is-error { background: var(--pp-error-bg); border: 1px solid #fecdca; color: var(--pp-error); }
+
+.pp-owner { margin-bottom: 14px; }
+.pp-owner-count { display: flex; align-items: baseline; gap: 8px; font-size: 13px; color: var(--pp-muted); }
+.pp-owner-count strong { font-size: 26px; font-weight: 800; color: var(--pp-ink); line-height: 1; }
+.pp-owner p { margin: 8px 0 0; font-size: 13px; line-height: 1.55; color: var(--pp-text); }
+
+.pp-form-head { margin-bottom: 14px; }
+.pp-form-head strong { display: block; font-size: 15px; color: var(--pp-ink); }
+.pp-form-head small { display: block; margin-top: 4px; font-size: 12px; line-height: 1.5; color: var(--pp-muted); }
+
+.pp-input-group { position: relative; }
+.pp-input-group .dt-input { padding-right: 38px; }
+.pp-input-group span {
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    transform: translateY(-50%);
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--pp-muted);
+    pointer-events: none;
+}
+
+.pp-optional {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--pp-muted);
+}
+
+.pp-textarea { min-height: 120px; resize: vertical; line-height: 1.55; }
+
+.pp-mine {
+    margin-bottom: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--pp-line);
+    border-radius: 14px;
+    background: #fcfcfd;
+}
+.pp-mine-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pp-mine-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--pp-muted); }
+.pp-mine-price { display: block; margin: 10px 0 4px; font-size: 22px; font-weight: 800; color: var(--pp-ink); }
+.pp-mine-meta { display: block; font-size: 12px; color: var(--pp-muted); }
+.pp-mine-message { margin: 10px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--pp-text); }
+
+.pp-edit { margin-bottom: 8px; }
+.pp-edit-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border: 1px solid var(--pp-line);
+    border-radius: 12px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--pp-ink);
+    cursor: pointer;
+    list-style: none;
+}
+.pp-edit-toggle::-webkit-details-marker { display: none; }
+.pp-edit-toggle:hover { border-color: var(--pp-primary); color: var(--pp-primary); }
+.pp-edit[open] .pp-edit-toggle { margin-bottom: 14px; }
+
+.pp-withdraw { margin: 0; text-align: center; }
+.pp-link {
+    border: 0;
+    background: none;
+    padding: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--pp-error);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.pp-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--pp-soft);
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--pp-text);
+}
+.pp-note i { margin-top: 3px; color: var(--pp-muted); }
+
+/* --------------------------------------------------------------------------
+   Espace membre : en-tete de la demande
+   -------------------------------------------------------------------------- */
+.pp-page .pp-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--pp-primary);
+}
+
+.pp-page .pp-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--pp-soft);
+    color: var(--pp-text);
+    font-weight: 600;
+}
+
+.pp-page .pp-request-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.pp-page .pp-request-meta i { margin-right: 5px; color: var(--pp-muted); }
+
+/* Prestataire choisi */
+.pp-page .pp-chosen {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 18px 22px;
+    border: 1px solid #abefc6;
+    border-radius: 16px;
+    background: linear-gradient(100deg, var(--pp-ok-bg) 0%, #fff 90%);
+}
+.pp-page .pp-chosen-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: var(--pp-ok);
+    color: #fff;
+    font-size: 19px;
+}
+.pp-page .pp-chosen-text { flex: 1; min-width: 220px; }
+.pp-page .pp-chosen-text strong { display: block; font-size: 15.5px; color: var(--pp-ink); }
+.pp-page .pp-chosen-text p { margin: 4px 0 0; font-size: 13px; line-height: 1.55; color: var(--pp-text); }
+
+/* --------------------------------------------------------------------------
+   Comparaison : une carte par proposition
+   -------------------------------------------------------------------------- */
+.pp-page .pp-list { list-style: none; margin: 0; padding: 0; }
+
+.pp-page .pp-card {
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr) 230px;
+    gap: 24px;
+    padding: 22px 24px;
+    border-bottom: 1px solid var(--pp-line);
+    scroll-margin-top: 90px;
+    transition: background .2s ease;
+}
+.pp-page .pp-card:last-child { border-bottom: 0; }
+.pp-page .pp-card:target { background: var(--pp-tint); }
+.pp-page .pp-card.is-chosen { background: #f6fef9; box-shadow: inset 4px 0 0 var(--pp-ok); }
+.pp-page .pp-card.is-out { opacity: .62; }
+
+.pp-page .pp-provider { display: flex; align-items: flex-start; gap: 12px; }
+.pp-page .pp-avatar {
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.pp-page .pp-avatar.is-initials {
+    display: grid;
+    place-items: center;
+    background: var(--pp-tint);
+    color: var(--pp-primary);
+    font-size: 15px;
+    font-weight: 700;
+}
+.pp-page .pp-provider-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pp-page .pp-provider-info strong { font-size: 14.5px; color: var(--pp-ink); }
+.pp-page .pp-provider-info small { font-size: 12px; color: var(--pp-muted); }
+.pp-page .pp-provider-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+
+.pp-page .pp-offer-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    font-size: 12.5px;
+    color: var(--pp-muted);
+}
+.pp-page .pp-offer-meta i { margin-right: 4px; }
+.pp-page .pp-offer-message {
+    margin: 12px 0 0;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--pp-text);
+    overflow-wrap: anywhere;
+}
+
+.pp-page .pp-price { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; text-align: right; }
+.pp-page .pp-price > strong { font-size: 24px; font-weight: 800; line-height: 1; color: var(--pp-ink); }
+.pp-page .pp-price-flags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+
+/* Echelle : ou se place ce prix entre la proposition la moins chere et la
+   plus chere */
+.pp-page .pp-scale {
+    position: relative;
+    width: 100%;
+    height: 6px;
+    margin-top: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #abefc6 0%, #fedf89 55%, #fecdca 100%);
+}
+.pp-page .pp-scale-dot {
+    position: absolute;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    background: var(--pp-ink);
+    box-shadow: 0 1px 4px rgba(16, 24, 40, .3);
+    transform: translate(-50%, -50%);
+}
+.pp-page .pp-scale-legend {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 11px;
+    color: var(--pp-muted);
+}
+
+.pp-page .pp-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.pp-page .pp-actions form { margin: 0; }
+
+/* --------------------------------------------------------------------------
+   « Mes propositions » : une ligne par demande ou par proposition
+   -------------------------------------------------------------------------- */
+.pp-page .pp-rows { list-style: none; margin: 0; padding: 0; }
+
+.pp-page .pp-row {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--pp-line);
+}
+.pp-page .pp-row:last-child { border-bottom: 0; }
+.pp-page .pp-row.is-faded { opacity: .6; }
+
+.pp-page .pp-row-media img {
+    display: block;
+    width: 76px;
+    height: 60px;
+    border-radius: 10px;
+    object-fit: cover;
+}
+.pp-page .pp-row-main { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.pp-page .pp-row-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pp-page .pp-row-title {
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--pp-ink);
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pp-page .pp-row-title:hover { color: var(--pp-primary); }
+.pp-page .pp-row-meta { font-size: 12.5px; color: var(--pp-muted); }
+
+.pp-page .pp-row-figures {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    font-size: 12.5px;
+    color: var(--pp-muted);
+    text-align: right;
+}
+.pp-page .pp-row-figures strong { color: var(--pp-ink); }
+
+.pp-page .pp-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--pp-primary);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   Ecrans etroits
+   -------------------------------------------------------------------------- */
+@media (max-width: 1100px) {
+    .pp-page .pp-card { grid-template-columns: minmax(0, 1fr) 210px; }
+    .pp-page .pp-provider { grid-column: 1 / -1; }
+}
+
+@media (max-width: 768px) {
+    .pp-page .sp-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .pp-page .pp-card { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 18px 16px; }
+    .pp-page .pp-price { align-items: stretch; text-align: left; }
+    .pp-page .pp-price-flags,
+    .pp-page .pp-actions { justify-content: flex-start; }
+
+    .pp-page .pp-row { grid-template-columns: 64px minmax(0, 1fr); padding: 14px 16px; }
+    .pp-page .pp-row-media img { width: 64px; height: 52px; }
+    .pp-page .pp-row-figures,
+    .pp-page .pp-row-actions { grid-column: 1 / -1; align-items: flex-start; text-align: left; }
+}

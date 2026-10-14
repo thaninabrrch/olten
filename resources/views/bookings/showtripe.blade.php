@@ -306,14 +306,7 @@
                             <span>{{ number_format($booking->driver_amount, 2, ',', ' ') }} €</span>
                         </div>
                     @else
-                        <div class="ck-line">
-                            <span>Prix du trajet · {{ $booking->seatsLabel() }}</span>
-                            <span>{{ number_format($booking->driver_amount, 2, ',', ' ') }} €</span>
-                        </div>
-                        <div class="ck-line">
-                            <span>Frais de service ({{ rtrim(rtrim(number_format($booking->commission_rate, 2, ',', ''), '0'), ',') }} %)</span>
-                            <span>{{ number_format($booking->commission, 2, ',', ' ') }} €</span>
-                        </div>
+                        {{-- Montant payé, frais de service compris : pas de ligne de frais à part --}}
                         <div class="ck-line ck-line--total">
                             <span>{{ $isLive ? 'Total payé' : 'Total remboursé' }}</span>
                             <span>{{ number_format($booking->total_price, 2, ',', ' ') }} €</span>

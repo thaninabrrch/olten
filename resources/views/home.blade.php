@@ -344,7 +344,6 @@
         'start_date' => $today,
         'end_date'   => $today,
     ]);
-    $tripRate   = rtrim(rtrim(number_format(\App\Models\Covoiturage::serviceRate(), 2, ',', ''), '0'), ',');
 @endphp
 
 <section class="annonces-section annonces-section--white home-trips">
@@ -373,8 +372,8 @@
                     $driver    = $trip->conducteur;
                     $vehicle   = $driver?->vehicle;
                     $seatsLeft = $trip->seats_left;
-                    $price     = $trip->seat_price;
-                    $fee       = \App\Models\Covoiturage::serviceFee($price);
+                    // Prix d'une place frais de service compris : ce que paie le passager
+                    $price     = $trip->passenger_price;
                     $departure = \Illuminate\Support\Str::substr((string) $trip->heure_depart, 0, 5);
                     $duration  = (int) ($trip->selected_route['duration'] ?? 0);
                 @endphp
@@ -426,9 +425,6 @@
                                 <span class="card-price-label">la place</span>
                                 <span class="card-price">
                                     {{ number_format($price, 2, ',', ' ') }} €
-                                </span>
-                                <span class="card-fee">
-                                    + {{ number_format($fee, 2, ',', ' ') }} € de frais ({{ $tripRate }} %)
                                 </span>
                             </span>
 

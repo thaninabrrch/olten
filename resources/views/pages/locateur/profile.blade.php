@@ -143,7 +143,7 @@
 
                     <div class="sp-opt-row">
                         <div>
-                            <label for="vtc-toggle" class="sp-label">Chauffeur VTC</label>
+                            <label for="vtc-toggle" class="sp-label">Conducteur</label>
                             <span class="sp-help">Transport de personnes et covoiturage</span>
                         </div>
 

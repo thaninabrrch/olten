@@ -39,4 +39,12 @@ return [
         'key' => env('STRIPE_PUBLIC_KEY'),
         'secret' => env('STRIPE_SECRET_KEY'),
     ],
+
+    // Suggestions de description par l'IA (App\Support\DescriptionWriter).
+    // Cle a creer sur Google AI Studio ; sans elle, le bouton « Rediger avec
+    // l'IA » n'apparait pas.
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-3.5-flash-lite'),
+    ],
 ];

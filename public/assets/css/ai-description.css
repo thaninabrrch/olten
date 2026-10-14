@@ -1,0 +1,174 @@
+/* ==========================================================================
+   Assistant « Rédiger avec l'IA » — components/ai-description.blade.php
+   Sous le champ Description des formulaires d'annonce et de produit. Chargee
+   par le composant seul (@push('styles')). Tout est prefixe .aid-.
+   ========================================================================== */
+
+.aid {
+    --aid-ink: #16191d;
+    --aid-text: #475467;
+    --aid-muted: #6b7280;
+    --aid-line: #e9ecef;
+    --aid-primary: var(--color-primary, #ff3c00);
+    --aid-tint: #fff6f2;
+    --aid-violet: #6d4aff;
+    margin-top: 12px;
+}
+
+/* Les blocs se montrent et se cachent par l'attribut hidden : rien ne doit
+   le contredire, quelle que soit la feuille chargee par la page. */
+.aid [hidden] { display: none !important; }
+
+/* Bouton d'ouverture */
+.aid-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 16px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background:
+        linear-gradient(#fff, #fff) padding-box,
+        linear-gradient(110deg, var(--aid-violet), var(--aid-primary)) border-box;
+    color: var(--aid-ink);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+.aid-open i {
+    background: linear-gradient(110deg, var(--aid-violet), var(--aid-primary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.aid-open:hover { transform: translateY(-1px); box-shadow: 0 8px 20px -10px rgba(109, 74, 255, .55); }
+
+/* Panneau */
+.aid-panel {
+    padding: 18px 20px;
+    border: 1px solid #f3dcd2;
+    border-radius: 16px;
+    background: linear-gradient(160deg, #fbf9ff 0%, var(--aid-tint) 100%);
+}
+
+.aid-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.aid-badge {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--aid-violet), var(--aid-primary));
+    color: #fff;
+    font-size: 15px;
+}
+.aid-head-text { flex: 1; min-width: 0; }
+.aid-head-text strong { display: block; font-size: 14.5px; color: var(--aid-ink); }
+.aid-head-text small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--aid-muted); }
+.aid-close {
+    border: 0;
+    background: none;
+    padding: 4px 6px;
+    color: var(--aid-muted);
+    font-size: 16px;
+    cursor: pointer;
+}
+.aid-close:hover { color: var(--aid-ink); }
+
+.aid-label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--aid-ink); }
+.aid-label span { margin-left: 6px; font-size: 11.5px; font-weight: 500; color: var(--aid-muted); }
+
+.aid-notes {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e3dff0;
+    border-radius: 10px;
+    background: #fff;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--aid-ink);
+    resize: vertical;
+}
+.aid-notes:focus { outline: none; border-color: var(--aid-violet); box-shadow: 0 0 0 3px rgba(109, 74, 255, .12); }
+
+.aid-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.aid-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border: 1px solid var(--aid-line);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--aid-ink);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease;
+}
+.aid-btn:hover { border-color: #cfd4da; }
+.aid-btn.is-primary { border-color: var(--aid-ink); background: var(--aid-ink); color: #fff; }
+.aid-btn.is-primary:hover { background: #000; }
+.aid-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.aid-error {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border: 1px solid #fecdca;
+    border-radius: 10px;
+    background: #fef3f2;
+    color: #b42318;
+    font-size: 12.5px;
+}
+
+.aid-loading { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 13px; color: var(--aid-text); }
+.aid-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(109, 74, 255, .25);
+    border-top-color: var(--aid-violet);
+    border-radius: 50%;
+    animation: aid-spin .8s linear infinite;
+}
+@keyframes aid-spin { to { transform: rotate(360deg); } }
+
+/* Suggestion */
+.aid-result { margin-top: 14px; }
+.aid-preview {
+    max-height: 340px;
+    overflow-y: auto;
+    padding: 14px 16px;
+    border: 1px solid var(--aid-line);
+    border-radius: 12px;
+    background: #fff;
+}
+.aid-preview-label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--aid-muted);
+}
+.aid-summary { margin: 0 0 14px; font-size: 14px; font-weight: 600; color: var(--aid-ink); }
+.aid-description { font-size: 13.5px; line-height: 1.6; color: var(--aid-text); }
+.aid-description p { margin: 0 0 10px; }
+.aid-description ul,
+.aid-description ol { margin: 0 0 10px; padding-left: 20px; list-style: disc; }
+.aid-description ol { list-style: decimal; }
+
+.aid-check { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--aid-ink); cursor: pointer; }
+
+.aid-hint { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0 0; font-size: 12.5px; color: var(--aid-muted); }
+.aid-hint i { margin-top: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+    .aid-spinner { animation-duration: 2s; }
+    .aid-open,
+    .aid-open:hover { transition: none; transform: none; }
+}

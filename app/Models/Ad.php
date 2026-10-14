@@ -104,16 +104,30 @@ class Ad extends Model
         return $this->category?->isVente() ?? false;
     }
 
-    /** Accroche placee avant le prix (« A partir de » ou « Prix »). */
-    public function priceLabel(): string
+    /**
+     * Demande de prestation : la colonne de prix porte le budget indicatif
+     * du client, et la periode de disponibilite la fenetre dans laquelle il
+     * veut voir la prestation realisee.
+     */
+    public function isPrestation(): bool
     {
-        return $this->isVente() ? 'Prix' : 'À partir de';
+        return $this->category?->isPrestation() ?? false;
     }
 
-    /** Unite placee apres le prix, vide pour une vente. */
+    /** Accroche placee avant le prix (« A partir de », « Prix » ou « Budget »). */
+    public function priceLabel(): string
+    {
+        return match (true) {
+            $this->isVente()      => 'Prix',
+            $this->isPrestation() => 'Budget',
+            default               => 'À partir de',
+        };
+    }
+
+    /** Unite placee apres le prix, vide pour une vente ou un budget. */
     public function priceSuffix(): string
     {
-        return $this->isVente() ? '' : '/ jour';
+        return $this->isVente() || $this->isPrestation() ? '' : '/ jour';
     }
 
     public function category()
@@ -150,5 +164,17 @@ class Ad extends Model
     public function favorites()
     {
         return $this->hasMany(Favorite::class);
+    }
+
+    /** Propositions des prestataires, pour une demande de prestation. */
+    public function proposals()
+    {
+        return $this->hasMany(ServiceProposal::class);
+    }
+
+    /** Le prestataire choisi par le client, s'il l'a deja choisi. */
+    public function acceptedProposal()
+    {
+        return $this->hasOne(ServiceProposal::class)->where('status', ServiceProposal::ACCEPTED);
     }
 }

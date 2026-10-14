@@ -13,18 +13,30 @@
         <x-contact-owner :owner="$seller" listing-type="product" :listing-id="$product->id"
                          :title="$product->name" price="12,00 €" price-label="l'unité"
                          :image="$sources[0]" kind="vente" />
+
+    Plusieurs popins sur une meme page (un prestataire par proposition, sur la
+    comparaison des propositions) : chacune recoit son `id`, et son bouton
+    porte data-cm-open="<id>". Sans valeur, data-cm-open ouvre la premiere.
+
+        <x-contact-owner id="cm-proposal-12" :owner="$provider" listing-type="proposal"
+                         :listing-id="$proposal->id" :title="$ad->title" kind="proposition" />
 --}}
 @props([
     'owner',
-    // « product » ou « ad » : le controleur en deduit le destinataire.
+    // « product », « ad » ou « proposal » : le controleur en deduit le
+    // destinataire (pour une proposition, l'autre partie : client ou prestataire).
     'listingType',
     'listingId',
     'title',
     'price' => null,
     'priceLabel' => null,
     'image' => null,
-    // « vente » ou « location » : choisit les questions rapides proposees.
+    // « vente », « location », « prestation » (le prestataire ecrit au client)
+    // ou « proposition » (le client ecrit au prestataire) : choisit les
+    // questions rapides proposees.
     'kind' => 'vente',
+    // Identifiant de la popin, a distinguer quand la page en porte plusieurs.
+    'id' => 'contact-owner',
 ])
 
 @auth
@@ -35,23 +47,38 @@
 
     // Les questions les plus posees sur une fiche : un clic les ajoute au
     // message, precedees d'une salutation si le champ est encore vide.
-    $suggestions = $kind === 'location'
-        ? [
+    $suggestions = match ($kind) {
+        'prestation' => [
+            // Demande de prestation : c'est le prestataire qui ecrit au client
+            ['label' => 'Précisions',     'icon' => 'fa-regular fa-circle-question', 'text' => 'Pourriez-vous me donner quelques précisions sur votre besoin ?'],
+            ['label' => 'Matériel',       'icon' => 'fa-solid fa-toolbox',           'text' => 'Le matériel est-il fourni, ou dois-je venir équipé ?'],
+            ['label' => 'Accès au lieu',  'icon' => 'fa-solid fa-location-dot',      'text' => 'Comment se passe l’accès au lieu de la prestation (étage, stationnement…) ?'],
+            ['label' => 'Disponibilités', 'icon' => 'fa-regular fa-calendar',        'text' => 'Quels jours et quels horaires vous conviendraient le mieux ?'],
+        ],
+        // Proposition recue : c'est le client qui ecrit au prestataire
+        'proposition' => [
+            ['label' => 'Ce que comprend le prix', 'icon' => 'fa-solid fa-receipt',        'text' => 'Que comprend exactement le prix que vous proposez ?'],
+            ['label' => 'Durée',                   'icon' => 'fa-regular fa-clock',        'text' => 'Combien de temps vous faudra-t-il pour réaliser la prestation ?'],
+            ['label' => 'Matériel',                'icon' => 'fa-solid fa-toolbox',        'text' => 'Apportez-vous le matériel nécessaire ?'],
+            ['label' => 'Date',                    'icon' => 'fa-regular fa-calendar',     'text' => 'Quand pourriez-vous intervenir ?'],
+        ],
+        'location' => [
             ['label' => 'Disponibilités',   'icon' => 'fa-regular fa-calendar',     'text' => 'Le bien est-il disponible aux dates qui m’intéressent ?'],
             ['label' => 'Caution',          'icon' => 'fa-solid fa-shield-halved',  'text' => 'Une caution est-elle demandée ? Si oui, de quel montant ?'],
             ['label' => 'Remise et retour', 'icon' => 'fa-solid fa-right-left',     'text' => 'Comment se passent la remise et le retour du bien ?'],
             ['label' => 'Livraison',        'icon' => 'fa-solid fa-truck-fast',     'text' => 'Une livraison est-elle possible ? Si oui, à quel tarif ?'],
-        ]
-        : [
+        ],
+        default => [
             ['label' => 'Toujours disponible ?', 'icon' => 'fa-regular fa-circle-check', 'text' => 'Est-il toujours disponible ?'],
             ['label' => 'Prix négociable ?',     'icon' => 'fa-solid fa-tag',            'text' => 'Le prix est-il négociable ?'],
             ['label' => 'Livraison',             'icon' => 'fa-solid fa-truck-fast',     'text' => 'Une livraison est-elle possible ? Si oui, à quel tarif ?'],
             ['label' => 'Remise en main propre', 'icon' => 'fa-regular fa-handshake',    'text' => 'Une remise en main propre est-elle possible ? Où et quand seriez-vous disponible ?'],
-        ];
+        ],
+    };
 @endphp
 
-<div class="cm" id="contact-owner" role="dialog" aria-modal="true"
-     aria-labelledby="cm-title" aria-describedby="cm-meta" data-cm hidden>
+<div class="cm" id="{{ $id }}" role="dialog" aria-modal="true"
+     aria-labelledby="{{ $id }}-title" aria-describedby="{{ $id }}-meta" data-cm hidden>
 
     <div class="cm-backdrop" data-cm-close></div>
 
@@ -78,8 +105,8 @@
 
                 <div class="cm-head-text">
                     <p class="cm-eyebrow">Nouveau message</p>
-                    <h2 class="cm-title" id="cm-title">Écrire à {{ $prenom }}</h2>
-                    <p class="cm-meta" id="cm-meta">
+                    <h2 class="cm-title" id="{{ $id }}-title">Écrire à {{ $prenom }}</h2>
+                    <p class="cm-meta" id="{{ $id }}-meta">
                         @if ($owner->is_approved)
                             <span class="cm-verified"><i class="fa-solid fa-circle-check"></i> Profil vérifié</span>
                         @endif
@@ -120,9 +147,9 @@
                 </div>
 
                 <div class="cm-quick">
-                    <p class="cm-label" id="cm-quick-label">Questions rapides</p>
+                    <p class="cm-label" id="{{ $id }}-quick-label">Questions rapides</p>
 
-                    <div class="cm-chips" role="group" aria-labelledby="cm-quick-label">
+                    <div class="cm-chips" role="group" aria-labelledby="{{ $id }}-quick-label">
                         @foreach ($suggestions as $s)
                             <button type="button" class="cm-chip" data-cm-chip="{{ $s['text'] }}" aria-pressed="false">
                                 <i class="{{ $s['icon'] }}" aria-hidden="true"></i>
@@ -133,12 +160,12 @@
                 </div>
 
                 <div class="cm-field">
-                    <label class="cm-label" for="cm-message">
+                    <label class="cm-label" for="{{ $id }}-message">
                         Votre message
                         <span class="cm-count" data-cm-count>0 / 2000</span>
                     </label>
 
-                    <textarea id="cm-message" name="message" class="cm-textarea" rows="4" maxlength="2000"
+                    <textarea id="{{ $id }}-message" name="message" class="cm-textarea" rows="4" maxlength="2000"
                               data-cm-text data-cm-greeting="Bonjour {{ $prenom }},"
                               placeholder="Bonjour {{ $prenom }}, votre offre m’intéresse…"></textarea>
                 </div>

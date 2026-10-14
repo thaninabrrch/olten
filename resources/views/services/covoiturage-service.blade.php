@@ -144,7 +144,7 @@
                            max="{{ $criteria['max_price'] ? ceil($criteria['max_price']) : null }}"
                            value="{{ $filters['max_price'] ?: '' }}"
                            placeholder="{{ $criteria['max_price']
-                                ? "Jusqu'à " . number_format((float) $criteria['max_price'], 0, ',', ' ') . " €"
+                                ? "Jusqu'à " . number_format(ceil($criteria['max_price']), 0, ',', ' ') . " €"
                                 : 'Sans limite' }}">
                 </div>
             </div>

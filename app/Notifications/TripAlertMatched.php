@@ -28,7 +28,7 @@ class TripAlertMatched extends Notification
     {
         $trip  = $this->trip;
         $heure = Str::substr((string) $trip->heure_depart, 0, 5);
-        $price = $trip->seat_price;
+        $price = $trip->passenger_price;
 
         return [
             'icon'  => 'fa-route',
@@ -36,7 +36,7 @@ class TripAlertMatched extends Notification
                 . $trip->depart_ville . ' → ' . $trip->destination_ville,
             'text'  => 'Départ le ' . $trip->date_depart?->translatedFormat('D d M')
                 . ($heure ? ' à ' . $heure : '')
-                . ($price > 0 ? ' · ' . number_format($price + Covoiturage::serviceFee($price), 2, ',', ' ') . ' € la place' : ''),
+                . ($price > 0 ? ' · ' . number_format($price, 2, ',', ' ') . ' € la place' : ''),
             'url'   => route('covoiturage.trip', $trip->covoiturage_id),
         ];
     }

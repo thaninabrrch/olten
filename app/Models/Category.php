@@ -65,6 +65,16 @@ class Category extends Model
         return $this->service?->slug === 'vente';
     }
 
+    /**
+     * Une annonce publiee dans une categorie de prestation est une demande :
+     * le client decrit son besoin et les prestataires lui font leurs
+     * propositions (ServiceProposal).
+     */
+    public function isPrestation(): bool
+    {
+        return $this->service?->slug === ServiceProposal::SERVICE_SLUG;
+    }
+
     public function objets()
     {
         return $this->hasMany(Objet::class, 'categorie_id');

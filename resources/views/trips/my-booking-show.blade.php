@@ -9,7 +9,7 @@
      | retour, chronologie, infos voyage) mais :
      |   - aucun bouton « Réserver » : le trajet est déjà réservé et payé ;
      |   - seuls les sens réservés sont affichés ;
-     |   - le paiement réel (prix, frais de service, total) remplace le
+     |   - le montant payé, frais de service compris, remplace le
      |     récapitulatif à cocher ;
      |   - le contact est celui de l'autre partie : le conducteur pour le
      |     passager, le passager pour le conducteur.
@@ -57,6 +57,9 @@
     $mode = $modes[$trip->passenger_mode] ?? null;
 
     $rate      = rtrim(rtrim(number_format((float) $booking->commission_rate, 2, ',', ''), '0'), ',');
+    // Taux de la réservation, figé au paiement : le passager lit ses tarifs
+    // frais de service compris à ce taux.
+    $feeRate   = (float) $booking->commission_rate;
     // Seul le passager annule sa réservation : le conducteur s'est engagé envers lui.
     $canCancel = $state === 'upcoming' && ! $isDriver;
     $sens      = count($legs) > 1 ? 'Aller & retour' : (($legs['retour'] ?? null) ? 'Retour' : 'Aller');
@@ -161,14 +164,7 @@
                                 <strong>{{ number_format((float) $booking->driver_amount, 2, ',', ' ') }} €</strong>
                             </div>
                         @else
-                            <div class="bkd-line">
-                                <span>Prix du trajet</span>
-                                <span>{{ number_format((float) $booking->driver_amount, 2, ',', ' ') }} €</span>
-                            </div>
-                            <div class="bkd-line">
-                                <span>Frais de service ({{ $rate }} %)</span>
-                                <span>{{ number_format((float) $booking->commission, 2, ',', ' ') }} €</span>
-                            </div>
+                            {{-- Montant payé, frais de service compris : pas de ligne de frais à part --}}
                             <div class="bkd-total">
                                 <span>{{ $state === 'cancelled' ? 'Total remboursé' : 'Total payé' }}</span>
                                 <strong>{{ number_format((float) $booking->total_price, 2, ',', ' ') }} €</strong>
@@ -306,6 +302,18 @@
                                 {{ count($leg['segments']) > 1 ? 'Escales et tarifs' : 'Tarif' }}
                             </span>
 
+                            @php
+                                // Le passager lit ses tarifs frais de service compris (les
+                                // escales se partagent le prix du sens) ; le conducteur
+                                // garde son propre prix.
+                                $legPrice  = $isDriver
+                                    ? $leg['total']
+                                    : \App\Models\Covoiturage::passengerPrice($leg['total'], $feeRate);
+                                $segPrices = $isDriver
+                                    ? array_map(fn ($segment) => (float) ($segment['price'] ?? 0), $leg['segments'])
+                                    : \App\Models\Covoiturage::passengerSegmentPrices($leg['segments'], $leg['total'], $feeRate);
+                            @endphp
+
                             @forelse ($leg['segments'] as $segment)
                                 @php
                                     $segFrom = \App\Models\Covoiturage::villeCourte($segment['from'] ?? '');
@@ -319,24 +327,28 @@
                                             Étape {{ $loop->iteration }}
                                         @endif
                                     </span>
-                                    <span>{{ number_format((float) ($segment['price'] ?? 0), 0, ',', ' ') }} €</span>
+                                    <span>{{ number_format($segPrices[$loop->index], 2, ',', ' ') }} €</span>
                                 </div>
                             @empty
                                 <div class="bkd-line">
                                     <span>Trajet complet</span>
-                                    <span>{{ number_format($leg['total'], 0, ',', ' ') }} €</span>
+                                    <span>{{ number_format($legPrice, 2, ',', ' ') }} €</span>
                                 </div>
                             @endforelse
 
                             <div class="bkd-total bkd-total--sm">
                                 <span>Total {{ $key === 'retour' ? 'retour' : 'aller' }}</span>
-                                <strong>{{ number_format($leg['total'], 2, ',', ' ') }} €</strong>
+                                <strong>{{ number_format($legPrice, 2, ',', ' ') }} €</strong>
                             </div>
 
                             <p class="bkd-note">
                                 <i class="fa-solid fa-circle-info"></i>
-                                Prix par place fixé par le conducteur. Les frais de service
-                                ({{ $rate }} %) sont ajoutés et réglés en ligne.
+                                @if ($isDriver)
+                                    Prix par place fixé par le conducteur. Les frais de service
+                                    ({{ $rate }} %) sont ajoutés et réglés en ligne.
+                                @else
+                                    Prix par place, réglé en ligne.
+                                @endif
                             </p>
                         </div>
                     </div>
