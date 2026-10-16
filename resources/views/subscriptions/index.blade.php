@@ -63,7 +63,6 @@
                     // sa premiere ligne est retenue, les suivantes ne sont pas
                     // affichees sur cette page.
                     $accroche = trim(strtok((string) $subscription->description, "\r\n"));
-
                     $gratuit = (float) $subscription->price <= 0;
                 @endphp
 
@@ -78,7 +77,7 @@
 
                     <div class="olten-plan-head">
                         <h2 class="olten-plan-name">{{ $subscription->name }}</h2>
-                        <p class="olten-plan-desc">{{ $accroche }}</p>
+                        <p class="olten-plan-desc">{!! nl2br(e($subscription->description)) !!}</p>
                     </div>
 
                     <div class="olten-plan-price">

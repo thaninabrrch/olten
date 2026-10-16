@@ -14,7 +14,7 @@ class SubscriptionSeeder extends Seeder
         Subscription::create([
             'name' => 'Standard',
             'slug' => 'standard',
-            'price' => 9.99,
+            'price' => 19.90,
             'description' => "Pour les utilisateurs actifs :\n\n"
                 . "Répondre aux offres de livraison\n"
                 . "Répondre aux offres VTC\n"
@@ -25,7 +25,7 @@ class SubscriptionSeeder extends Seeder
         Subscription::create([
             'name' => 'Premium',
             'slug' => 'premium',
-            'price' => 19.99,
+            'price' => 29.90,
             'description' =>  "Pour les utilisateurs actifs :\n\n"
                 . "Répondre aux offres de livraison\n"
                 . "Répondre aux offres VTC\n"
