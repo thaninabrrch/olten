@@ -72,36 +72,87 @@
                     </h2>
                 </div>
 
-                <a href="{{ route('services.index') }}" class="section-link">
-                    Tous les services
-                    <i class="fas fa-arrow-right"></i>
-                </a>
+                {{-- Affichées par le script seulement si la ligne déborde --}}
+                <div class="services-nav" data-rail-nav hidden>
+                    <button type="button" class="carousel-btn" data-rail-prev
+                            aria-controls="services-rail" aria-label="Services précédents">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button type="button" class="carousel-btn" data-rail-next
+                            aria-controls="services-rail" aria-label="Services suivants">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
             </div>
 
-            <div class="services-grid">
-                @foreach($services as $service)
-                    @php
-                        // Teinte de repli, stable pour un service donne, quand
-                        // aucune image n'a ete televersee depuis le back-office.
-                        $tileHue = ($service->id * 47) % 360;
-                    @endphp
+            <div class="services-rail" data-rail>
+                <div class="services-grid" id="services-rail" data-rail-track>
+                    @foreach($services as $service)
+                        @php
+                            // Photo du back-office, sinon celle de la famille du service
+                            $cover = $service->cover_url;
+                        @endphp
 
-                    <a href="{{ route('services.show', $service->slug) }}"
-                       class="service-tile"
-                       style="--tile-hue: {{ $tileHue }};@if($service->image) --tile-image: url('{{ asset('storage/' . $service->image) }}');@endif">
+                        <a href="{{ route('services.show', $service->slug) }}"
+                           class="service-tile"
+                           @if($cover) style="--tile-image: url('{{ $cover }}');" @endif>
 
-                        <span class="service-tile-arrow" aria-hidden="true">
-                            <i class="fas fa-arrow-right"></i>
-                        </span>
+                            <span class="service-tile-icon" aria-hidden="true">
+                                <i class="{{ $service->icon_class }}"></i>
+                            </span>
 
-                        <span class="service-tile-body">
-                            <span class="service-tile-name">{{ $service->display_name }}</span>
-                            @if(filled($service->short_description))
-                                <span class="service-tile-desc">{{ $service->short_description }}</span>
-                            @endif
-                        </span>
-                    </a>
-                @endforeach
+                            {{-- Revelee au survol : la carte mene a la page du service --}}
+                            <span class="service-tile-arrow" aria-hidden="true">
+                                <i class="fas fa-arrow-right"></i>
+                            </span>
+
+                            <span class="service-tile-body">
+                                <span class="service-tile-name">{{ $service->display_name }}</span>
+                                @if($service->tagline)
+                                    <span class="service-tile-desc">{{ $service->tagline }}</span>
+                                @endif
+                            </span>
+                        </a>
+                    @endforeach
+
+                    {{-- Formation n'est pas encore un service : la carte l'annonce et
+                         mene a la page d'attente. Elle s'efface d'elle-meme le jour
+                         ou le service est cree en back-office. --}}
+                    @unless($services->contains('slug', 'formation'))
+                        <a href="{{ route('formation') }}" class="service-tile"
+                           style="--tile-image: url('{{ asset('assets/images/services/formation.jpg') }}');">
+                            <span class="service-tile-icon" aria-hidden="true">
+                                <i class="fas fa-graduation-cap"></i>
+                            </span>
+
+                            <span class="service-tile-badge">Bientôt</span>
+
+                            <span class="service-tile-arrow" aria-hidden="true">
+                                <i class="fas fa-arrow-right"></i>
+                            </span>
+
+                            <span class="service-tile-body">
+                                <span class="service-tile-name">Formation</span>
+                                <span class="service-tile-desc">Apprendre &amp; transmettre</span>
+                            </span>
+                        </a>
+                    @endunless
+                </div>
+            </div>
+
+            <div class="services-rail-footer" data-rail-footer hidden>
+                <div class="services-progress" aria-hidden="true"><span data-rail-thumb></span></div>
+                <span class="services-hint">
+                    <i class="fas fa-arrows-left-right" aria-hidden="true"></i>
+                    Glissez pour voir tous les services
+                </span>
+            </div>
+
+            <div class="services-all">
+                <a href="{{ route('services.index') }}" class="hero-btn hero-btn-ghost">
+                    Voir tous les services
+                    <i class="fas fa-arrow-right"></i>
+                </a>
             </div>
 
         </div>
@@ -605,3 +656,63 @@
     </a>
 </section>
 @endsection
+
+@push('scripts')
+<script>
+    /*
+     * Ligne de services : flèches, fondus des bords et barre de progression.
+     * Tout reste masqué tant que la ligne tient à l'écran ; le défilement
+     * natif (doigt, pavé tactile) marche aussi sans ce script.
+     */
+    (function () {
+        const rail = document.querySelector('[data-rail]');
+        if (!rail) return;
+
+        const track  = rail.querySelector('[data-rail-track]');
+        const nav    = document.querySelector('[data-rail-nav]');
+        const footer = document.querySelector('[data-rail-footer]');
+        const prev   = nav.querySelector('[data-rail-prev]');
+        const next   = nav.querySelector('[data-rail-next]');
+        const thumb  = footer.querySelector('[data-rail-thumb]');
+        const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+        function update() {
+            const max        = track.scrollWidth - track.clientWidth;
+            const scrollable = max > 2;
+
+            rail.classList.toggle('is-scrollable', scrollable);
+            nav.hidden    = !scrollable;
+            footer.hidden = !scrollable;
+            if (!scrollable) return;
+
+            const x       = track.scrollLeft;
+            const atStart = x <= 2;
+            const atEnd   = x >= max - 2;
+            const ratio   = track.clientWidth / track.scrollWidth;
+
+            rail.classList.toggle('at-start', atStart);
+            rail.classList.toggle('at-end', atEnd);
+            prev.disabled = atStart;
+            next.disabled = atEnd;
+
+            // Le curseur occupe la part visible de la ligne et glisse sur le reste
+            thumb.style.width     = (ratio * 100) + '%';
+            thumb.style.transform = 'translateX(' + ((x / max) * (1 / ratio - 1) * 100) + '%)';
+        }
+
+        // Un clic avance d'environ un écran, en gardant une tuile de repère
+        function step(direction) {
+            track.scrollBy({
+                left: direction * track.clientWidth * 0.8,
+                behavior: motion.matches ? 'auto' : 'smooth',
+            });
+        }
+
+        prev.addEventListener('click', () => step(-1));
+        next.addEventListener('click', () => step(1));
+        track.addEventListener('scroll', update, { passive: true });
+        new ResizeObserver(update).observe(track);
+        update();
+    })();
+</script>
+@endpush

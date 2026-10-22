@@ -123,14 +123,36 @@ class AdController extends Controller
 
     public function create()
     {
-        // Les categories sont des sous-parties d'un service : on les charge
-        // avec leur service pour pouvoir les regrouper dans le selecteur.
-        $categories = Category::with('service')
-                              ->publishable()
-                              ->orderBy('service_id')
-                              ->orderBy('id')
-                              ->get();
-        return view('pages.locateur.deposer_annonce', compact('categories'));
+        return view('pages.locateur.deposer_annonce', [
+            'categories' => $this->publishableCategories(),
+            'tripMode'   => false,
+        ]);
+    }
+
+    /**
+     * « Deposer une annonce », service covoiturage. Un trajet n'est pas une
+     * annonce : la page accueille l'assistant de trajet, le meme que
+     * /covoiturage/create, qui publie par /covoiturage/publish.
+     */
+    public function createTrip()
+    {
+        return view('pages.locateur.deposer_annonce', [
+            'categories' => $this->publishableCategories(),
+            'tripMode'   => true,
+        ]);
+    }
+
+    /**
+     * Les categories sont des sous-parties d'un service : on les charge
+     * avec leur service pour pouvoir les regrouper dans le selecteur.
+     */
+    private function publishableCategories()
+    {
+        return Category::with('service')
+                       ->publishable()
+                       ->orderBy('service_id')
+                       ->orderBy('id')
+                       ->get();
     }
 
     public function reverseGeocode(Request $request)

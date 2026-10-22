@@ -1,14 +1,39 @@
 @extends('layouts.connected')
 @section('title', 'Déposer une annonce - Olten')
 
+{{-- Service covoiturage : la page accueille l'assistant de trajet, partagé
+     avec /covoiturage/create (livreur/covoiturage/partials). Ses styles et
+     scripts ne sont chargés que dans ce mode. --}}
+@if($tripMode)
+    @push('styles')
+        @include('livreur.covoiturage.partials.wizard-styles')
+        <style>
+            /* Dans la page, l'assistant tient dans un cadre plutôt qu'en plein écran */
+            .sp-trip .app-content-area {
+                height: min(780px, calc(100vh - 140px));
+                min-height: 620px;
+                border: 1px solid #E4E7EC;
+                border-radius: 16px;
+            }
+        </style>
+    @endpush
+@endif
+
 @section('content')
+@php
+    // Les trajets se retrouvent dans « Mes trajets », les annonces dans « Mes annonces »
+    [$listUrl, $listLabel] = $tripMode
+        ? [route('covoiturage.index'), 'Mes trajets']
+        : [route('ads.index'), 'Mes annonces'];
+@endphp
+
 <div class="sp-page">
 
     {{-- Fil d'ariane --}}
     <nav class="sp-crumbs" aria-label="Fil d'ariane">
         <a href="{{ url('/') }}">Accueil</a>
         <i class="fa-solid fa-chevron-right"></i>
-        <a href="{{ route('ads.index') }}">Mes annonces</a>
+        <a href="{{ $listUrl }}">{{ $listLabel }}</a>
         <i class="fa-solid fa-chevron-right"></i>
         <span class="is-current">Déposer une annonce</span>
     </nav>
@@ -17,15 +42,37 @@
     <header class="sp-head">
         <div>
             <h1 class="sp-title">Déposer une annonce</h1>
-            <p class="sp-subtitle" id="page-subtitle" data-mode-text
-               data-vente="Décrivez votre bien et fixez son prix : votre annonce part en validation."
-               data-prestation="Décrivez votre besoin, quand et où le réaliser, et votre budget : les prestataires vous feront leurs propositions.">Décrivez votre bien, indiquez vos disponibilités et votre tarif : votre annonce part en validation.</p>
+            @if($tripMode)
+                <p class="sp-subtitle">Indiquez votre itinéraire, votre date de départ, vos places et vos prix : votre trajet sera proposé aux passagers.</p>
+            @else
+                <p class="sp-subtitle" id="page-subtitle" data-mode-text
+                   data-vente="Décrivez votre bien et fixez son prix : votre annonce part en validation."
+                   data-prestation="Décrivez votre besoin, quand et où le réaliser, et votre budget : les prestataires vous feront leurs propositions.">Décrivez votre bien, indiquez vos disponibilités et votre tarif : votre annonce part en validation.</p>
+            @endif
         </div>
 
-        <a href="{{ route('ads.index') }}" class="sp-btn-primary">
-            Mes annonces
+        <a href="{{ $listUrl }}" class="sp-btn-primary">
+            {{ $listLabel }}
         </a>
     </header>
+
+    @if($tripMode)
+        {{-- Le choix du service reste en tête : une autre catégorie ramène
+             au formulaire d'annonce --}}
+        <section class="sp-form-section">
+            <div class="sp-field">
+                <label class="sp-label" for="category_id">Catégorie</label>
+                @include('pages.locateur.partials.category-select')
+            </div>
+        </section>
+
+        <div class="sp-trip">
+            @include('livreur.covoiturage.partials.wizard')
+        </div>
+
+        {{-- Dans le contenu et non dans la pile « scripts » : voir l'en-tête du partiel --}}
+        @include('livreur.covoiturage.partials.wizard-scripts')
+    @else
 
     {{-- Les identifiants des champs sont ceux attendus par assets/js/adress.js
          (carte, autocompletion) et assets/js/ckeditor.js (editeurs de texte). --}}
@@ -64,27 +111,7 @@
 
                 <div class="sp-field">
                     <label class="sp-label" for="category_id">Catégorie <span class="sp-req">*</span></label>
-                    <select name="category_id" id="category_id" class="sp-input" required
-                            data-autocomplete="Rechercher une catégorie…">
-                        <option value="">Choisir une catégorie</option>
-                        {{-- Les categories sont des sous-parties d'un service --}}
-                        @forelse($categories->groupBy(fn ($c) => $c->service->display_name ?? 'Autres') as $serviceName => $group)
-                            <optgroup label="{{ $serviceName }}">
-                                @foreach($group as $category)
-                                    <option value="{{ $category->id }}"
-                                            data-service="{{ $category->service->slug ?? '' }}"
-                                            data-service-name="{{ $serviceName }}"
-                                            data-icon="{{ $category->icon_class }}"
-                                            @selected(old('category_id') == $category->id)>
-                                        {{ $category->nom }}
-                                    </option>
-                                @endforeach
-                            </optgroup>
-                        @empty
-                            <option value="" disabled>Aucune catégorie disponible</option>
-                        @endforelse
-                    </select>
-                    <x-select-autocomplete />
+                    @include('pages.locateur.partials.category-select')
                 </div>
             </div>
 
@@ -224,10 +251,12 @@
         <input type="hidden" name="distance_km" id="distanceKm">
         <input type="hidden" name="delivery_cost" id="deliveryCost">
     </form>
+    @endif
 </div>
 
-{{-- Bascule location / vente / prestation : assets/js/ad-form.js. La meme
-     regle est rejouee cote serveur dans AdController. --}}
+{{-- Bascule location / vente / prestation, et passage au covoiturage :
+     assets/js/ad-form.js. La meme regle est rejouee cote serveur dans
+     AdController. --}}
 <script src="{{ asset('assets/js/ad-form.js') }}?v={{ @filemtime(public_path('assets/js/ad-form.js')) ?: 1 }}"></script>
 
 @endsection

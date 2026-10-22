@@ -96,6 +96,10 @@ Route::get('/', [HomeController::class, 'home'])->name('home');
 Route::get('/creer-site', function () {
     return view('pages.creer_site');
 })->name('creer.site');
+
+// Service Formation annoncé sur l'accueil, pas encore ouvert.
+// A declarer avant la route catch-all `/{slug}` de fin de fichier.
+Route::view('/formation', 'pages.formation')->name('formation');
 Route::get('/contact', [ContactController::class, 'index'])
     ->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])
@@ -142,6 +146,12 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware('auth', 'verified', 'approved')->group(function () {
     Route::get('/annonces/deposer-une-annonce', [AdController::class, 'create'])->name('ads.create');
+    // Meme page, service covoiturage : elle accueille l'assistant de trajet.
+    // Meme garde que /covoiturage/create : sans permis valide, la page
+    // d'attente remplace l'assistant.
+    Route::get('/annonces/deposer-une-annonce/covoiturage', [AdController::class, 'createTrip'])
+        ->middleware('documents.approved:publish')
+        ->name('ads.create.trip');
     Route::post('/ads', [AdController::class, 'store'])->name('ads.store');
     Route::get('/ads/reverse-geocode', [AdController::class, 'reverseGeocode'])->name('ads.reverse-geocode');
     Route::get('/annonces/mes-annonces', [AdController::class, 'index'])->name('ads.index');

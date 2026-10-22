@@ -1332,9 +1332,11 @@ body {
 }
 
 .services-inner {
+  /* Reprise par la ligne de tuiles, qui deborde dans cette marge pour defiler */
+  --services-gutter: 20px;
   max-width: 1360px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 var(--services-gutter);
 }
 
 /* ---- En-tete aligne a gauche, partage services + annonces ---- */
@@ -1391,62 +1393,178 @@ body {
   display: none;
 }
 
-/* ---- Tuiles : 5 par ligne, puis 4 / 3 / 2 ---- */
-.services-grid {
+/* ---- Ligne de services ----
+   Une seule ligne : les cartes se partagent la largeur ; quand elles n'y
+   tiennent plus, la ligne defile horizontalement. Les fleches, le fondu du
+   bord et la barre de progression (script de home.blade.php) n'apparaissent
+   qu'alors ; sans script, le defilement natif reste. */
+.services-nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
+.services-nav .carousel-btn {
+  width: 38px;
+  height: 38px;
+  font-size: 12px;
+}
+
+/* Bouton en butee : il ne reagit plus au survol */
+.services-nav .carousel-btn:disabled:hover {
+  background: #fff;
+  border-color: #E4DCCE;
+  color: #15110D;
+}
+
+.services-rail {
+  position: relative;
+  /* Deborde dans la marge de .services-inner pour que les cartes defilent
+     jusqu'au bord du bloc ; les marges verticales negatives compensent la
+     marge interieure de .services-grid. */
+  margin: -8px calc(-1 * var(--services-gutter)) -30px;
+}
+
+.services-grid {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: var(--services-gutter);
+  scrollbar-width: thin;
+  /* Le defilement rogne tout ce qui depasse : cette marge interieure
+     laisse la place a l'elevation, a l'ombre et au contour de focus. */
+  padding: 8px var(--services-gutter) 30px;
+}
+
+/* Le script a pris le relais : la barre de progression remplace la
+   barre de defilement native. */
+.services-rail.is-scrollable .services-grid {
+  scrollbar-width: none;
+}
+
+.services-rail.is-scrollable .services-grid::-webkit-scrollbar {
+  display: none;
+}
+
+/* Fondus des bords : celui de droite annonce la suite, celui de gauche
+   apparait des qu'on a quitte le debut de la ligne. */
+.services-rail::before,
+.services-rail::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  width: calc(var(--services-gutter) + 48px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .3s ease;
+}
+
+.services-rail::before {
+  left: 0;
+  background: linear-gradient(90deg, #F8FAFC 30%, rgba(248, 250, 252, 0));
+}
+
+.services-rail::after {
+  right: 0;
+  background: linear-gradient(270deg, #F8FAFC 30%, rgba(248, 250, 252, 0));
+}
+
+.services-rail.is-scrollable:not(.at-start)::before,
+.services-rail.is-scrollable:not(.at-end)::after {
+  opacity: 1;
+}
+
+/* ---- Carte de service : photo assombrie, nom et accroche en bas ---- */
 .service-tile {
   position: relative;
   display: flex;
-  align-items: flex-end;
-  flex: 0 1 calc((100% - 64px) / 5);
-  aspect-ratio: 1 / 0.95;
-  padding: 18px;
-  border-radius: 14px;
+  flex-direction: column;
+  justify-content: flex-end;
+  flex: 1 0 250px;
+  height: 180px;
+  padding: 16px;
+  border-radius: 16px;
   overflow: hidden;
   text-decoration: none;
-  /* 1. voile sombre pour la lisibilite du texte
-     2. image du service (back-office), absente -> couche ignoree
-     3. degrade de repli, teinte stable par service */
-  background-image:
-    linear-gradient(180deg, rgba(16, 12, 8, 0) 32%, rgba(16, 12, 8, .82) 100%),
-    var(--tile-image, none),
-    linear-gradient(155deg,
-      hsl(var(--tile-hue, 20), 42%, 40%) 0%,
-      hsl(var(--tile-hue, 20), 32%, 22%) 100%);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  /* 1. voile sombre, plus dense en bas pour la lisibilite du texte
+     2. photo du service (modele Service), absente -> couche ignoree
+     3. fond sombre de repli */
+  background:
+    linear-gradient(180deg, rgba(16, 12, 8, .22) 0%, rgba(16, 12, 8, .32) 45%, rgba(16, 12, 8, .85) 100%),
+    var(--tile-image, none) center / cover no-repeat,
+    #2A2420;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .08), inset 0 0 0 1px rgba(255, 255, 255, .08);
+  scroll-snap-align: start;
   transition: transform .25s ease, box-shadow .25s ease;
 }
 
+/* Au survol : la carte se souleve, cerclee de clair */
 .service-tile:hover {
   transform: translateY(-4px);
-  box-shadow: 0 16px 30px rgba(16, 24, 40, .18);
+  box-shadow: 0 16px 28px -12px rgba(16, 24, 40, .45), inset 0 0 0 2px rgba(255, 255, 255, .5);
 }
 
-/* Badge fleche revele au survol (et au focus clavier) */
-.service-tile-arrow {
+.service-tile:focus-visible {
+  outline: 2px solid var(--color-primary, #FF4D1C);
+  outline-offset: 3px;
+}
+
+/* Pastille d'icone, en verre depoli */
+.service-tile-icon {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 2;
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  background: var(--color-primary, #FF4D1C);
-  color: #fff;
+  top: 14px;
+  left: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .2);
+  border: 1px solid rgba(255, 255, 255, .3);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 14px;
+}
+
+/* Service annonce mais pas encore ouvert (Formation) */
+.service-tile-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 4px 9px;
+  border-radius: 50px;
+  background: var(--color-primary, #FF4D1C);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 10px rgba(16, 12, 8, .25);
+  transition: opacity .2s ease, transform .2s ease;
+}
+
+/* Fleche revelee au survol (et au focus clavier) : la carte mene au service */
+.service-tile-arrow {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #fff;
+  color: #15110D;
   font-size: 12px;
+  box-shadow: 0 4px 12px rgba(16, 12, 8, .25);
   opacity: 0;
-  transform: translate(5px, -5px) scale(.88);
-  pointer-events: none;
-  box-shadow: 0 4px 12px rgba(16, 12, 8, .28);
+  transform: translate(-4px, 4px) scale(.85);
   transition: opacity .25s ease, transform .25s ease;
 }
 
@@ -1458,12 +1576,17 @@ body {
 .service-tile:hover .service-tile-arrow,
 .service-tile:focus-visible .service-tile-arrow {
   opacity: 1;
-  transform: translate(0, 0) scale(1);
+  transform: none;
+}
+
+/* Formation : le badge cede sa place a la fleche le temps du survol */
+.service-tile:hover .service-tile-badge,
+.service-tile:focus-visible .service-tile-badge {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 .service-tile-body {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -1474,8 +1597,8 @@ body {
   font-size: 15px;
   font-weight: 700;
   line-height: 1.25;
+  letter-spacing: -.01em;
   color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .35);
 }
 
 .service-tile-desc {
@@ -1486,20 +1609,87 @@ body {
   font-size: 12.5px;
   line-height: 1.4;
   color: rgba(255, 255, 255, .82);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .35);
 }
 
-@media (max-width: 1200px) {
-  .service-tile { flex: 0 1 calc((100% - 48px) / 4); }
+/* ---- Sous la ligne : progression du defilement, puis lien vers tout ---- */
+.services-rail-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 18px;
 }
 
-@media (max-width: 900px) {
-  .service-tile { flex: 0 1 calc((100% - 32px) / 3); }
+.services-progress {
+  position: relative;
+  width: 160px;
+  height: 4px;
+  border-radius: 4px;
+  background: #E4E7EC;
+  overflow: hidden;
+}
+
+.services-progress span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: inherit;
+  background: var(--color-primary, #FF4D1C);
+  transition: width .2s ease;
+}
+
+/* Consigne de geste, seulement la ou l'on fait defiler au doigt */
+.services-hint {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #667085;
+}
+
+.services-hint i {
+  color: var(--color-primary, #FF4D1C);
+  animation: services-hint-nudge 1.8s ease-in-out infinite;
+}
+
+@keyframes services-hint-nudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(4px); }
+}
+
+/* Bouton « Voir tous les services », centre sous la ligne */
+.services-all {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+@media (max-width: 620px), (hover: none) {
+  .services-progress { flex: 1; width: auto; }
+  .services-hint { display: inline-flex; }
 }
 
 @media (max-width: 620px) {
-  .services-grid { gap: 12px; }
-  .service-tile { flex: 0 1 calc((100% - 12px) / 2); padding: 14px; }
+  .service-tile { flex: 0 0 148px; height: 164px; padding: 14px; }
+}
+
+@media (max-width: 600px) {
+  /* Au doigt, la ligne se glisse : les fleches chargeraient l'en-tete */
+  .services-nav { display: none; }
+  .services-all .hero-btn { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .service-tile,
+  .service-tile-arrow,
+  .service-tile-badge,
+  .services-rail::before,
+  .services-rail::after { transition: none; }
+  .service-tile:hover { transform: none; }
+  .services-hint i { animation: none; }
 }
 
 /* ==========================================================================
@@ -2354,8 +2544,8 @@ body {
   margin: 4px 0 12px;
 }
 .faq-number {
-  background: #FEE8C6;  
-  color: #FF4D1C;        
+  background: #FEE8C6;
+  color: #FF4D1C;
   border-radius: 50%;
   width: 28px;
   height: 28px;
@@ -2547,7 +2737,7 @@ body {
    ========================================================================== */
 @media (max-width: 992px) {
   .services-section { padding: 56px 0 36px; }
-  .services-inner { padding: 0 18px; }
+  .services-inner { --services-gutter: 18px; }
   .section-header--left { margin-bottom: 24px; }
   .section-header--center { gap: 18px; margin-bottom: 30px; }
   .annonce-card, .product-card { flex: 0 0 calc(50% - 13px); }
@@ -2581,7 +2771,7 @@ body {
 
 @media (max-width: 576px) {
   .services-section { padding: 44px 0 34px; }
-  .services-inner { padding: 0 16px; }
+  .services-inner { --services-gutter: 16px; }
   .annonces-section, .produits-section { padding: 0 18px 25px; }
   .annonce-card, .product-card { flex: 0 0 100%; }
   .carousel-track { gap: 16px; }
@@ -10991,7 +11181,7 @@ body.cs-modal-open {
     .cv-search-form {
         grid-template-columns: repeat(2, 1fr);
     }
-    
+
 
     .cv-search-btn {
         grid-column: span 2;

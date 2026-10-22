@@ -40,7 +40,7 @@
         'icon'  => 'fa-bullhorn',
         'items' => [
             ['Mes annonces',        'fa-list',        route('ads.index'),                   request()->routeIs('ads.index') || request()->routeIs('ads.edit'), false],
-            ['Déposer une annonce', 'fa-circle-plus', $approved ? route('ads.create') : '#', request()->routeIs('ads.create'), ! $approved],
+            ['Déposer une annonce', 'fa-circle-plus', $approved ? route('ads.create') : '#', request()->routeIs('ads.create', 'ads.create.trip'), ! $approved],
             ['Statistiques',        'fa-chart-line',  route('statistiques'),                request()->is('statistiques'), false],
         ],
     ];

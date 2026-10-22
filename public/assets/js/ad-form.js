@@ -17,6 +17,10 @@
  |                         invisible
  | Le texte present dans la page est celui de la location.
  |
+ | Une option qui porte data-href mene a une autre page au lieu de changer de
+ | mode : le covoiturage ouvre l'assistant de trajet, et depuis celui-ci une
+ | categorie d'annonce ramene au formulaire.
+ |
  | Les memes regles sont rejouees cote serveur dans AdController.
  */
 (function () {
@@ -84,6 +88,15 @@
         });
     }
 
-    categorie.addEventListener('change', appliquer);
+    categorie.addEventListener('change', () => {
+        const lien = categorie.selectedOptions[0]?.dataset.href;
+
+        if (lien) {
+            window.location.href = lien;
+            return;
+        }
+
+        appliquer();
+    });
     appliquer();
 })();

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class Service extends Model
@@ -57,15 +58,78 @@ class Service extends Model
      */
     public function getIconClassAttribute(): string
     {
+        return $this->forFamily(self::ICONS) ?? 'fas fa-layer-group';
+    }
+
+    /**
+     * Photo par défaut de chaque famille de service (copies allégées dans
+     * public/assets/images/services), tant qu'aucune image n'a été
+     * téléversée depuis le back-office.
+     */
+    private const COVERS = [
+        'covoiturage' => 'assets/images/services/covoiturage.jpg',
+        'livraison'   => 'assets/images/services/livraison.jpg',
+        'location'    => 'assets/images/services/location.jpg',
+        'vente'       => 'assets/images/services/vente.jpg',
+        'appel'       => 'assets/images/services/appels-offres.jpg',
+        'prestation'  => 'assets/images/services/prestations.jpg',
+    ];
+
+    /**
+     * Image de fond du service : celle du back-office, sinon la photo de
+     * sa famille, sinon null (la carte garde alors sa seule couleur).
+     * Le fichier téléversé est vérifié : une image supprimée du disque
+     * laissait une carte vide.
+     */
+    public function getCoverUrlAttribute(): ?string
+    {
+        if ($this->image && Storage::disk('public')->exists($this->image)) {
+            return asset('storage/' . $this->image);
+        }
+
+        $cover = $this->forFamily(self::COVERS);
+
+        return $cover ? asset($cover) : null;
+    }
+
+    /**
+     * Accroches par défaut par famille de service, pour les cartes de
+     * l'accueil tant qu'aucune accroche n'a été saisie en back-office.
+     */
+    private const TAGLINES = [
+        'covoiturage' => 'Partagez vos trajets',
+        'livraison'   => 'Colis & courses',
+        'location'    => 'Courte & longue durée',
+        'vente'       => 'Acheter & vendre',
+        'appel'       => 'Publiez votre besoin',
+        'prestation'  => 'Pros qualifiés',
+    ];
+
+    /**
+     * Accroche du service : celle du back-office, sinon celle de sa famille.
+     */
+    public function getTaglineAttribute(): ?string
+    {
+        return filled($this->short_description)
+            ? $this->short_description
+            : $this->forFamily(self::TAGLINES);
+    }
+
+    /**
+     * Valeur associée au premier mot-clé de la table trouvé dans le slug
+     * du service (les tables vont du plus spécifique au plus générique).
+     */
+    private function forFamily(array $values): ?string
+    {
         $haystack = Str::slug($this->slug ?: $this->nom);
 
-        foreach (self::ICONS as $keyword => $icon) {
+        foreach ($values as $keyword => $value) {
             if (str_contains($haystack, $keyword)) {
-                return $icon;
+                return $value;
             }
         }
 
-        return 'fas fa-layer-group';
+        return null;
     }
 
     /**

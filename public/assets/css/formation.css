@@ -1,0 +1,341 @@
+/* ==========================================================================
+   PAGE FORMATION (bientôt disponible)
+   Une page de cahier d'écolier : papier à grands carreaux (Seyès), marge
+   orange, titre surligné et fiches bristol en guise d'exemples de cours.
+   La teinte violette reprend celle de la tuile Formation de l'accueil.
+   ========================================================================== */
+.fm-page {
+  --fm-paper: #FDFCFF;
+  --fm-rule: #EEEAF8;
+  --fm-rule-strong: #DCD4F1;
+  --fm-ink: #15110D;
+  --fm-ink-soft: #4F4A57;
+  --fm-violet: #5B3E96;
+  --fm-orange: var(--color-primary, #FF3C00);
+  /* Position de la marge : le texte s'écrit à sa droite, comme sur un cahier */
+  --fm-margin: clamp(28px, 9vw, 132px);
+
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - var(--header-height, 80px));
+  padding: 72px 32px 84px calc(var(--fm-margin) + 44px);
+  /* Seyès : un carreau de 32px, trois lignes fines entre deux lignes fortes */
+
+  color: var(--fm-ink);
+}
+
+.fm-inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
+  align-items: center;
+  gap: 72px;
+  width: 100%;
+  max-width: 1180px;
+}
+
+/* ---- Texte ---- */
+.fm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 15px 7px 13px;
+  border: 1px solid var(--fm-rule-strong);
+  border-radius: 50px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(91, 62, 150, .08);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--fm-violet);
+}
+
+/* Point qui pulse : le service est en cours de préparation */
+.fm-badge-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fm-orange);
+}
+
+.fm-badge-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--fm-orange);
+  animation: fm-pulse 1.8s ease-out infinite;
+}
+
+.fm-title {
+  margin: 26px 0 24px;
+  font-family: 'Bricolage Grotesque', var(--font-family, sans-serif);
+  font-size: clamp(42px, 6.2vw, 84px);
+  font-weight: 800;
+  line-height: .98;
+  letter-spacing: -.035em;
+  color: var(--fm-ink);
+}
+
+/* Coup de surligneur sur « bientôt », passé au chargement */
+.fm-title mark {
+  padding: 0 .08em;
+  margin: 0 -.04em;
+  color: inherit;
+  background-color: transparent;
+  background-image: linear-gradient(transparent 56%, rgba(255, 60, 0, .3) 56%, rgba(255, 60, 0, .3) 90%, transparent 90%);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  animation: fm-highlight .8s cubic-bezier(.6, 0, .3, 1) .7s both;
+}
+
+.fm-lead {
+  max-width: 520px;
+  margin: 0 0 34px;
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--fm-ink-soft);
+}
+
+.fm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.fm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 26px;
+  border: 1px solid transparent;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease, gap .2s ease;
+}
+
+.fm-btn--primary {
+  background: var(--fm-orange);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(255, 60, 0, .28);
+}
+
+.fm-btn--primary:hover {
+  background: var(--color-primary-dark, #E13800);
+  color: #fff;
+  gap: 14px;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(255, 60, 0, .32);
+}
+
+.fm-btn--ghost {
+  background: #fff;
+  border-color: var(--fm-rule-strong);
+  color: var(--fm-ink);
+}
+
+.fm-btn--ghost:hover {
+  border-color: var(--fm-ink);
+  color: var(--fm-ink);
+}
+
+.fm-btn:focus-visible,
+.fm-note a:focus-visible {
+  outline: 3px solid var(--fm-violet);
+  outline-offset: 3px;
+}
+
+.fm-note {
+  margin: 30px 0 0;
+  font-size: 14px;
+  color: var(--fm-ink-soft);
+}
+
+.fm-note a {
+  font-weight: 700;
+  color: var(--fm-violet);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.fm-note a:hover {
+  color: var(--fm-orange);
+}
+
+/* ---- Fiches bristol ---- */
+.fm-annotation {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  margin: 0 0 16px 6px;
+  font-family: 'Caveat', cursive;
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--fm-violet);
+  transform: rotate(-3deg);
+}
+
+.fm-annotation svg {
+  flex-shrink: 0;
+  width: 44px;
+  height: 34px;
+  transform: translateY(12px);
+}
+
+.fm-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* L'entrée anime l'élément de liste, l'inclinaison et le survol la fiche :
+   une animation figée en fin de course écraserait sinon le survol. */
+.fm-cards li {
+  animation: fm-drop .7s cubic-bezier(.2, .8, .25, 1.15) both;
+  animation-delay: calc(.35s + var(--i, 0) * .09s);
+}
+
+.fm-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 112px;
+  padding: 28px 18px 18px;
+  border-radius: 6px;
+  background-color: #fff;
+  /* lignes bleues de la fiche, sous le bandeau */
+  background-image: repeating-linear-gradient(180deg, transparent 0 23px, #DEE7F6 23px 24px);
+  background-position: 0 12px;
+  box-shadow: 0 1px 1px rgba(21, 17, 13, .06), 0 10px 22px rgba(91, 62, 150, .12);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform .35s cubic-bezier(.2, .8, .25, 1.2), box-shadow .35s ease;
+}
+
+/* Bandeau de couleur en tête de fiche */
+.fm-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+  border-radius: 6px 6px 0 0;
+  background: var(--band, var(--fm-orange));
+}
+
+.fm-card:hover {
+  transform: rotate(0deg) translateY(-3px);
+  box-shadow: 0 1px 1px rgba(21, 17, 13, .06), 0 18px 34px rgba(91, 62, 150, .2);
+}
+
+.fm-card-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #F4F1FA;
+  background: color-mix(in srgb, var(--tone, var(--fm-violet)) 12%, #fff);
+  color: var(--tone, var(--fm-violet));
+  font-size: 18px;
+}
+
+.fm-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.fm-card-text strong {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--fm-ink);
+}
+
+.fm-card-text span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #8A8494;
+}
+
+/* ---- Entrée de page ---- */
+.fm-reveal {
+  animation: fm-rise .7s cubic-bezier(.2, .8, .25, 1) both;
+  animation-delay: calc(var(--d, 0) * 90ms);
+}
+
+@keyframes fm-rise {
+  from { opacity: 0; transform: translateY(16px); }
+}
+
+@keyframes fm-drop {
+  from { opacity: 0; transform: translateY(-28px) rotate(6deg); }
+}
+
+@keyframes fm-highlight {
+  from { background-size: 0% 100%; }
+}
+
+@keyframes fm-pulse {
+  from { transform: scale(1); opacity: .6; }
+  to   { transform: scale(3); opacity: 0; }
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 992px) {
+  .fm-page { padding-top: 56px; padding-bottom: 64px; }
+  .fm-inner { grid-template-columns: minmax(0, 1fr); gap: 44px; }
+  .fm-board { max-width: 560px; }
+}
+
+@media (max-width: 576px) {
+  .fm-page {
+    --fm-margin: 22px;
+    padding: 44px 18px 56px 44px;
+  }
+  .fm-lead { font-size: 16px; }
+  .fm-btn { width: 100%; justify-content: center; }
+  .fm-annotation { font-size: 24px; }
+  .fm-cards { gap: 16px 12px; }
+  .fm-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 0;
+    padding: 24px 14px 14px;
+  }
+  .fm-card-icon { width: 38px; height: 38px; font-size: 16px; }
+  .fm-card-text strong { font-size: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fm-reveal,
+  .fm-cards li,
+  .fm-title mark,
+  .fm-badge-dot::after { animation: none; }
+  .fm-card,
+  .fm-btn { transition: none; }
+}
