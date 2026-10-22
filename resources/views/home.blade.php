@@ -89,7 +89,7 @@
                 <div class="services-grid" id="services-rail" data-rail-track>
                     @foreach($services as $service)
                         @php
-                            // Photo du back-office, sinon celle de la famille du service
+                            // Image téléversée en back-office ; sans elle, fond uni
                             $cover = $service->cover_url;
                         @endphp
 
@@ -117,8 +117,9 @@
 
                     {{-- Formation n'est pas encore un service : la carte l'annonce et
                          mene a la page d'attente. Elle s'efface d'elle-meme le jour
-                         ou le service est cree en back-office. --}}
-                    @unless($services->contains('slug', 'formation'))
+                         ou le service est cree en back-office ($formationSoon,
+                         AppServiceProvider). --}}
+                    @if($formationSoon)
                         <a href="{{ route('formation') }}" class="service-tile"
                            style="--tile-image: url('{{ asset('assets/images/services/formation.jpg') }}');">
                             <span class="service-tile-icon" aria-hidden="true">
@@ -136,7 +137,7 @@
                                 <span class="service-tile-desc">Apprendre &amp; transmettre</span>
                             </span>
                         </a>
-                    @endunless
+                    @endif
                 </div>
             </div>
 

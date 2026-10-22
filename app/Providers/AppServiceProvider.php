@@ -51,8 +51,12 @@ class AppServiceProvider extends ServiceProvider
             $footerCategories ??= Category::take(8)->get();
             $footerServices ??= Service::orderBy('id', 'asc')->get();
 
+            // Formation n'est pas encore un service : accueil, page des
+            // services, menu et pied de page l'annoncent (« Bientôt ») tant
+            // qu'aucun service « formation » n'est créé en back-office.
             $view->with('footerCategories', $footerCategories)
-                 ->with('footerServices', $footerServices);
+                 ->with('footerServices', $footerServices)
+                 ->with('formationSoon', ! $footerServices->contains('slug', 'formation'));
         });
 
         // Compteurs affiches dans le menu utilisateur du header (annonces en

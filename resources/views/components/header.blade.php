@@ -172,6 +172,17 @@
                                 </li>
                             @endforeach
 
+                            {{-- Annoncée tant que le service n'existe pas ($formationSoon) --}}
+                            @if($formationSoon)
+                                <li>
+                                    <a href="{{ route('formation') }}"
+                                       class="{{ request()->routeIs('formation') ? 'is-active' : '' }}"
+                                       @if(request()->routeIs('formation')) aria-current="page" @endif>
+                                        Formation <span class="soon-pill">Bientôt</span>
+                                    </a>
+                                </li>
+                            @endif
+
                             <li>
                                 <a href="{{ route('services.index') }}"
                                    class="{{ request()->routeIs('services.index') ? 'is-active' : '' }}"

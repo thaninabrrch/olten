@@ -62,24 +62,9 @@ class Service extends Model
     }
 
     /**
-     * Photo par défaut de chaque famille de service (copies allégées dans
-     * public/assets/images/services), tant qu'aucune image n'a été
-     * téléversée depuis le back-office.
-     */
-    private const COVERS = [
-        'covoiturage' => 'assets/images/services/covoiturage.jpg',
-        'livraison'   => 'assets/images/services/livraison.jpg',
-        'location'    => 'assets/images/services/location.jpg',
-        'vente'       => 'assets/images/services/vente.jpg',
-        'appel'       => 'assets/images/services/appels-offres.jpg',
-        'prestation'  => 'assets/images/services/prestations.jpg',
-    ];
-
-    /**
-     * Image de fond du service : celle du back-office, sinon la photo de
-     * sa famille, sinon null (la carte garde alors sa seule couleur).
-     * Le fichier téléversé est vérifié : une image supprimée du disque
-     * laissait une carte vide.
+     * Image de fond du service, gérée uniquement depuis le back-office
+     * (colonne `image`). Sans image, ou si le fichier a disparu du disque,
+     * null : la carte garde alors son fond uni plutôt qu'une image cassée.
      */
     public function getCoverUrlAttribute(): ?string
     {
@@ -87,9 +72,7 @@ class Service extends Model
             return asset('storage/' . $this->image);
         }
 
-        $cover = $this->forFamily(self::COVERS);
-
-        return $cover ? asset($cover) : null;
+        return null;
     }
 
     /**

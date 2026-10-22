@@ -83,7 +83,7 @@
                          stable sur lequel se detache son glyphe. --}}
                     <a href="{{ route('services.show', $service->slug) }}"
                        class="sv-card-visual"
-                       style="--tile-hue: {{ $tileHue }};@if($service->image) --tile-image: url('{{ asset('storage/' . $service->image) }}');@endif"
+                       style="--tile-hue: {{ $tileHue }};@if($service->cover_url) --tile-image: url('{{ $service->cover_url }}');@endif"
                        aria-label="Voir le service {{ $service->display_name }}">
                         <i class="{{ $service->icon_class }} sv-card-glyph" aria-hidden="true"></i>
                     </a>
@@ -137,6 +137,44 @@
 
                 </article>
             @endforeach
+
+            {{-- Formation n'est pas encore un service ($formationSoon,
+                 AppServiceProvider) : la carte l'annonce et mène à la page
+                 d'attente, jusqu'à sa création en back-office. --}}
+            @if($formationSoon)
+                <article class="sv-card">
+                    <a href="{{ route('formation') }}"
+                       class="sv-card-visual"
+                       style="--tile-hue: 28; --tile-image: url('{{ asset('assets/images/services/formation.jpg') }}');"
+                       aria-label="Découvrir la formation, bientôt sur Olten">
+                        <span class="sv-card-badge">Bientôt</span>
+                        <i class="fas fa-graduation-cap sv-card-glyph" aria-hidden="true"></i>
+                    </a>
+
+                    <div class="sv-card-body">
+                        <h2 class="sv-card-title">
+                            <a href="{{ route('formation') }}">Formation</a>
+                        </h2>
+
+                        <p class="sv-card-desc">
+                            Partager ce que l'on sait faire, près de chez soi : musique, cuisine,
+                            soutien scolaire.
+                        </p>
+
+                        <div class="sv-card-stats">
+                            <span class="sv-card-stat is-empty">
+                                <i class="fa-regular fa-clock"></i>
+                                Bientôt disponible
+                            </span>
+                        </div>
+                    </div>
+
+                    <a href="{{ route('formation') }}" class="sv-card-cta">
+                        En savoir plus
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                </article>
+            @endif
         </div>
 
     @else

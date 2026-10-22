@@ -38,6 +38,15 @@
                     </li>
                 @endforeach
 
+                {{-- Annoncée tant que le service n'existe pas ($formationSoon) --}}
+                @if($formationSoon)
+                    <li>
+                        <a href="{{ route('formation') }}">
+                            Formation <span class="soon-pill">Bientôt</span>
+                        </a>
+                    </li>
+                @endif
+
                 <li>
                     <a href="{{ route('services.index') }}">Tous nos services</a>
                 </li>
