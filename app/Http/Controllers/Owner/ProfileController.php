@@ -172,6 +172,11 @@ class ProfileController extends Controller
                 ->delete();
         }
 
+        // En production Laratrust met les roles en cache (config/laratrust.php) ;
+        // l'ecriture directe dans role_user ne le vide pas, et hasRole() renverrait
+        // l'ancien etat au rechargement de la page.
+        $user->flushCache();
+
         return response()->json([
             'status' => 'success',
             'is_vtc_driver' => $request->boolean('is_vtc_driver'),
@@ -207,6 +212,9 @@ class ProfileController extends Controller
                 ->where('user_type', 'App\Models\User')
                 ->delete();
         }
+
+        // Meme raison que toggleVtc : vider le cache des roles de Laratrust.
+        $user->flushCache();
 
         $activeRoles = $user->roles()->pluck('display_name')->toArray();
 
