@@ -137,7 +137,7 @@
 
         {{-- 2. Disponibilites — masquee pour une categorie de vente ; pour une
              prestation, fenetre dans laquelle le travail doit etre realise --}}
-        <section class="sp-form-section" id="section-disponibilites" data-mode-hide="vente">
+        <section class="sp-form-section" id="section-disponibilites" data-mode-hide="vente prestation">
             <div class="sp-form-head">
                 <span class="sp-step">2</span>
                 <div>
@@ -157,6 +157,42 @@
                     <label class="sp-label" for="available_until"><span data-mode-text data-prestation="Au plus tard le">Disponible jusqu'au</span> <span class="sp-req">*</span></label>
                     <input type="date" name="available_until" id="available_until" class="sp-input"
                            min="{{ now()->format('Y-m-d') }}" value="{{ old('available_until') }}" required>
+                </div>
+            </div>
+        </section>
+
+        {{-- 2. Prix et stock --}}
+        <section class="sp-form-section" data-mode-hide="location prestation">
+            <div class="sp-form-head">
+                <span class="sp-step">2</span>
+                <div>
+                    <h2>Prix et stock</h2>
+                    <p>Le tarif à l'unité et la quantité dont vous disposez.</p>
+                </div>
+            </div>
+
+            <div class="sp-form-grid">
+                <div class="sp-box">
+                    <div class="sp-box-head">
+                        <label class="sp-label" for="price">Prix <span class="sp-req">*</span></label>
+                        <span class="sp-help">Le montant payé par l'acheteur, à l'unité.</span>
+                    </div>
+
+                    <div class="sp-input-group">
+                        <input type="number" name="price" id="price" class="sp-input"
+                               step="0.01" min="0" placeholder="0,00" value="{{ old('price') }}" required>
+                        <span class="sp-input-suffix">€</span>
+                    </div>
+                </div>
+
+                <div class="sp-box">
+                    <div class="sp-box-head">
+                        <label class="sp-label" for="stock">Stock <span class="sp-req">*</span></label>
+                        <span class="sp-help">À zéro, le produit s'affiche en rupture.</span>
+                    </div>
+
+                    <input type="number" name="stock" id="stock" class="sp-input"
+                           min="0" placeholder="0" value="{{ old('stock') }}" required>
                 </div>
             </div>
         </section>
@@ -196,7 +232,7 @@
         </section>
 
         {{-- 4. Tarif et livraison --}}
-        <section class="sp-form-section">
+        <section class="sp-form-section" data-mode-hide="vente">
             <div class="sp-form-head">
                 <span class="sp-step">4</span>
                 <div>
@@ -236,6 +272,47 @@
 
                     <div class="toggle-switch">
                         <input type="checkbox" name="delivery_active" id="livraisonActive" @checked(old('delivery_active'))>
+                        <label for="livraisonActive" class="toggle-label"></label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {{-- 4. Mise en ligne --}}
+        <section class="sp-form-section" data-mode-hide="location prestation">
+            <div class="sp-form-head">
+                <span class="sp-step">4</span>
+                <div>
+                    <h2>Mise en ligne</h2>
+                    <p>La visibilité du produit et la possibilité de le faire livrer.</p>
+                </div>
+            </div>
+
+            <div class="sp-form-grid">
+                <div class="sp-box is-row">
+                    <div class="sp-box-head">
+                        <label class="sp-label" for="is_active">Produit actif</label>
+                        <span class="sp-help">Désactivé, il reste dans votre catalogue sans être visible.</span>
+                    </div>
+
+                    {{-- Le champ cache suit la case : sans lui, decocher n'envoie rien --}}
+                    <div class="toggle-switch">
+                        <input type="hidden" name="is_active" value="0">
+                        <input type="checkbox" name="is_active" id="is_active" value="1" @checked(old('is_active', true))>
+                        <label class="toggle-label" for="is_active"></label>
+                    </div>
+                </div>
+
+                <div class="sp-box is-row">
+                    <div class="sp-box-head">
+                        <label class="sp-label" for="livraisonActive">Proposez-vous une livraison ?</label>
+                        <span class="sp-help">Les livreurs de la plateforme pourront se proposer.</span>
+                    </div>
+
+                    <div class="toggle-switch">
+                        <input type="hidden" name="delivery_available" value="0">
+                        <input type="checkbox" name="delivery_available" id="livraisonActive" value="1"
+                               @checked(old('delivery_available'))>
                         <label for="livraisonActive" class="toggle-label"></label>
                     </div>
                 </div>

@@ -16,6 +16,8 @@ use App\Mail\NewAdNotification;
 use Illuminate\Support\Facades\Mail;
 use App\Models\User;
 use App\Support\ImageUpload;
+use App\Http\Controllers\Seller\ProductController;
+use App\Models\Product;
 
 class AdController extends Controller
 {
@@ -173,35 +175,54 @@ class AdController extends Controller
         return response()->json($response->json());
     }
 
+
     public function store(Request $request)
     {
+        // 1. Vérifier la catégorie sélectionnée
+        $request->validate([
+            'category_id' => 'required|exists:categories,id',
+        ]);
+
+        $categorie = Category::with('service')
+            ->findOrFail($request->input('category_id'));
+
+        $estVente = $categorie->isVente();
+        $estPrestation = $categorie->isPrestation();
+
         /*
-        | Une categorie de vente n'a pas de periode de location : le formulaire
-        | masque le bloc « Disponibilites », et la validation cesse de l'exiger.
-        | Le controle est refait ici, cote serveur : masquer un champ dans la
-        | page ne prouve rien sur ce qui arrive dans la requete.
-        |
-        | Une categorie de prestation fait de l'annonce une demande : la periode
-        | devient la fenetre de realisation, le prix le budget, et il n'y a
-        | pas de livraison.
+        |--------------------------------------------------------------------------
+        | 2. VENTE : déléguer à ProductController
+        |--------------------------------------------------------------------------
         */
-        $categorie     = Category::with('service')->find($request->input('category_id'));
-        $estVente      = $categorie?->isVente() ?? false;
-        $estPrestation = $categorie?->isPrestation() ?? false;
+        if ($estVente) {
+
+            // Le formulaire Ad utilise title, ProductController attend name.
+            $request->merge([
+                'name' => $request->input('name') ?: $request->input('title'),
+
+                // Adapter le nom du champ de livraison si nécessaire.
+                'delivery_available' => $request->boolean('delivery_active'),
+            ]);
+
+            return app(ProductController::class)->store($request);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 3. LOCATION / PRESTATION : création d'une Ad
+        |--------------------------------------------------------------------------
+        */
 
         $messages = [
             'title.required' => 'Le titre est obligatoire.',
             'title.max' => 'Le titre ne peut pas dépasser :max caractères.',
             'summary.string' => "L'aperçu doit être un texte.",
             'summary.max' => "L'aperçu ne peut pas dépasser :max caractères.",
-            'title.required' => 'Le titre est obligatoire.',
-            'title.max'      => 'Le titre ne peut pas dépasser :max caractères.',
             'category_id.required' => 'La catégorie est obligatoire.',
-            'category_id.exists'   => 'La catégorie sélectionnée est invalide.',
+            'category_id.exists' => 'La catégorie sélectionnée est invalide.',
             'price_per_day.required' => 'Le prix par jour est obligatoire.',
-            'price_per_day.numeric'  => 'Le prix doit être un nombre.',
+            'price_per_day.numeric' => 'Le prix doit être un nombre.',
             'description.string' => 'La description doit être un texte.',
-            'summary.string' => "L'aperçu doit être un texte.",
             'available_from.required' => 'La date de disponibilité est obligatoire.',
             'available_until.required' => 'La date de fin de disponibilité est obligatoire.',
             'available_until.after_or_equal' => 'La date de fin doit être égale ou après la date de début.',
@@ -222,45 +243,53 @@ class AdController extends Controller
             'price_per_km'    => 'nullable|numeric|min:0',
             'distance_km'     => 'nullable|numeric|min:0',
             'delivery_cost'   => 'nullable|numeric|min:0',
-            'images'   => 'nullable|array',
-            'summary' => 'nullable|string|max:500',
-            'description' => 'nullable|string',
-            'images.*' => ImageUpload::rules(),
-            'available_from'  => $estVente ? 'nullable|date' : 'required|date',
-            'available_until' => $estVente ? 'nullable|date' : 'required|date|after_or_equal:available_from',
+            'images'          => 'nullable|array',
+            'summary'         => 'nullable|string|max:500',
+            'description'     => 'nullable|string',
+            'images.*'        => ImageUpload::rules(),
+            'available_from'  => 'required|date',
+            'available_until' => 'required|date|after_or_equal:available_from',
         ], $messages);
 
-        // Une vente ne se perime pas a une fin de location : sans periode,
-        // expires_at reste vide et l'annonce est comptee comme active.
-        $validated['expires_at'] = $validated['available_until'] ?? null;
-        $validated['delivery_active'] = ! $estPrestation && $request->has('delivery_active');
+        // 4. Préparer les données de l'annonce
+        $validated['expires_at'] = $validated['available_until'];
+        $validated['delivery_active'] = ! $estPrestation
+            && $request->has('delivery_active');
+
         $validated['user_id'] = Auth::id();
 
+        // Une prestation ne comporte aucune livraison.
         if ($estPrestation) {
-            $validated = array_merge($validated, $this->withoutDelivery());
+            $validated = array_merge(
+                $validated,
+                $this->withoutDelivery()
+            );
         }
 
+        // 5. Créer l'annonce
         $ad = Ad::create($validated);
 
+        // 6. Enregistrer les images
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
                 $path = ImageUpload::store($image, 'ads');
 
                 $ad->images()->create([
-                    'path' => $path
+                    'path' => $path,
                 ]);
             }
         }
 
+        // 7. Notifications Premium
         $users = User::where('notifications_enabled', true)
-                    ->whereHas('subscription', function ($query) {
-                        $query->where('slug', 'premium');
-                    })
-                    ->whereHas('notificationCategories', function ($query) use ($ad) {
-                        $query->where('categories.id', $ad->category_id);
-                    })
-                    ->where('id', '!=', $ad->user_id)
-                    ->get();
+            ->whereHas('subscription', function ($query) {
+                $query->where('slug', 'premium');
+            })
+            ->whereHas('notificationCategories', function ($query) use ($ad) {
+                $query->where('categories.id', $ad->category_id);
+            })
+            ->where('id', '!=', $ad->user_id)
+            ->get();
 
         foreach ($users as $user) {
             Mail::to($user->email)->send(
@@ -268,10 +297,15 @@ class AdController extends Controller
             );
         }
 
-        return redirect()->route('ads.index')->with('success', $estPrestation
-            ? 'Demande publiée : dès sa validation, les prestataires pourront vous faire leurs propositions.'
-            : 'Annonce créée avec succès !');
+        // 8. Redirection
+        return redirect()->route('ads.index')->with(
+            'success',
+            $estPrestation
+                ? 'Demande publiée : dès sa validation, les prestataires pourront vous faire leurs propositions.'
+                : 'Annonce créée avec succès !'
+        );
     }
+
 
     /**
      * Messages d'erreur d'une demande de prestation : ses champs sont ceux
