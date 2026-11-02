@@ -1,63 +1,69 @@
+
 /*
- | Formulaire d'annonce (depot et modification) : il suit le service de la
- | categorie choisie.
+ | Formulaire d'annonce (depot et modification)
  |
- |   location (defaut) : periode de disponibilite, tarif journalier, livraison
- |   vente             : pas de periode, prix ferme
- |   prestation        : le client decrit son besoin ; la periode devient la
- |                       fenetre de realisation, le prix son budget, et il
- |                       n'y a pas de livraison
- |
- | Le balisage porte les variantes de chaque mode :
- |   data-mode-text        texte remplace : data-vente="…", data-prestation="…"
- |   data-mode-placeholder idem pour un placeholder
- |   data-mode-hide="…"    bloc masque dans les modes listes (« vente »,
- |                         « prestation ») ; ses champs cessent d'etre exiges,
- |                         sinon le navigateur bloquerait l'envoi sur un champ
- |                         invisible
- | Le texte present dans la page est celui de la location.
- |
- | Une option qui porte data-href mene a une autre page au lieu de changer de
- | mode : le covoiturage ouvre l'assistant de trajet, et depuis celui-ci une
- | categorie d'annonce ramene au formulaire.
- |
- | Les memes regles sont rejouees cote serveur dans AdController.
+ | location     : disponibilites
+ | vente        : prix et stock
+ | prestation   : aucune de ces deux sections
  */
 (function () {
     const categorie = document.getElementById('category_id');
     if (!categorie) return;
 
-    // slug du service de la categorie => mode du formulaire
+    // Slug du service de la categorie => mode du formulaire
     const MODES = {
         'vente': 'vente',
         'prestations-de-services': 'prestation',
     };
 
-    const textes       = document.querySelectorAll('[data-mode-text]');
+    const textes = document.querySelectorAll('[data-mode-text]');
     const placeholders = document.querySelectorAll('[data-mode-placeholder]');
-    const blocs        = document.querySelectorAll('[data-mode-hide]');
+    const blocs = document.querySelectorAll('[data-mode-hide]');
 
-    // Le texte d'origine est celui de la location : on le garde de cote.
-    textes.forEach(el => { el.dataset.location = el.textContent; });
-    placeholders.forEach(el => { el.dataset.location = el.placeholder; });
+    // Conserver les textes d'origine (location)
+    textes.forEach(el => {
+        el.dataset.location = el.textContent;
+    });
+
+    placeholders.forEach(el => {
+        el.dataset.location = el.placeholder;
+    });
+
+    // Memoriser les champs obligatoires
     blocs.forEach(bloc => {
-        bloc.querySelectorAll('[required]').forEach(champ => { champ.dataset.required = '1'; });
+        bloc.querySelectorAll('[required]').forEach(champ => {
+            champ.dataset.required = '1';
+        });
     });
 
     function appliquer() {
         const option = categorie.selectedOptions[0];
-        const mode   = MODES[option ? option.dataset.service : ''] || 'location';
 
+        // Aucun mode tant qu'aucune categorie n'est selectionnee
+        const mode = option && option.value
+            ? MODES[option.dataset.service] || 'location'
+            : null;
+
+        // Modifier les textes
         textes.forEach(el => {
-            el.textContent = el.dataset[mode] ?? el.dataset.location;
+            el.textContent = mode
+                ? el.dataset[mode] ?? el.dataset.location
+                : el.dataset.location;
         });
 
+        // Modifier les placeholders
         placeholders.forEach(el => {
-            el.placeholder = el.dataset[mode] ?? el.dataset.location;
+            el.placeholder = mode
+                ? el.dataset[mode] ?? el.dataset.location
+                : el.dataset.location;
         });
 
+        // Afficher ou masquer les sections
         blocs.forEach(bloc => {
-            const masque = bloc.dataset.modeHide.split(' ').includes(mode);
+            const modesMasques = bloc.dataset.modeHide.split(' ');
+
+            const masque = !mode || modesMasques.includes(mode);
+
             bloc.hidden = masque;
 
             bloc.querySelectorAll('input').forEach(champ => {
@@ -76,18 +82,22 @@
         renumeroter();
     }
 
-    // Les etapes sont numerotees a la main dans le balisage : masquer la
-    // deuxieme laisserait la suite en 1, 3, 4. On renumerote ce qui reste.
+    // Renumeroter les sections visibles
     function renumeroter() {
         let numero = 0;
 
         document.querySelectorAll('.sp-form-section').forEach(section => {
             if (section.hidden) return;
+
             const puce = section.querySelector('.sp-step');
-            if (puce) puce.textContent = ++numero;
+
+            if (puce) {
+                puce.textContent = ++numero;
+            }
         });
     }
 
+    // Changement de categorie
     categorie.addEventListener('change', () => {
         const lien = categorie.selectedOptions[0]?.dataset.href;
 
@@ -98,5 +108,8 @@
 
         appliquer();
     });
+
+    // Initialisation
     appliquer();
+
 })();
