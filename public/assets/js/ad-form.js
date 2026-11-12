@@ -2,10 +2,12 @@
 /*
  | Formulaire d'annonce (depot et modification)
  |
- | location     : disponibilites
- | vente        : prix et stock
- | prestation   : aucune de ces deux sections
+ | location     : disponibilites + adresse + tarif location
+ | vente        : prix et stock + adresse + prix de vente
+ | prestation   : période de réalisation + adresse + budget
+ | livraison    : tarif de livraison uniquement (hors informations générales)
  */
+
 (function () {
     const categorie = document.getElementById('category_id');
     if (!categorie) return;
@@ -14,11 +16,19 @@
     const MODES = {
         'vente': 'vente',
         'prestations-de-services': 'prestation',
+        'livraison': 'livraison',
     };
 
     const textes = document.querySelectorAll('[data-mode-text]');
     const placeholders = document.querySelectorAll('[data-mode-placeholder]');
-    const blocs = document.querySelectorAll('[data-mode-hide]');
+
+    // Tous les éléments conditionnels
+    const elements = document.querySelectorAll('[data-mode-hide]');
+
+    // Sections du formulaire avec gestion de visibilité
+    const sections = document.querySelectorAll(
+        '.sp-form-section[data-mode-hide], .sp-form-section[data-mode-only]'
+    );
 
     // Conserver les textes d'origine (location)
     textes.forEach(el => {
@@ -29,17 +39,18 @@
         el.dataset.location = el.placeholder;
     });
 
-    // Memoriser les champs obligatoires
-    blocs.forEach(bloc => {
-        bloc.querySelectorAll('[required]').forEach(champ => {
-            champ.dataset.required = '1';
+    // Memoriser les champs obligatoires et leur état disabled initial
+    sections.forEach(section => {
+        section.querySelectorAll('input, select, textarea, button').forEach(champ => {
+            champ.dataset.originalRequired = champ.required ? '1' : '0';
+            champ.dataset.originalDisabled = champ.disabled ? '1' : '0';
         });
     });
 
     function appliquer() {
         const option = categorie.selectedOptions[0];
 
-        // Aucun mode tant qu'aucune categorie n'est selectionnee
+        // Determiner le mode
         const mode = option && option.value
             ? MODES[option.dataset.service] || 'location'
             : null;
@@ -58,24 +69,34 @@
                 : el.dataset.location;
         });
 
-        // Afficher ou masquer les sections
-        blocs.forEach(bloc => {
-            const modesMasques = bloc.dataset.modeHide.split(' ');
+        // Gestion des éléments data-mode-hide (textes, aides...)
+        elements.forEach(el => {
+            const modesMasques = (el.dataset.modeHide || '').split(/\s+/);
 
-            const masque = !mode || modesMasques.includes(mode);
+            el.hidden = !mode || modesMasques.includes(mode);
+        });
 
-            bloc.hidden = masque;
+        // Gestion des sections data-mode-hide et data-mode-only
+        sections.forEach(section => {
+            const modesMasques = (section.dataset.modeHide || '').split(/\s+/);
+            const modesAutorises = (section.dataset.modeOnly || '').split(/\s+/);
 
-            bloc.querySelectorAll('input').forEach(champ => {
-                champ.required = !masque && champ.dataset.required === '1';
+            const masque =
+                !mode ||
+                modesMasques.includes(mode) ||
+                (
+                    section.hasAttribute('data-mode-only') &&
+                    !modesAutorises.includes(mode)
+                );
 
-                if (!masque) return;
+            section.hidden = masque;
 
-                if (champ.type === 'checkbox') {
-                    champ.checked = false;
-                } else if (champ.type !== 'hidden') {
-                    champ.value = '';
-                }
+            // Désactiver les champs des sections masquées
+            section.querySelectorAll('input, select, textarea, button').forEach(champ => {
+                champ.disabled = masque || champ.dataset.originalDisabled === '1';
+
+                champ.required = !masque &&
+                    champ.dataset.originalRequired === '1';
             });
         });
 

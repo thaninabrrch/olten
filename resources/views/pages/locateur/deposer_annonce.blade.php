@@ -137,7 +137,7 @@
 
         {{-- 2. Disponibilites — masquee pour une categorie de vente ; pour une
              prestation, fenetre dans laquelle le travail doit etre realise --}}
-        <section class="sp-form-section" id="section-disponibilites" data-mode-hide="vente prestation">
+        <section class="sp-form-section" id="section-disponibilites" data-mode-hide="vente prestation livraison">
             <div class="sp-form-head">
                 <span class="sp-step">2</span>
                 <div>
@@ -162,7 +162,7 @@
         </section>
 
         {{-- 2. Prix et stock --}}
-        <section class="sp-form-section" data-mode-hide="location prestation">
+        <section class="sp-form-section" data-mode-hide="location prestation livraison">
             <div class="sp-form-head">
                 <span class="sp-step">2</span>
                 <div>
@@ -198,7 +198,7 @@
         </section>
 
         {{-- 3. Adresse --}}
-        <section class="sp-form-section">
+        <section class="sp-form-section" data-mode-hide="livraison">
             <div class="sp-form-head">
                 <span class="sp-step">3</span>
                 <div>
@@ -232,11 +232,11 @@
         </section>
 
         {{-- 4. Tarif et livraison --}}
-        <section class="sp-form-section" data-mode-hide="vente">
+        <section class="sp-form-section" data-mode-hide="vente livraison">
             <div class="sp-form-head">
                 <span class="sp-step">4</span>
                 <div>
-                    <h2 data-mode-text data-prestation="Votre budget">Tarif et livraison</h2>
+                    <h2 data-mode-text data-prestation="Votre budget" data-livraison="Indiquez le tarif demandé pour effectuer la livraison.">Tarif et livraison</h2>
                     <p id="tarif-intro" data-mode-text
                        data-vente="Le prix affiché aux acheteurs, et la possibilité de faire livrer le bien."
                        data-prestation="Le montant que vous envisagez. Chaque prestataire vous répondra avec son propre prix.">Le prix affiché aux locataires, et la possibilité de faire livrer le bien.</p>
@@ -278,8 +278,53 @@
             </div>
         </section>
 
+        {{-- SECTION SPÉCIFIQUE AU MODE LIVRAISON --}}
+        <section class="sp-form-section"
+                data-mode-only="livraison"
+                hidden>
+
+            <div class="sp-form-head">
+                <span class="sp-step">4</span>
+                <div>
+                    <h2>Tarif de livraison</h2>
+                    <p>
+                        Indiquez le montant demandé pour chaque kilomètre parcouru.
+                    </p>
+                </div>
+            </div>
+
+            <div class="sp-form-grid">
+                <div class="sp-box">
+                    <div class="sp-box-head">
+                        <label class="sp-label" for="price_per_km">
+                            Tarif de livraison <span class="sp-req">*</span>
+                        </label>
+
+                        <span class="sp-help">
+                            Définissez votre tarif par kilomètre.
+                        </span>
+                    </div>
+
+                    <div class="sp-input-group">
+                        <input
+                            type="number"
+                            name="price_per_day"
+                            id="price_per_km"
+                            class="sp-input"
+                            placeholder="0,00"
+                            step="0.01"
+                            min="0"
+                            value="{{ old('price_per_day') }}"
+                            required
+                        >
+
+                        <span class="sp-input-suffix">€ / km</span>
+                    </div>
+                </div>
+            </div>
+        </section>
         {{-- 4. Mise en ligne --}}
-        <section class="sp-form-section" data-mode-hide="location prestation">
+        <section class="sp-form-section" data-mode-hide="location prestation livraison">
             <div class="sp-form-head">
                 <span class="sp-step">4</span>
                 <div>

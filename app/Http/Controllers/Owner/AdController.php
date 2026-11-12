@@ -175,7 +175,6 @@ class AdController extends Controller
         return response()->json($response->json());
     }
 
-
     public function store(Request $request)
     {
         // 1. Vérifier la catégorie sélectionnée
@@ -187,6 +186,7 @@ class AdController extends Controller
             ->findOrFail($request->input('category_id'));
 
         $estVente = $categorie->isVente();
+        $estLivraison = $categorie->isDelivery();
         $estPrestation = $categorie->isPrestation();
 
         /*
@@ -195,12 +195,8 @@ class AdController extends Controller
         |--------------------------------------------------------------------------
         */
         if ($estVente) {
-
-            // Le formulaire Ad utilise title, ProductController attend name.
             $request->merge([
                 'name' => $request->input('name') ?: $request->input('title'),
-
-                // Adapter le nom du champ de livraison si nécessaire.
                 'delivery_available' => $request->boolean('delivery_active'),
             ]);
 
@@ -209,7 +205,7 @@ class AdController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | 3. LOCATION / PRESTATION : création d'une Ad
+        | 3. LOCATION / PRESTATION / LIVRAISON : création d'une Ad
         |--------------------------------------------------------------------------
         */
 
@@ -220,8 +216,8 @@ class AdController extends Controller
             'summary.max' => "L'aperçu ne peut pas dépasser :max caractères.",
             'category_id.required' => 'La catégorie est obligatoire.',
             'category_id.exists' => 'La catégorie sélectionnée est invalide.',
-            'price_per_day.required' => 'Le prix par jour est obligatoire.',
-            'price_per_day.numeric' => 'Le prix doit être un nombre.',
+            'price_per_day.required' => 'Le tarif est obligatoire.',
+            'price_per_day.numeric' => 'Le tarif doit être un nombre.',
             'description.string' => 'La description doit être un texte.',
             'available_from.required' => 'La date de disponibilité est obligatoire.',
             'available_until.required' => 'La date de fin de disponibilité est obligatoire.',
@@ -233,32 +229,83 @@ class AdController extends Controller
         }
 
         $validated = $request->validate([
-            'title'           => 'required|string|max:255',
-            'category_id'     => 'required|exists:categories,id',
-            'address'         => 'nullable|string|max:255',
-            'longitude'       => 'nullable|numeric',
-            'latitude'        => 'nullable|numeric',
-            'price_per_day'   => 'required|numeric|min:0',
-            'client_address'  => 'nullable|string|max:255',
-            'price_per_km'    => 'nullable|numeric|min:0',
-            'distance_km'     => 'nullable|numeric|min:0',
-            'delivery_cost'   => 'nullable|numeric|min:0',
-            'images'          => 'nullable|array',
-            'summary'         => 'nullable|string|max:500',
-            'description'     => 'nullable|string',
-            'images.*'        => ImageUpload::rules(),
-            'available_from'  => 'required|date',
-            'available_until' => 'required|date|after_or_equal:available_from',
+            'title' => 'required|string|max:255',
+            'category_id' => 'required|exists:categories,id',
+
+            'address' => 'nullable|string|max:255',
+            'longitude' => 'nullable|numeric',
+            'latitude' => 'nullable|numeric',
+
+            // Le tarif de livraison est également stocké dans price_per_day.
+            'price_per_day' => 'required|numeric|min:0',
+
+            'client_address' => 'nullable|string|max:255',
+            'price_per_km' => 'nullable|numeric|min:0',
+            'distance_km' => 'nullable|numeric|min:0',
+            'delivery_cost' => 'nullable|numeric|min:0',
+
+            'images' => 'nullable|array',
+            'images.*' => ImageUpload::rules(),
+
+            'summary' => 'nullable|string|max:500',
+            'description' => 'nullable|string',
+
+            'available_from' => $estLivraison
+                ? 'nullable|date'
+                : 'required|date',
+
+            'available_until' => $estLivraison
+                ? 'nullable|date'
+                : 'required|date|after_or_equal:available_from',
+
         ], $messages);
 
-        // 4. Préparer les données de l'annonce
-        $validated['expires_at'] = $validated['available_until'];
-        $validated['delivery_active'] = ! $estPrestation
-            && $request->has('delivery_active');
+        /*
+        |--------------------------------------------------------------------------
+        | 4. Préparer les données
+        |--------------------------------------------------------------------------
+        */
 
         $validated['user_id'] = Auth::id();
 
-        // Une prestation ne comporte aucune livraison.
+        $validated['expires_at'] = $validated['available_until'] ?? null;
+
+        $validated['delivery_active'] = ! $estPrestation
+            && ! $estLivraison
+            && $request->boolean('delivery_active');
+
+        /*
+        |--------------------------------------------------------------------------
+        | 5. LIVRAISON : vider les champs inutilisés
+        |--------------------------------------------------------------------------
+        */
+
+        if ($estLivraison) {
+            // Pas d'adresse de retrait ni de coordonnées.
+            $validated['address'] = '';
+            $validated['longitude'] = null;
+            $validated['latitude'] = null;
+
+            // Pas de période de disponibilité.
+            $validated['available_from'] = null;
+            $validated['available_until'] = null;
+            $validated['expires_at'] = null;
+
+            // Pas d'adresse client ni de calcul de livraison.
+            $validated['client_address'] = '';
+            $validated['price_per_km'] = null;
+            $validated['distance_km'] = null;
+            $validated['delivery_cost'] = null;
+
+            $validated['delivery_active'] = false;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 6. PRESTATION : aucune livraison
+        |--------------------------------------------------------------------------
+        */
+
         if ($estPrestation) {
             $validated = array_merge(
                 $validated,
@@ -266,10 +313,20 @@ class AdController extends Controller
             );
         }
 
-        // 5. Créer l'annonce
+        /*
+        |--------------------------------------------------------------------------
+        | 7. Créer l'annonce
+        |--------------------------------------------------------------------------
+        */
+
         $ad = Ad::create($validated);
 
-        // 6. Enregistrer les images
+        /*
+        |--------------------------------------------------------------------------
+        | 8. Enregistrer les images
+        |--------------------------------------------------------------------------
+        */
+
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
                 $path = ImageUpload::store($image, 'ads');
@@ -280,7 +337,12 @@ class AdController extends Controller
             }
         }
 
-        // 7. Notifications Premium
+        /*
+        |--------------------------------------------------------------------------
+        | 9. Notifications Premium
+        |--------------------------------------------------------------------------
+        */
+
         $users = User::where('notifications_enabled', true)
             ->whereHas('subscription', function ($query) {
                 $query->where('slug', 'premium');
@@ -297,15 +359,21 @@ class AdController extends Controller
             );
         }
 
-        // 8. Redirection
+        /*
+        |--------------------------------------------------------------------------
+        | 10. Redirection
+        |--------------------------------------------------------------------------
+        */
+
         return redirect()->route('ads.index')->with(
             'success',
             $estPrestation
                 ? 'Demande publiée : dès sa validation, les prestataires pourront vous faire leurs propositions.'
-                : 'Annonce créée avec succès !'
+                : ($estLivraison
+                    ? 'Votre annonce de livraison a été créée avec succès !'
+                    : 'Annonce créée avec succès !')
         );
     }
-
 
     /**
      * Messages d'erreur d'une demande de prestation : ses champs sont ceux
@@ -351,25 +419,37 @@ class AdController extends Controller
     public function update(Request $request, Ad $ad)
     {
         $this->authorize('update', $ad);
+
         /*
-        | Une categorie de vente n'a pas de periode de location : le formulaire
-        | masque le bloc « Disponibilites », et la validation cesse de l'exiger.
-        | Le controle est refait ici, cote serveur : masquer un champ dans la
-        | page ne prouve rien sur ce qui arrive dans la requete.
-        |
-        | Meme regle pour une demande de prestation (voir store()).
+        |--------------------------------------------------------------------------
+        | 1. Vérifier la catégorie
+        |--------------------------------------------------------------------------
         */
-        $categorie     = Category::with('service')->find($request->input('category_id'));
-        $estVente      = $categorie?->isVente() ?? false;
-        $estPrestation = $categorie?->isPrestation() ?? false;
+
+        $request->validate([
+            'category_id' => 'required|exists:categories,id',
+        ]);
+
+        $categorie = Category::with('service')
+            ->findOrFail($request->input('category_id'));
+
+        $estVente = $categorie->isVente();
+        $estPrestation = $categorie->isPrestation();
+        $estLivraison = $categorie->isDelivery();
+
+        /*
+        |--------------------------------------------------------------------------
+        | 2. Messages de validation
+        |--------------------------------------------------------------------------
+        */
 
         $messages = [
             'title.required' => 'Le titre est obligatoire.',
-            'title.max'      => 'Le titre ne peut pas dépasser :max caractères.',
+            'title.max' => 'Le titre ne peut pas dépasser :max caractères.',
             'category_id.required' => 'La catégorie est obligatoire.',
-            'category_id.exists'   => 'La catégorie sélectionnée est invalide.',
-            'price_per_day.required' => 'Le prix par jour est obligatoire.',
-            'price_per_day.numeric'  => 'Le prix doit être un nombre.',
+            'category_id.exists' => 'La catégorie sélectionnée est invalide.',
+            'price_per_day.required' => 'Le tarif est obligatoire.',
+            'price_per_day.numeric' => 'Le tarif doit être un nombre.',
             'description.string' => 'La description doit être un texte.',
             'summary.string' => "L'aperçu doit être un texte.",
             'available_from.required' => 'La date de disponibilité est obligatoire.',
@@ -381,54 +461,150 @@ class AdController extends Controller
             $messages = $this->prestationMessages() + $messages;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | 3. Validation
+        |--------------------------------------------------------------------------
+        */
+
         $validated = $request->validate([
-            'title'           => 'required|string|max:255',
-            'category_id'     => 'required|exists:categories,id',
-            'address'         => 'nullable|string|max:255',
-            'longitude'       => 'nullable|numeric',
-            'latitude'        => 'nullable|numeric',
-            'price_per_day'   => 'required|numeric|min:0',
-            'client_address'  => 'nullable|string|max:255',
-            'price_per_km'    => 'nullable|numeric|min:0',
-            'distance_km'     => 'nullable|numeric|min:0',
-            'delivery_cost'   => 'nullable|numeric|min:0',
-            'images'   => 'nullable|array',
+            'title' => 'required|string|max:255',
+            'category_id' => 'required|exists:categories,id',
+
+            'address' => 'nullable|string|max:255',
+            'longitude' => 'nullable|numeric',
+            'latitude' => 'nullable|numeric',
+
+            'price_per_day' => 'required|numeric|min:0',
+
+            'client_address' => 'nullable|string|max:255',
+            'price_per_km' => 'nullable|numeric|min:0',
+            'distance_km' => 'nullable|numeric|min:0',
+            'delivery_cost' => 'nullable|numeric|min:0',
+
+            'images' => 'nullable|array',
+            'images.*' => ImageUpload::rules(),
+
             'summary' => 'nullable|string|max:500',
             'description' => 'nullable|string',
-            'images.*' => ImageUpload::rules(),
-            'available_from'  => $estVente ? 'nullable|date' : 'required|date',
-            'available_until' => $estVente ? 'nullable|date' : 'required|date|after_or_equal:available_from',
+
+            'available_from' => $estLivraison
+                ? 'nullable|date'
+                : 'required|date',
+
+            'available_until' => $estLivraison
+                ? 'nullable|date'
+                : 'required|date|after_or_equal:available_from',
+
         ], $messages);
 
-        // Une vente ne se perime pas a une fin de location : sans periode,
-        // expires_at reste vide et l'annonce est comptee comme active.
+        /*
+        |--------------------------------------------------------------------------
+        | 4. Préparer les données
+        |--------------------------------------------------------------------------
+        */
+
         $validated['expires_at'] = $validated['available_until'] ?? null;
-        $deliveryActive = ! $estPrestation && $request->has('delivery_active');
+
+        $deliveryActive = ! $estPrestation
+            && ! $estLivraison
+            && $request->boolean('delivery_active');
+
         $validated['delivery_active'] = $deliveryActive;
-        if (! $deliveryActive) {
-            $validated['client_address'] = null;
-            $validated['price_per_km']   = null;
-            $validated['distance_km']    = null;
-            $validated['delivery_cost']  = null;
+
+        /*
+        |--------------------------------------------------------------------------
+        | 5. LIVRAISON : vider les champs inutilisés
+        |--------------------------------------------------------------------------
+        */
+
+        if ($estLivraison) {
+            $validated['address'] = '';
+            $validated['longitude'] = null;
+            $validated['latitude'] = null;
+
+            $validated['available_from'] = null;
+            $validated['available_until'] = null;
+            $validated['expires_at'] = null;
+
+            $validated['client_address'] = '';
+            $validated['price_per_km'] = null;
+            $validated['distance_km'] = null;
+            $validated['delivery_cost'] = null;
+
+            $validated['delivery_active'] = false;
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 6. Si aucune livraison n'est proposée
+        |--------------------------------------------------------------------------
+        */
+
+        elseif (! $deliveryActive) {
+            $validated['client_address'] = null;
+            $validated['price_per_km'] = null;
+            $validated['distance_km'] = null;
+            $validated['delivery_cost'] = null;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 7. PRESTATION : aucune livraison
+        |--------------------------------------------------------------------------
+        */
+
+        if ($estPrestation) {
+            $validated = array_merge(
+                $validated,
+                $this->withoutDelivery()
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 8. Enregistrer les images
+        |--------------------------------------------------------------------------
+        */
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $file) {
                 $path = ImageUpload::store($file, 'ads');
-                $ad->images()->create(['path' => $path]);
+
+                $ad->images()->create([
+                    'path' => $path,
+                ]);
             }
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 9. Mettre à jour l'annonce
+        |--------------------------------------------------------------------------
+        */
+
         $ad->update($validated);
 
-        // Remettre en ligne une annonce archivee passe par une nouvelle date
-        // de fin. Si elle est toujours depassee, l'annonce reste aux archives :
-        // on y renvoie plutot que de laisser croire qu'elle est republiee.
+        /*
+        |--------------------------------------------------------------------------
+        | 10. Vérifier l'expiration
+        |--------------------------------------------------------------------------
+        */
+
         if ($ad->isExpired()) {
             return redirect()->route('archives', ['type' => 'annonce'])
-                ->with('success', 'Annonce mise à jour. Elle reste archivée : sa date de fin de disponibilité est dépassée.');
+                ->with(
+                    'success',
+                    'Annonce mise à jour. Elle reste archivée : sa date de fin de disponibilité est dépassée.'
+                );
         }
 
-        return redirect()->route('ads.index')->with('success', 'Annonce mise à jour avec succès.');
+        return redirect()->route('ads.index')->with(
+            'success',
+            $estLivraison
+                ? 'Votre annonce de livraison a été mise à jour avec succès !'
+                : 'Annonce mise à jour avec succès.'
+        );
     }
 
     public function exportICal(Ad $ad)

@@ -60,9 +60,9 @@ class Category extends Model
      * Une categorie de vente ne se loue pas : pas de periode de disponibilite,
      * et un prix ferme au lieu d'un tarif journalier.
      */
-    public function isVente(): bool
+    public function isDelivery(): bool
     {
-        return $this->service?->slug === 'vente';
+        return $this->service?->slug === 'livraison';
     }
 
     /**
@@ -73,6 +73,11 @@ class Category extends Model
     public function isPrestation(): bool
     {
         return $this->service?->slug === ServiceProposal::SERVICE_SLUG;
+    }
+
+        public function isVente(): bool
+    {
+        return $this->service?->slug === 'vente';
     }
 
     public function objets()
