@@ -745,7 +745,10 @@ class SearchController extends Controller
             ->get()
             ->map(fn (Product $product) => Listing::fromProduct($product));
 
-        return $ads->merge($products)->sortByDesc('views')->take(self::POPULAR_LIMIT)->values();
+        // `toBase()` : sans annonce vue, `map()` sur une collection vide la
+        // laisse Eloquent, et son `merge()` appelle getKey() sur les tableaux
+        // de Listing (erreur 500 sur /recherche).
+        return $ads->toBase()->merge($products)->sortByDesc('views')->take(self::POPULAR_LIMIT)->values();
     }
 
     /* ==================================================================
@@ -775,6 +778,8 @@ class SearchController extends Controller
             ->limit(self::SUGGEST_LIMIT)
             ->get()
             ->map(fn (Ad $ad) => ['views' => (int) $ad->views] + $this->adItem($ad))
+            // Collection simple : voir popular(), le merge Eloquent casse sur des tableaux.
+            ->toBase()
             ->merge(
                 Product::with(['images', 'category'])
                     ->available()

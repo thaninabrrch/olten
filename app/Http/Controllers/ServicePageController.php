@@ -1132,7 +1132,11 @@ class ServicePageController extends Controller
             ->get()
             ->map(fn (Product $product) => Listing::fromProduct($product));
 
-        return $ads->merge($products)
+        // `toBase()` : sans annonce vue, `map()` sur une collection vide la
+        // laisse Eloquent, et son `merge()` appelle getKey() sur les tableaux
+        // de Listing.
+        return $ads->toBase()
+                   ->merge($products)
                    ->sortByDesc('views')
                    ->take(self::POPULAR_LIMIT)
                    ->values();
