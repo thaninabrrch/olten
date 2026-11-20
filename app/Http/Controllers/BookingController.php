@@ -88,6 +88,10 @@ class BookingController extends Controller
 
     public function store(Request $request, Ad $ad)
     {
+        if($ad->category->slug == 'livraison')
+        {
+            return redirect()->route('bookings.confirm.livraison', $ad->id);
+        }
         $validated = $request->validate([
             'start_date' => 'required|date',
             'end_date'   => 'required|date|after_or_equal:start_date',
@@ -135,6 +139,14 @@ class BookingController extends Controller
                                                             ]);
     }
 
+    public function confirmLivraison(Ad $ad)
+    {
+        if ($ad->category?->slug !== 'livraison') {
+            abort(404);
+        }
+
+        return view('bookings.confirm-livraison', compact('ad'));
+    }
     /**
      * Convertit un montant saisi ou formate en flottant.
      * Gere « 2200.00 », « 2,200.00 € » (milliers a l'anglaise) et
@@ -154,6 +166,7 @@ class BookingController extends Controller
         return (float) $brut;
     }
 
+
     public function pay(Request $request)
     {
         $user = Auth::user();
@@ -162,14 +175,33 @@ class BookingController extends Controller
 
         $ad = Ad::findOrFail($request->ad_id);
 
-        $start_date = $request->start_date;
-        $end_date = $request->end_date;
+        // Récupérer le slug de la catégorie
+        $cat = $ad->category->slug;
 
-        $days = \Carbon\Carbon::parse($start_date)->diffInDays($end_date) + 1;
-        // Le montant arrive du formulaire : selon le chemin emprunte il peut
-        // porter un symbole et un separateur de milliers (« 2,200.00 € »), que
-        // le cast direct tronquerait a 2. On le normalise avant conversion.
+        // Détecter une annonce de livraison
+        $isDelivery = $cat === 'livraison';
+
+        // Les dates ne sont pas nécessaires pour une livraison
+        $start_date = null;
+        $end_date = null;
+        $days = 0;
+
+        if (!$isDelivery) {
+            $request->validate([
+                'start_date' => 'required|date',
+                'end_date' => 'required|date|after_or_equal:start_date',
+            ]);
+
+            $start_date = $request->start_date;
+            $end_date = $request->end_date;
+
+            $days = \Carbon\Carbon::parse($start_date)
+                ->diffInDays($end_date) + 1;
+        }
+
+        // Normaliser le montant
         $total = $this->montant($request->finalPrice);
+
         $intent = PaymentIntent::create([
             'amount' => (int) round($total * 100),
             'currency' => 'eur',
@@ -182,32 +214,51 @@ class BookingController extends Controller
             'payment_method' => $request->payment_method,
             'return_url' => route('bookings.confirm'),
         ]);
+
         if ($intent->status == 'succeeded') {
+
             $booking = new Booking();
+
             $booking->ad_id = $ad->id;
             $booking->user_id = $user->id;
+
+            // Dates uniquement pour les autres catégories
             $booking->start_date = $start_date;
             $booking->end_date = $end_date;
+
             $booking->status = 'paid';
             $booking->booking_status = 'pending';
             $booking->payment_intent_id = $intent->id;
-            $booking->address = $ad->address;
 
-            $booking->delivery_requested = $request->boolean('delivery_requested');
+            // Adresse de l'annonce pour les réservations classiques
+            $booking->address = $isDelivery
+                ? $request->departure_address
+                : $ad->address;
 
-            if ($booking->delivery_requested) {
+            $booking->delivery_requested = $isDelivery;
 
+            if ($isDelivery) {
                 $booking->delivery_cost = $request->delivery_cost;
                 $booking->delivery_distance_km = $request->delivery_distance;
-                $booking->delivery_address = $request->delivery_address;
+                $booking->delivery_address = $request->arrival_address;
             }
 
             $booking->calculateTotalPrice();
             $booking->save();
+
             $owner = $ad->user;
+
             if ($owner && $owner->hasPremiumSubscription()) {
-                $owner->notify(new NewBookingNotification($booking)); 
+                $owner->notify(new NewBookingNotification($booking));
             }
+        }
+
+        if ($intent->status !== 'succeeded') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Le paiement nécessite une authentification ou n’a pas abouti.',
+                'status' => $intent->status,
+            ], 422);
         }
 
         return response()->json([

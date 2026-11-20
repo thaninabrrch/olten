@@ -209,9 +209,8 @@
                     @endphp
 
                     {{-- ================= ANNONCE ================= --}}
-
                     <a href="{{ route('ads.show', $ad->id) }}"
-                       class="annonce-card {{ $isExpired ? 'expired-card' : '' }}">
+                            class="annonce-card {{ $isExpired ? 'expired-card' : '' }}">
 
                         <div class="card-image-container">
 
@@ -271,7 +270,7 @@
                                 <span class="card-price-block">
                                     <span class="card-price-label">{{ \Illuminate\Support\Str::lower($ad->priceLabel()) }}</span>
                                     <span class="card-price">
-                                        {{ number_format($ad->price_per_day, 2) }} €@if($ad->priceSuffix())<small>{{ $ad->priceSuffix() }}</small>@endif
+                                        {{ number_format($ad->price_per_day, 2) }} €<small>@if($ad->category->slug == 'livraison') / KM @else ($ad->priceSuffix()){{ $ad->priceSuffix() }}@endif</small>
                                     </span>
                                 </span>
 

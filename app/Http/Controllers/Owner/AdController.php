@@ -92,10 +92,16 @@ class AdController extends Controller
 
         $reservedDates = [];
 
-        foreach ($ad->bookings()
-                    ->whereIn('booking_status', ['pending', 'confirmed'])
-                    ->get() as $booking) {
+        // Ne pas récupérer les dates pour les annonces de livraison
+        if ($ad->category->slug !== 'livraison') {
 
+            foreach (
+                $ad->bookings()
+                    ->whereIn('booking_status', ['pending', 'confirmed'])
+                    ->whereNotNull('start_date')
+                    ->whereNotNull('end_date')
+                    ->get() as $booking
+            ) {
                 $period = \Carbon\CarbonPeriod::create(
                     $booking->start_date,
                     $booking->end_date
@@ -104,23 +110,26 @@ class AdController extends Controller
                 foreach ($period as $date) {
                     $reservedDates[] = $date->format('Y-m-d');
                 }
+            }
         }
 
-        // Demande de prestation : l'encart de reservation laisse la place a
-        // celui des propositions (proposals.box). Il lui faut le nombre de
-        // propositions recues, le prestataire deja choisi s'il y en a un, et
-        // la proposition du visiteur s'il a deja repondu.
+        // Demande de prestation
         $prestation = null;
 
         if ($ad->isPrestation()) {
             $prestation = [
                 'count'    => $ad->proposals()->visible()->count(),
                 'accepted' => $ad->acceptedProposal()->with('provider')->first(),
-                'mine'     => Auth::check() ? $ad->proposals()->where('user_id', Auth::id())->first() : null,
+                'mine'     => Auth::check()
+                    ? $ad->proposals()->where('user_id', Auth::id())->first()
+                    : null,
             ];
         }
 
-        return view('pages.annonces_pages.annonces_details', compact('ad', 'reservedDates', 'prestation'));
+        return view(
+            'pages.annonces_pages.annonces_details',
+            compact('ad', 'reservedDates', 'prestation')
+        );
     }
 
     public function create()
@@ -293,7 +302,7 @@ class AdController extends Controller
 
             // Pas d'adresse client ni de calcul de livraison.
             $validated['client_address'] = '';
-            $validated['price_per_km'] = null;
+            $validated['price_per_km'] = $validated['price_per_day'];
             $validated['distance_km'] = null;
             $validated['delivery_cost'] = null;
 
@@ -528,7 +537,7 @@ class AdController extends Controller
             $validated['expires_at'] = null;
 
             $validated['client_address'] = '';
-            $validated['price_per_km'] = null;
+            $validated['price_per_km'] = $validated['price_per_day'];
             $validated['distance_km'] = null;
             $validated['delivery_cost'] = null;
 

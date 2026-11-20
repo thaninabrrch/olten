@@ -306,11 +306,10 @@ Route::middleware('auth', 'verified', 'approved')->group(function () {
     Route::get('/mes-trajets-reserves/{booking}', [TripReservationsController::class, 'show'])->name('trips.myBookings.show');
     // Côté conducteur : les réservations reçues sur ses trajets
     Route::get('/mes-trajets/reservations', [TripReservationsController::class, 'received'])->name('trips.received');
-
+    Route::get('/bookings/{ad}/confirm-livraison', [BookingController::class, 'confirmLivraison'])->name('bookings.confirm.livraison');
 });
 //visualiser le détails d'une annonce meme pour un utilisateur visteur non connecté
 Route::get('/annonces/{ad}/détails', [AdController::class, 'show'])->name('ads.show');
-
 // Login admin public
 Route::get('admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
 Route::post('admin/login', [AdminAuthController::class, 'login'])->name('admin.login.submit');

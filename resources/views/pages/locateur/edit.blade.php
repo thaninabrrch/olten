@@ -150,7 +150,7 @@
 
         {{-- 2. Disponibilites — masquee pour une categorie de vente ; pour une
              prestation, fenetre dans laquelle le travail doit etre realise --}}
-        <section class="sp-form-section" id="section-disponibilites" data-mode-hide="vente">
+        <section class="sp-form-section" id="section-disponibilites" data-mode-hide="vente prestation livraison">
             <div class="sp-form-head">
                 <span class="sp-step">2</span>
                 <div>
@@ -177,7 +177,7 @@
         </section>
 
         {{-- 3. Adresse --}}
-        <section class="sp-form-section">
+        <section class="sp-form-section" data-mode-hide="livraison">
             <div class="sp-form-head">
                 <span class="sp-step">3</span>
                 <div>
@@ -214,7 +214,7 @@
         </section>
 
         {{-- 4. Tarif et livraison --}}
-        <section class="sp-form-section">
+        <section class="sp-form-section" data-mode-hide="vente livraison">
             <div class="sp-form-head">
                 <span class="sp-step">4</span>
                 <div>
@@ -226,34 +226,152 @@
             </div>
 
             <div class="sp-form-grid">
-                <div class="sp-box">
+
+                {{-- Prix location / vente / prestation --}}
+                <div class="sp-box" data-mode-hide="livraison">
+
                     <div class="sp-box-head">
                         <label class="sp-label" for="price_per_day">
-                            <span id="price-label" data-mode-text data-vente="Prix" data-prestation="Budget indicatif">Prix par jour</span> <span class="sp-req">*</span>
+                            <span id="price-label"
+                                data-mode-text
+                                data-vente="Prix"
+                                data-prestation="Budget indicatif">
+                                Prix par jour
+                            </span>
+                            <span class="sp-req">*</span>
                         </label>
-                        <span class="sp-help" id="price-help" data-mode-text
-                              data-vente="Le prix de vente affiché aux acheteurs."
-                              data-prestation="Il aide les prestataires à calibrer leur proposition.">Le tarif journalier affiché aux locataires.</span>
+
+                        <span class="sp-help"
+                            id="price-help"
+                            data-mode-text
+                            data-vente="Le prix de vente affiché aux acheteurs."
+                            data-prestation="Il aide les prestataires à calibrer leur proposition.">
+                            Le tarif journalier affiché aux locataires.
+                        </span>
                     </div>
 
                     <div class="sp-input-group">
-                        <input type="number" name="price_per_day" id="price_per_day" class="sp-input"
-                               step="0.01" min="0" value="{{ old('price_per_day', $ad->price_per_day) }}" required>
-                        <span class="sp-input-suffix" id="price-suffix" data-mode-text data-vente="€" data-prestation="€">€ / jour</span>
+                        <input
+                            type="number"
+                            name="price_per_day"
+                            id="price_per_day"
+                            class="sp-input"
+                            step="0.01"
+                            min="0"
+                            value="{{ old('price_per_day', $ad->price_per_day) }}"
+                        >
+
+                        <span class="sp-input-suffix"
+                            id="price-suffix"
+                            data-mode-text
+                            data-vente="€"
+                            data-prestation="€">
+                            € / jour
+                        </span>
                     </div>
                 </div>
 
-                {{-- Une prestation ne se livre pas --}}
-                <div class="sp-box is-row" data-mode-hide="prestation">
+                {{-- Tarif kilométrique : livraison --}}
+                <div class="sp-box" data-mode-only="livraison" hidden>
+
                     <div class="sp-box-head">
-                        <label class="sp-label" for="livraisonActive">Proposez-vous une livraison ?</label>
-                        <span class="sp-help">Les livreurs de la plateforme pourront se proposer pour l'acheminement.</span>
+                        <label class="sp-label" for="price_per_km">
+                            Tarif kilométrique
+                            <span class="sp-req">*</span>
+                        </label>
+
+                        <span class="sp-help">
+                            Indiquez le prix facturé pour chaque kilomètre parcouru.
+                        </span>
+                    </div>
+
+                    <div class="sp-input-group">
+                        <input
+                            type="number"
+                            name="price_per_km"
+                            id="price_per_km"
+                            class="sp-input"
+                            step="0.01"
+                            min="0"
+                            value="{{ old('price_per_km', $ad->price_per_km ?? '') }}"
+                        >
+
+                        <span class="sp-input-suffix">
+                            DA / km
+                        </span>
+                    </div>
+                </div>
+
+                {{-- Option de livraison pour les annonces classiques --}}
+                <div class="sp-box is-row" data-mode-hide="prestation livraison">
+
+                    <div class="sp-box-head">
+                        <label class="sp-label" for="livraisonActive">
+                            Proposez-vous une livraison ?
+                        </label>
+
+                        <span class="sp-help">
+                            Les livreurs de la plateforme pourront se proposer pour l'acheminement.
+                        </span>
                     </div>
 
                     <div class="toggle-switch">
-                        <input type="checkbox" name="delivery_active" id="livraisonActive"
-                               @checked(old('delivery_active', $ad->delivery_active))>
+                        <input
+                            type="checkbox"
+                            name="delivery_active"
+                            id="livraisonActive"
+                            value="1"
+                            @checked(old('delivery_active', $ad->delivery_active))
+                        >
+
                         <label for="livraisonActive" class="toggle-label"></label>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        {{-- SECTION SPÉCIFIQUE AU MODE LIVRAISON --}}
+        <section class="sp-form-section"
+                data-mode-only="livraison"
+                hidden>
+
+            <div class="sp-form-head">
+                <span class="sp-step">4</span>
+                <div>
+                    <h2>Tarif de livraison</h2>
+                    <p>
+                        Indiquez le montant demandé pour chaque kilomètre parcouru.
+                    </p>
+                </div>
+            </div>
+
+            <div class="sp-form-grid">
+                <div class="sp-box">
+                    <div class="sp-box-head">
+                        <label class="sp-label" for="price_per_km">
+                            Tarif de livraison <span class="sp-req">*</span>
+                        </label>
+
+                        <span class="sp-help">
+                            Définissez votre tarif par kilomètre.
+                        </span>
+                    </div>
+
+                    <div class="sp-input-group">
+                        <input
+                            type="number"
+                            name="price_per_day"
+                            id="price_per_km"
+                            class="sp-input"
+                            placeholder="0,00"
+                            step="0.01"
+                            min="0"
+                            value="{{ old('price_per_day', $ad->price_per_km) }}"
+                            required
+                        >
+
+                        <span class="sp-input-suffix">€ / km</span>
                     </div>
                 </div>
             </div>
