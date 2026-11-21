@@ -211,14 +211,35 @@ class DeliveryAdController extends Controller
 
     public function rateDelivery(Request $request, Delivery $delivery)
     {
+        // Seul le client servi (locataire ou acheteur) note la livraison, et
+        // une fois celle-ci terminee : sans ce controle, n'importe quel membre
+        // pouvait noter n'importe quel livreur.
+        $client = $delivery->booking?->user_id ?? $delivery->productSale?->buyer_id;
+
+        if ($client !== auth()->id() || $delivery->status !== 'delivered') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous ne pouvez pas noter cette livraison.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'rating'  => 'required|integer|between:1,5',
+            'comment' => 'nullable|string|max:1000',
+        ], [
+            'rating.required' => 'Choisissez une note de 1 à 5 étoiles.',
+            'rating.*'        => 'La note doit être comprise entre 1 et 5.',
+            'comment.max'     => 'Le commentaire ne peut pas dépasser :max caractères.',
+        ]);
+
         DeliveryReview::updateOrCreate(
             [
                 'delivery_id' => $delivery->id,
                 'user_id' => auth()->id(),
             ],
             [
-                'rating' => $request->rating,
-                'comment' => $request->comment,
+                'rating' => $validated['rating'],
+                'comment' => $validated['comment'] ?? null,
             ]
         );
 
