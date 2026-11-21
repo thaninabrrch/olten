@@ -136,9 +136,13 @@
                 @foreach ($bookings as $booking)
                     @php
                         $ad    = $booking->ad;
-                        $start = \Carbon\Carbon::parse($booking->start_date);
-                        $end   = \Carbon\Carbon::parse($booking->end_date);
-                        $nights = max(1, $start->diffInDays($end));
+                        // Une livraison n'a pas de periode : on date la ligne
+                        // du jour de la reservation (Carbon::parse(null) rendrait
+                        // « aujourd'hui », une date inventee).
+                        $isDelivery = $booking->isDelivery();
+                        $start = $isDelivery ? $booking->created_at : \Carbon\Carbon::parse($booking->start_date);
+                        $end   = $isDelivery ? null : \Carbon\Carbon::parse($booking->end_date);
+                        $nights = $isDelivery ? 0 : max(1, $start->diffInDays($end));
                         [$stLabel, $stClass, $stIcon] = $statusMeta[$booking->booking_status]
                             ?? [ucfirst((string) $booking->booking_status), 'is-neutral', 'fa-circle-info'];
                         $owner = $ad?->user;
@@ -153,7 +157,7 @@
                             <span class="sp-date-month">{{ $mois[(int) $start->format('n')] }}</span>
                             <span class="sp-date-year">{{ $start->format('Y') }}</span>
                             <span class="sp-date-sep"></span>
-                            <span class="sp-date-end">au {{ $end->format('d/m/Y') }}</span>
+                            <span class="sp-date-end">{{ $isDelivery ? 'Livraison' : 'au ' . $end->format('d/m/Y') }}</span>
                         </div>
 
                         <div class="sp-row-main">
@@ -177,13 +181,20 @@
                             <div class="sp-row-meta">
                                 <span class="sp-tag">
                                     <i class="fa-solid fa-user"></i>
-                                    Propriétaire : {{ trim(($owner->firstname ?? '') . ' ' . ($owner->name ?? '')) ?: ($owner->email ?? 'Inconnu') }}
+                                    {{ $isDelivery ? 'Livreur' : 'Propriétaire' }} : {{ trim(($owner->firstname ?? '') . ' ' . ($owner->name ?? '')) ?: ($owner->email ?? 'Inconnu') }}
                                 </span>
 
-                                <span class="sp-tag">
-                                    <i class="fa-regular fa-moon"></i>
-                                    {{ $nights }} jour{{ $nights > 1 ? 's' : '' }}
-                                </span>
+                                @if($isDelivery)
+                                    <span class="sp-tag">
+                                        <i class="fa-solid fa-route"></i>
+                                        {{ number_format((float) $booking->delivery_distance_km, 1, ',', ' ') }} km
+                                    </span>
+                                @else
+                                    <span class="sp-tag">
+                                        <i class="fa-regular fa-moon"></i>
+                                        {{ $nights }} jour{{ $nights > 1 ? 's' : '' }}
+                                    </span>
+                                @endif
 
                                 <span class="sp-tag">
                                     <i class="fa-regular fa-clock"></i>
@@ -205,7 +216,7 @@
                             </div>
 
                             <div class="sp-row-actions">
-                                @if($booking->delivery_requested)
+                                @if($booking->delivery_requested || $isDelivery)
                                     <a href="{{ route('bookings.show', $booking->id) }}" class="sp-act is-edit">
                                         Suivre
                                     </a>

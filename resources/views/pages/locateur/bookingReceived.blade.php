@@ -132,9 +132,12 @@
                 @foreach ($bookings as $booking)
                     @php
                         $ad     = $booking->ad;
-                        $start  = \Carbon\Carbon::parse($booking->start_date);
-                        $end    = \Carbon\Carbon::parse($booking->end_date);
-                        $days   = max(1, $start->diffInDays($end));
+                        // Livraison : pas de periode, la ligne est datee du jour
+                        // de la demande (voir bookings/my).
+                        $isDelivery = $booking->isDelivery();
+                        $start  = $isDelivery ? $booking->created_at : \Carbon\Carbon::parse($booking->start_date);
+                        $end    = $isDelivery ? null : \Carbon\Carbon::parse($booking->end_date);
+                        $days   = $isDelivery ? 0 : max(1, $start->diffInDays($end));
                         [$stLabel, $stClass, $stIcon] = $statusMeta[$booking->booking_status]
                             ?? [ucfirst((string) $booking->booking_status), 'is-neutral', 'fa-circle-info'];
                         $asker  = $booking->user;
@@ -150,7 +153,7 @@
                             <span class="sp-date-month">{{ $mois[(int) $start->format('n')] }}</span>
                             <span class="sp-date-year">{{ $start->format('Y') }}</span>
                             <span class="sp-date-sep"></span>
-                            <span class="sp-date-end">au {{ $end->format('d/m/Y') }}</span>
+                            <span class="sp-date-end">{{ $isDelivery ? 'Livraison' : 'au ' . $end->format('d/m/Y') }}</span>
                         </div>
 
                         <div class="sp-row-main">
@@ -177,10 +180,19 @@
                                     Demandeur : {{ $name ?: ($asker->name ?? $asker->email ?? 'Inconnu') }}
                                 </span>
 
-                                <span class="sp-tag">
-                                    <i class="fa-regular fa-calendar"></i>
-                                    {{ $days }} jour{{ $days > 1 ? 's' : '' }}
-                                </span>
+                                @if($isDelivery)
+                                    {{-- Le livreur doit savoir ou aller avant d'accepter --}}
+                                    <span class="sp-tag">
+                                        <i class="fa-solid fa-route"></i>
+                                        {{ $booking->address }} → {{ $booking->delivery_address }}
+                                        · {{ number_format((float) $booking->delivery_distance_km, 1, ',', ' ') }} km
+                                    </span>
+                                @else
+                                    <span class="sp-tag">
+                                        <i class="fa-regular fa-calendar"></i>
+                                        {{ $days }} jour{{ $days > 1 ? 's' : '' }}
+                                    </span>
+                                @endif
 
                                 <span class="sp-tag">
                                     <i class="fa-regular fa-clock"></i>
@@ -220,7 +232,7 @@
                                     </form>
                                 @endif
 
-                                @if($booking->delivery_requested)
+                                @if($booking->delivery_requested || $isDelivery)
                                     <a href="{{ route('bookings.show', $booking->id) }}" class="sp-act is-ghost">Suivre</a>
                                 @endif
 

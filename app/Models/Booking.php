@@ -60,8 +60,24 @@ class Booking extends Model
         return $this->hasMany(DeliveryRequest::class, 'booking_id');
     }
 
+    /**
+     * Reservation d'une offre de livraison : un trajet paye au kilometre,
+     * sans periode. C'est l'absence de dates qui la distingue d'une location
+     * (avec ou sans livraison en option).
+     */
+    public function isDelivery(): bool
+    {
+        return $this->start_date === null;
+    }
+
     public function calculateTotalPrice()
     {
+        // Sans dates, Carbon::parse(null) rendrait « maintenant » : la
+        // livraison compterait un jour au tarif de l'annonce en plus du trajet.
+        if ($this->isDelivery()) {
+            return $this->total_price = (float) ($this->delivery_cost ?? 0);
+        }
+
         $start = $this->start_date instanceof Carbon ? $this->start_date : Carbon::parse($this->start_date);
         $end   = $this->end_date instanceof Carbon ? $this->end_date : Carbon::parse($this->end_date);
 

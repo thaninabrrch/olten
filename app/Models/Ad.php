@@ -124,10 +124,35 @@ class Ad extends Model
         };
     }
 
+    /**
+     * Offre de livraison : l'annonceur transporte, le client paie au
+     * kilometre. Se reconnait au SERVICE de la categorie (« Colis & Paquets »,
+     * « Repas »... sont toutes des categories du service livraison), pas au
+     * slug de la categorie, qu'aucune ne porte.
+     */
+    public function isDelivery(): bool
+    {
+        return $this->category?->isDelivery() ?? false;
+    }
+
+    /**
+     * Tarif au kilometre d'une offre de livraison. Le formulaire le saisit
+     * dans `price_per_day` et le recopie dans `price_per_km` : la seconde
+     * colonne fait foi, la premiere couvre les annonces anterieures.
+     */
+    public function deliveryRate(): float
+    {
+        return (float) ($this->price_per_km ?: $this->price_per_day);
+    }
+
     /** Unite placee apres le prix, vide pour une vente ou un budget. */
     public function priceSuffix(): string
     {
-        return $this->isVente() || $this->isPrestation() ? '' : '/ jour';
+        return match (true) {
+            $this->isVente() || $this->isPrestation() => '',
+            $this->isDelivery()                       => '/ km',
+            default                                   => '/ jour',
+        };
     }
 
     public function category()

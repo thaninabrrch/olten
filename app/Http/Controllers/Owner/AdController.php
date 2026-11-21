@@ -92,8 +92,8 @@ class AdController extends Controller
 
         $reservedDates = [];
 
-        // Ne pas récupérer les dates pour les annonces de livraison
-        if ($ad->category->slug !== 'livraison') {
+        // Une offre de livraison n'a pas de calendrier : rien a griser.
+        if (! $ad->isDelivery()) {
 
             foreach (
                 $ad->bookings()

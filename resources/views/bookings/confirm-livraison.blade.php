@@ -1,1024 +1,567 @@
 {{-- resources/views/bookings/confirm-livraison.blade.php --}}
+{{--
+ | Reservation d'une offre de livraison : le client saisit son trajet, le prix
+ | se calcule sur la distance au tarif du livreur, puis il paie.
+ |
+ | Meme tunnel visuel que la location (pages/annonces_pages/confirm_booking),
+ | styles partages dans assets/css/checkout.css. Le montant affiche ici n'est
+ | qu'indicatif : BookingController::pay() le recalcule au tarif de l'annonce.
+--}}
 
 @extends('layouts.main')
 
-@section('title', 'Finaliser votre livraison - Olten.fr')
+@section('title', 'Réserver une livraison - Olten.fr')
+
+@php
+    $user    = auth()->user();
+    $livreur = $ad->user;
+    $rate    = $ad->deliveryRate();
+
+    $image = $ad->images->first()
+        ? asset('storage/' . $ad->images->first()->path)
+        : asset('assets/images/no-image.jpg');
+@endphp
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/css/intlTelInput.css">
-
-<style>
-    .delivery-checkout {
-        max-width: 1050px;
-        margin: 40px auto;
-        padding: 0 18px;
-    }
-
-    .checkout-title {
-        margin-bottom: 25px;
-    }
-
-    .checkout-title h1 {
-        font-size: 27px;
-        font-weight: 700;
-        margin-bottom: 8px;
-    }
-
-    .checkout-grid {
-        display: grid;
-        grid-template-columns: 1.4fr 1fr;
-        gap: 25px;
-        align-items: start;
-    }
-
-    .checkout-card {
-        background: #fff;
-        border: 1px solid #e8e8e8;
-        border-radius: 14px;
-        padding: 25px;
-        margin-bottom: 20px;
-    }
-
-    .checkout-card h2 {
-        font-size: 19px;
-        font-weight: 700;
-        margin-bottom: 20px;
-    }
-
-    .checkout-field {
-        margin-bottom: 18px;
-        position: relative;
-    }
-
-    .checkout-field label {
-        display: block;
-        font-weight: 600;
-        margin-bottom: 8px;
-    }
-
-    .checkout-field input {
-        width: 100%;
-        min-height: 48px;
-        border: 1px solid #ddd;
-        border-radius: 9px;
-        padding: 11px 13px;
-        outline: none;
-    }
-
-    .checkout-field input:focus {
-        border-color: #e85b91;
-        box-shadow: 0 0 0 3px rgba(232, 91, 145, .1);
-    }
-
-    .address-suggestions {
-        display: none;
-        position: absolute;
-        top: calc(100% + 4px);
-        left: 0;
-        right: 0;
-        z-index: 50;
-        background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 9px;
-        box-shadow: 0 8px 20px rgba(0,0,0,.08);
-        max-height: 220px;
-        overflow-y: auto;
-    }
-
-    .address-suggestion {
-        padding: 12px 14px;
-        cursor: pointer;
-        font-size: 14px;
-        border-bottom: 1px solid #f1f1f1;
-    }
-
-    .address-suggestion:last-child {
-        border-bottom: none;
-    }
-
-    .address-suggestion:hover {
-        background: #fff3f7;
-    }
-
-    .address-help {
-        display: block;
-        color: #777;
-        font-size: 12px;
-        margin-top: 6px;
-    }
-
-    .route-result {
-        display: none;
-        background: #f7f8fa;
-        border-radius: 10px;
-        padding: 16px;
-        margin-top: 15px;
-    }
-
-    .route-result-row {
-        display: flex;
-        justify-content: space-between;
-        gap: 15px;
-        margin: 8px 0;
-    }
-
-    .route-result-row strong {
-        text-align: right;
-    }
-
-    .route-error {
-        color: #d93025;
-        font-size: 13px;
-        margin-top: 10px;
-    }
-
-    .summary-line {
-        display: flex;
-        justify-content: space-between;
-        gap: 15px;
-        margin: 13px 0;
-        font-size: 14px;
-    }
-
-    .summary-line.total {
-        border-top: 1px solid #eee;
-        padding-top: 17px;
-        margin-top: 18px;
-        font-size: 19px;
-        font-weight: 700;
-    }
-
-    .summary-address {
-        max-width: 65%;
-        text-align: right;
-        overflow-wrap: anywhere;
-    }
-
-    #card-element {
-        border: 1px solid #ddd;
-        border-radius: 9px;
-        padding: 15px;
-        min-height: 48px;
-        background: #fff;
-    }
-
-    #card-errors {
-        color: #d93025;
-        font-size: 13px;
-        margin-top: 8px;
-    }
-
-    .phone-wrapper {
-        width: 100%;
-    }
-
-    .phone-wrapper input {
-        width: 100%;
-    }
-
-    .iti {
-        width: 100%;
-    }
-
-    .checkout-button {
-        display: block;
-        width: 100%;
-        border: none;
-        border-radius: 10px;
-        padding: 15px 20px;
-        background: #e85b91;
-        color: #fff;
-        font-size: 16px;
-        font-weight: 700;
-        cursor: pointer;
-        transition: .2s;
-    }
-
-    .checkout-button:hover {
-        background: #d94880;
-    }
-
-    .checkout-button:disabled {
-        opacity: .5;
-        cursor: not-allowed;
-    }
-
-    .checkout-notice {
-        color: #777;
-        font-size: 12px;
-        margin-top: 12px;
-        text-align: center;
-    }
-
-    .ad-summary-title {
-        font-weight: 700;
-        font-size: 16px;
-        margin-bottom: 8px;
-    }
-
-    .ad-summary-price {
-        color: #e85b91;
-        font-weight: 700;
-        font-size: 19px;
-    }
-
-    @media(max-width: 768px) {
-        .checkout-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .checkout-card {
-            padding: 18px;
-        }
-
-        .checkout-title h1 {
-            font-size: 22px;
-        }
-    }
-</style>
+<link rel="stylesheet" href="{{ asset('assets/css/checkout.css') }}?v={{ @filemtime(public_path('assets/css/checkout.css')) ?: 1 }}">
 @endpush
 
 @section('content')
 
-<div class="delivery-checkout">
+<div class="ck">
+    <div class="ck-wrap">
 
-    <div class="checkout-title">
-        <h1>Finaliser votre livraison</h1>
-        <p>Renseignez votre trajet pour calculer le prix de votre livraison.</p>
-    </div>
+        {{-- Fil de progression --}}
+        <ol class="ck-steps">
+            <li class="is-done">
+                <span class="ck-step-dot"><i class="fa-solid fa-check"></i></span>
+                <span class="ck-step-text">
+                    <strong>Offre choisie</strong>
+                    <small>{{ \Illuminate\Support\Str::limit($ad->title, 38) }}</small>
+                </span>
+            </li>
+            <li class="is-current">
+                <span class="ck-step-dot">2</span>
+                <span class="ck-step-text">
+                    <strong>Trajet &amp; paiement</strong>
+                    <small>Vous y êtes</small>
+                </span>
+            </li>
+            <li>
+                <span class="ck-step-dot">3</span>
+                <span class="ck-step-text">
+                    <strong>Confirmation</strong>
+                    <small>Demande envoyée au livreur</small>
+                </span>
+            </li>
+        </ol>
 
-    <div class="checkout-grid">
-
-        {{-- COLONNE GAUCHE --}}
-        <div>
-
-            {{-- ADRESSES --}}
-            <div class="checkout-card">
-                <h2>1. Votre trajet</h2>
-
-                <div class="checkout-field">
-                    <label for="departure_address">
-                        Adresse de départ
-                    </label>
-
-                    <input
-                        type="text"
-                        id="departure_address"
-                        placeholder="Saisissez l'adresse de départ"
-                        autocomplete="off"
-                    >
-
-                    <div id="departureSuggestions" class="address-suggestions"></div>
-
-                    <span class="address-help">
-                        Indiquez l'adresse où le livreur devra récupérer le colis.
-                    </span>
-                </div>
-
-                <div class="checkout-field">
-                    <label for="arrival_address">
-                        Adresse d'arrivée
-                    </label>
-
-                    <input
-                        type="text"
-                        id="arrival_address"
-                        placeholder="Saisissez l'adresse de livraison"
-                        autocomplete="off"
-                    >
-
-                    <div id="addressSuggestions" class="address-suggestions"></div>
-
-                    <span class="address-help">
-                        Indiquez l'adresse où le colis devra être livré.
-                    </span>
-                </div>
-
-                <div id="routeError" class="route-error"></div>
-
-                <div id="distanceResult" class="route-result">
-                    <div class="route-result-row">
-                        <span>Distance estimée</span>
-                        <strong id="distanceDisplay">-- km</strong>
-                    </div>
-
-                    <div class="route-result-row">
-                        <span>Tarif par kilomètre</span>
-                        <strong>{{ number_format((float) $ad->price_per_km, 2, ',', ' ') }} €</strong>
-                    </div>
-
-                    <div class="route-result-row">
-                        <span>Coût de la livraison</span>
-                        <strong id="distanceLabel">-- €</strong>
-                    </div>
-                </div>
-            </div>
-
-            {{-- TELEPHONE --}}
-            <div class="checkout-card">
-                <h2>2. Vos coordonnées</h2>
-
-                <div class="checkout-field">
-                    <label for="phone">Numéro de téléphone</label>
-
-                    <div class="phone-wrapper">
-                        <input
-                            type="tel"
-                            id="phone"
-                            placeholder="Votre numéro de téléphone"
-                        >
-                    </div>
-                </div>
-            </div>
-
-            {{-- PAIEMENT --}}
-            <div class="checkout-card">
-                <h2>3. Paiement</h2>
-
-                <div class="checkout-field">
-                    <label>Informations de votre carte bancaire</label>
-
-                    <div id="card-element"></div>
-
-                    <div id="card-errors" role="alert"></div>
-                </div>
-
-                <p class="checkout-notice">
-                    Le paiement est traité de manière sécurisée.
+        <header class="ck-head">
+            <div>
+                <span class="ck-eyebrow"><i class="fa-solid fa-lock"></i> Paiement sécurisé</span>
+                <h1 class="ck-title">Réserver votre <em>livraison</em></h1>
+                <p class="ck-lead">
+                    Indiquez où récupérer le colis et où le livrer : le prix est calculé sur la
+                    distance du trajet, au tarif du livreur. Vous ne serez débité qu'une seule fois.
                 </p>
             </div>
 
-        </div>
+            <div class="ck-illu">
+                <svg viewBox="0 0 300 210" fill="none" xmlns="http://www.w3.org/2000/svg"
+                     role="img" aria-label="Illustration : un camion de livraison entre deux adresses">
+                    <circle cx="150" cy="105" r="92" fill="#ff3c00" fill-opacity="0.07"/>
+                    <circle cx="150" cy="105" r="68" fill="#ff3c00" fill-opacity="0.06"/>
 
-        {{-- COLONNE DROITE --}}
-        <div>
+                    <g class="ck-twinkle" fill="#ffb020">
+                        <circle cx="34" cy="46" r="4"/>
+                        <circle cx="268" cy="164" r="5"/>
+                    </g>
 
-            <div class="checkout-card">
-                <h2>Récapitulatif</h2>
+                    {{-- Trajet pointille entre les deux adresses --}}
+                    <path d="M44 166 C 96 132, 196 190, 252 116"
+                          stroke="#1c2026" stroke-opacity="0.22" stroke-width="3"
+                          stroke-dasharray="7 8" stroke-linecap="round"/>
 
-                <div class="ad-summary-title">
-                    {{ $ad->title }}
-                </div>
+                    {{-- Depart --}}
+                    <path d="M44 138 a14 14 0 0 1 14 14 c0 10 -14 24 -14 24 s-14 -14 -14 -24 a14 14 0 0 1 14 -14z" fill="#ff3c00"/>
+                    <circle cx="44" cy="152" r="5" fill="#ffffff"/>
 
-                <div class="ad-summary-price">
-                    {{ number_format((float) $ad->price_per_km, 2, ',', ' ') }} € / km
-                </div>
+                    {{-- Arrivee --}}
+                    <path d="M252 86 a14 14 0 0 1 14 14 c0 10 -14 24 -14 24 s-14 -14 -14 -24 a14 14 0 0 1 14 -14z" fill="#1a9d5c"/>
+                    <circle cx="252" cy="100" r="5" fill="#ffffff"/>
 
-                <hr style="border:0;border-top:1px solid #eee;margin:20px 0;">
+                    {{-- Camion --}}
+                    <g class="ck-float">
+                        <rect x="96" y="92" width="80" height="50" rx="8" fill="#1c2026"/>
+                        <rect x="110" y="106" width="22" height="20" rx="3" fill="#ffb020"/>
+                        <rect x="119" y="106" width="4" height="20" fill="#1c2026" fill-opacity="0.25"/>
+                        <path d="M176 104 h22 l16 18 v20 h-38 z" fill="#ff3c00"/>
+                        <path d="M182 109 h13 l10 12 h-23 z" fill="#ffffff" fill-opacity="0.85"/>
+                        <circle cx="118" cy="144" r="10" fill="#1c2026"/>
+                        <circle cx="118" cy="144" r="4" fill="#ffffff"/>
+                        <circle cx="192" cy="144" r="10" fill="#1c2026"/>
+                        <circle cx="192" cy="144" r="4" fill="#ffffff"/>
+                    </g>
 
-                <div class="summary-line">
-                    <span>Départ</span>
-                    <strong class="summary-address" id="recapDeparture">
-                        À renseigner
-                    </strong>
-                </div>
+                    {{-- Colis --}}
+                    <g class="ck-float-2">
+                        <rect x="196" y="34" width="34" height="30" rx="5" fill="#ffb020"/>
+                        <rect x="210" y="34" width="6" height="30" fill="#ffffff" fill-opacity="0.55"/>
+                    </g>
 
-                <div class="summary-line">
-                    <span>Arrivée</span>
-                    <strong class="summary-address" id="recapArrival">
-                        À renseigner
-                    </strong>
-                </div>
-
-                <div class="summary-line">
-                    <span>Distance</span>
-                    <strong id="recapDistance">-- km</strong>
-                </div>
-
-                <div class="summary-line">
-                    <span>Tarif kilométrique</span>
-                    <strong>{{ number_format((float) $ad->price_per_km, 2, ',', ' ') }} € / km</strong>
-                </div>
-
-                <div class="summary-line total">
-                    <span>Total</span>
-                    <strong id="grandTotal">-- €</strong>
-                </div>
-
-                <button
-                    type="button"
-                    id="submitBtn"
-                    class="checkout-button"
-                    disabled
-                >
-                    Procéder au paiement
-                </button>
-
-                <p class="checkout-notice">
-                    Le montant sera calculé après validation des deux adresses.
-                </p>
+                    <ellipse cx="150" cy="180" rx="92" ry="10" fill="#111111" fill-opacity="0.05"/>
+                </svg>
             </div>
+        </header>
 
-        </div>
+        <form id="payment-form" novalidate>
+            @csrf
+
+            <div class="ck-grid">
+
+                {{-- ---------- Colonne gauche : informations ---------- --}}
+                <div class="ck-col">
+
+                    {{-- Trajet --}}
+                    <section class="ck-card">
+                        <h2 class="ck-card-title"><span>1</span> Votre trajet</h2>
+
+                        <div class="ck-route">
+                            <div class="ck-route-stop">
+                                <span class="ck-route-pin"><i class="fa-solid fa-box"></i></span>
+                                <label class="ck-label" for="departure_address">
+                                    Adresse de départ <span class="ck-required">*</span>
+                                </label>
+                                <input type="text" id="departure_address" class="ck-input"
+                                       placeholder="Où le livreur récupère-t-il le colis ?" autocomplete="off">
+                                <ul id="departureSuggestions" class="ck-suggestions"></ul>
+                            </div>
+
+                            <div class="ck-route-stop is-end">
+                                <span class="ck-route-pin"><i class="fa-solid fa-flag-checkered"></i></span>
+                                <label class="ck-label" for="arrival_address">
+                                    Adresse d'arrivée <span class="ck-required">*</span>
+                                </label>
+                                <input type="text" id="arrival_address" class="ck-input"
+                                       placeholder="Où le colis doit-il être livré ?" autocomplete="off">
+                                <ul id="arrivalSuggestions" class="ck-suggestions"></ul>
+                            </div>
+                        </div>
+
+                        <div id="routeResult" class="ck-note" hidden>
+                            <i class="fa-solid fa-route"></i>
+                            <span id="routeLabel"></span>
+                        </div>
+
+                        <div id="routeError" class="ck-error" role="alert"></div>
+                    </section>
+
+                    {{-- Coordonnees --}}
+                    <section class="ck-card">
+                        <h2 class="ck-card-title"><span>2</span> Vos coordonnées</h2>
+
+                        <div class="ck-fields">
+                            <div class="ck-field">
+                                <label class="ck-label" for="ck-lastname">Nom</label>
+                                <input type="text" id="ck-lastname" class="ck-input"
+                                       value="{{ $user->lastname ?: $user->name }}" readonly>
+                            </div>
+
+                            <div class="ck-field">
+                                <label class="ck-label" for="ck-firstname">Prénom</label>
+                                <input type="text" id="ck-firstname" class="ck-input"
+                                       value="{{ $user->firstname }}" readonly>
+                            </div>
+
+                            <div class="ck-field ck-field--full">
+                                <label class="ck-label" for="phone">
+                                    Téléphone <span class="ck-required">*</span>
+                                </label>
+                                <input type="tel" id="phone" class="ck-input" value="{{ $user->phone }}">
+                                <small class="ck-hint">Le livreur vous joindra à ce numéro.</small>
+                                <div id="phone-error" class="ck-error" role="alert"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {{-- Paiement --}}
+                    <section class="ck-card">
+                        <h2 class="ck-card-title"><span>3</span> Paiement</h2>
+
+                        <div class="ck-field ck-field--full">
+                            <label class="ck-label" for="card-element">Carte bancaire</label>
+                            <div id="card-element" class="ck-card-element"></div>
+                            <div id="card-errors" class="ck-error" role="alert"></div>
+                        </div>
+
+                        <ul class="ck-trust">
+                            <li><i class="fa-solid fa-shield-halved"></i> Paiement chiffré via Stripe</li>
+                            <li><i class="fa-regular fa-credit-card"></i> Aucune donnée bancaire stockée</li>
+                            <li><i class="fa-solid fa-rotate-left"></i> Remboursé si le livreur refuse</li>
+                        </ul>
+                    </section>
+                </div>
+
+                {{-- ---------- Colonne droite : recapitulatif ---------- --}}
+                <aside class="ck-aside">
+                    <div class="ck-recap">
+
+                        <div class="ck-recap-ad">
+                            <img src="{{ $image }}" alt="{{ $ad->title }}">
+                            <span class="ck-recap-ad-info">
+                                <strong>{{ $ad->title }}</strong>
+                                @if ($livreur)
+                                    <small>
+                                        <i class="fa-solid fa-truck-fast"></i>
+                                        {{ trim(($livreur->firstname ?? '') . ' ' . ($livreur->lastname ?? '')) ?: ($livreur->name ?? 'Livreur') }}
+                                    </small>
+                                @endif
+                            </span>
+                        </div>
+
+                        <ul class="ck-recap-route">
+                            <li class="is-empty" id="recapDepartureItem">
+                                <i class="fa-solid fa-circle-dot"></i>
+                                <span>
+                                    <small>Départ</small>
+                                    <strong id="recapDeparture">À renseigner</strong>
+                                </span>
+                            </li>
+                            <li class="is-empty" id="recapArrivalItem">
+                                <i class="fa-solid fa-location-dot"></i>
+                                <span>
+                                    <small>Arrivée</small>
+                                    <strong id="recapArrival">À renseigner</strong>
+                                </span>
+                            </li>
+                        </ul>
+
+                        <div class="ck-line">
+                            <span>Tarif du livreur</span>
+                            <span>{{ number_format($rate, 2, ',', ' ') }} € / km</span>
+                        </div>
+
+                        <div class="ck-line">
+                            <span>Distance</span>
+                            <span id="recapDistance">—</span>
+                        </div>
+
+                        <div class="ck-line ck-line--total">
+                            <span>Total</span>
+                            <span id="grandTotal">—</span>
+                        </div>
+
+                        <button id="submit" type="submit" class="ck-submit" disabled>
+                            <i class="fa-solid fa-lock"></i>
+                            Payer &amp; Réserver
+                        </button>
+
+                        <p class="ck-recap-note">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <span id="submitHint">Le montant s'affiche dès que les deux adresses sont choisies dans les suggestions.</span>
+                        </p>
+                    </div>
+                </aside>
+
+            </div>
+        </form>
+
     </div>
 </div>
-
-{{-- FORMULAIRE DE DONNÉES --}}
-<input type="hidden" id="departure_lat">
-<input type="hidden" id="departure_lng">
-
-<input type="hidden" id="arrival_lat">
-<input type="hidden" id="arrival_lng">
-
-<input type="hidden" id="delivery_distance" value="0">
-<input type="hidden" id="delivery_cost" value="0">
-<input type="hidden" id="finalPriceInput" value="0">
 
 @endsection
 
 @push('scripts')
-
+{{-- Memes versions que la page de location : la feuille intl-tel-input
+     18.2.1 est deja chargee par layouts.main. --}}
 <script src="https://js.stripe.com/v3/"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/intlTelInput.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', () => {
 
-    /*
-    |--------------------------------------------------------------------------
-    | CONFIGURATION
-    |--------------------------------------------------------------------------
-    */
+    const AD_ID        = @json($ad->id);
+    const RATE         = Number(@json($rate));
+    const PAY_URL      = @json(route('bookings.pay'));
+    // Stripe refuse un paiement inferieur a 50 centimes (meme seuil cote serveur).
+    const MIN_TOTAL    = 0.5;
 
-    const adId = @json($ad->id);
-    const pricePerKm = Number(@json((float) $ad->price_per_km));
+    const euros = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
+    const km    = (value) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(value) + ' km';
+    const $     = (id) => document.getElementById(id);
 
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    const form      = $('payment-form');
+    const submitBtn = $('submit');
+    const csrf      = form.querySelector('input[name=_token]').value;
 
-    const departureInput = document.getElementById('departure_address');
-    const arrivalInput = document.getElementById('arrival_address');
+    /* ------------------------------------------------------------------
+       Telephone
+       ------------------------------------------------------------------ */
 
-    const departureSuggestions = document.getElementById('departureSuggestions');
-    const arrivalSuggestions = document.getElementById('addressSuggestions');
-
-    const departureLatInput = document.getElementById('departure_lat');
-    const departureLngInput = document.getElementById('departure_lng');
-
-    const arrivalLatInput = document.getElementById('arrival_lat');
-    const arrivalLngInput = document.getElementById('arrival_lng');
-
-    const distanceInput = document.getElementById('delivery_distance');
-    const costInput = document.getElementById('delivery_cost');
-
-    const submitBtn = document.getElementById('submitBtn');
-
-    let selectedDeparture = false;
-    let selectedDestination = false;
-
-    let currentDistance = 0;
-    let currentCost = 0;
-
-    let departureRequestId = 0;
-    let arrivalRequestId = 0;
-
-    /*
-    |--------------------------------------------------------------------------
-    | TÉLÉPHONE
-    |--------------------------------------------------------------------------
-    */
-
-    const phoneInput = document.querySelector('#phone');
-
+    const phoneInput = $('phone');
     const iti = window.intlTelInput(phoneInput, {
-        initialCountry: 'dz',
-        preferredCountries: ['dz', 'fr'],
+        initialCountry: 'fr',
         separateDialCode: true,
-        utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/utils.js'
+        utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js'
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | STRIPE
-    |--------------------------------------------------------------------------
-    */
+    phoneInput.addEventListener('input', () => { $('phone-error').textContent = ''; });
 
-    const stripe = Stripe(@json(config('services.stripe.key')));
+    /* ------------------------------------------------------------------
+       Stripe
+       ------------------------------------------------------------------ */
 
+    const stripe   = Stripe(@json(config('services.stripe.key')));
     const elements = stripe.elements();
 
     const card = elements.create('card', {
         hidePostalCode: true,
         style: {
             base: {
-                fontSize: '16px',
-                color: '#32325d',
-                fontFamily: 'Arial, sans-serif',
-                '::placeholder': {
-                    color: '#aab7c4'
-                }
+                fontSize: '14px',
+                color: '#111',
+                fontFamily: 'inherit',
+                '::placeholder': { color: '#9aa0a6' }
             },
-            invalid: {
-                color: '#d93025'
-            }
+            invalid: { color: '#b42318' }
         }
     });
 
     card.mount('#card-element');
 
-    card.on('change', function(event) {
-        document.getElementById('card-errors').textContent =
-            event.error ? event.error.message : '';
+    card.on('change', (event) => {
+        $('card-errors').textContent = event.error ? event.error.message : '';
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | RÉINITIALISER LE CALCUL
-    |--------------------------------------------------------------------------
-    */
+    /* ------------------------------------------------------------------
+       Trajet : deux adresses choisies dans les suggestions, puis distance
+       routiere (OSRM) et prix au kilometre.
+       ------------------------------------------------------------------ */
 
-    function resetCalculation() {
-        currentDistance = 0;
-        currentCost = 0;
+    const stops = {
+        departure: { input: $('departure_address'), list: $('departureSuggestions'),
+                     recap: $('recapDeparture'), item: $('recapDepartureItem'), place: null, timer: null, req: 0 },
+        arrival:   { input: $('arrival_address'),   list: $('arrivalSuggestions'),
+                     recap: $('recapArrival'),   item: $('recapArrivalItem'),   place: null, timer: null, req: 0 }
+    };
 
-        distanceInput.value = 0;
-        costInput.value = 0;
+    let route = null; // { distance, total } une fois le trajet calcule
+    let routeReq = 0;
 
-        document.getElementById('finalPriceInput').value = 0;
+    function setRecap(stop, text) {
+        stop.recap.textContent = text || 'À renseigner';
+        stop.item.classList.toggle('is-empty', !text);
+    }
 
-        document.getElementById('distanceResult').style.display = 'none';
-        document.getElementById('distanceLabel').textContent = '';
-        document.getElementById('distanceDisplay').textContent = '-- km';
-
-        document.getElementById('recapDistance').textContent = '-- km';
-        document.getElementById('grandTotal').textContent = '-- €';
-
-        document.getElementById('routeError').textContent = '';
-
+    function resetRoute(message = '') {
+        route = null;
+        $('routeResult').hidden = true;
+        $('routeError').textContent = message;
+        $('recapDistance').textContent = '—';
+        $('grandTotal').textContent = '—';
+        $('submitHint').textContent = "Le montant s'affiche dès que les deux adresses sont choisies dans les suggestions.";
         submitBtn.disabled = true;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | GÉOCODAGE NOMINATIM
-    |--------------------------------------------------------------------------
-    */
-
     async function searchAddress(query) {
-
         const url = new URL('https://nominatim.openstreetmap.org/search');
-
         url.searchParams.set('format', 'jsonv2');
-        url.searchParams.set('addressdetails', '1');
         url.searchParams.set('limit', '5');
         url.searchParams.set('q', query);
 
-        const response = await fetch(url.toString(), {
-            headers: {
-                'Accept-Language': 'fr'
-            }
+        const response = await fetch(url, { headers: { 'Accept-Language': 'fr' } });
+
+        if (!response.ok) throw new Error('Recherche indisponible');
+
+        return response.json();
+    }
+
+    function showSuggestions(stop, places) {
+        stop.list.innerHTML = '';
+
+        places.forEach((place) => {
+            const li = document.createElement('li');
+            li.textContent = place.display_name;
+            li.addEventListener('click', () => choose(stop, place));
+            stop.list.appendChild(li);
         });
-
-        if (!response.ok) {
-            throw new Error('Impossible de rechercher cette adresse.');
-        }
-
-        return await response.json();
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | AFFICHER LES SUGGESTIONS
-    |--------------------------------------------------------------------------
-    */
+    function choose(stop, place) {
+        stop.place = { label: place.display_name, lat: place.lat, lon: place.lon };
+        stop.input.value = place.display_name;
+        stop.list.innerHTML = '';
+        setRecap(stop, place.display_name);
 
-    function displaySuggestions(results, container, onSelect) {
-
-        container.innerHTML = '';
-
-        if (!results.length) {
-            container.style.display = 'none';
-            return;
-        }
-
-        results.forEach(function(place) {
-
-            const item = document.createElement('div');
-
-            item.className = 'address-suggestion';
-            item.textContent = place.display_name;
-
-            item.addEventListener('click', function() {
-                onSelect(place);
-                container.style.display = 'none';
-                container.innerHTML = '';
-            });
-
-            container.appendChild(item);
-        });
-
-        container.style.display = 'block';
+        calculateRoute();
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | SÉLECTION DE L'ADRESSE DE DÉPART
-    |--------------------------------------------------------------------------
-    */
+    Object.values(stops).forEach((stop) => {
+        stop.input.addEventListener('input', () => {
+            // Toute frappe invalide l'adresse choisie : le prix ne doit pas
+            // porter sur un trajet que le client a modifie depuis.
+            stop.place = null;
+            setRecap(stop, stop.input.value.trim());
+            resetRoute();
 
-    function selectDeparture(place) {
+            clearTimeout(stop.timer);
 
-        departureInput.value = place.display_name;
+            const query = stop.input.value.trim();
 
-        departureLatInput.value = place.lat;
-        departureLngInput.value = place.lon;
-
-        selectedDeparture = true;
-
-        document.getElementById('recapDeparture').textContent =
-            place.display_name;
-
-        resetCalculation();
-
-        if (selectedDestination) {
-            calculateRoute();
-        }
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | SÉLECTION DE L'ADRESSE D'ARRIVÉE
-    |--------------------------------------------------------------------------
-    */
-
-    function selectArrival(place) {
-
-        arrivalInput.value = place.display_name;
-
-        arrivalLatInput.value = place.lat;
-        arrivalLngInput.value = place.lon;
-
-        selectedDestination = true;
-
-        document.getElementById('recapArrival').textContent =
-            place.display_name;
-
-        resetCalculation();
-
-        if (selectedDeparture) {
-            calculateRoute();
-        }
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | AUTOCOMPLÉTION DÉPART
-    |--------------------------------------------------------------------------
-    */
-
-    departureInput.addEventListener('input', async function() {
-
-        const query = this.value.trim();
-        const requestId = ++departureRequestId;
-
-        selectedDeparture = false;
-
-        departureLatInput.value = '';
-        departureLngInput.value = '';
-
-        document.getElementById('recapDeparture').textContent =
-            query || 'À renseigner';
-
-        resetCalculation();
-
-        if (query.length < 3) {
-            departureSuggestions.style.display = 'none';
-            return;
-        }
-
-        try {
-            const results = await searchAddress(query);
-
-            if (requestId !== departureRequestId) return;
-
-            displaySuggestions(
-                results,
-                departureSuggestions,
-                selectDeparture
-            );
-
-        } catch (error) {
-            if (requestId === departureRequestId) {
-                document.getElementById('routeError').textContent =
-                    'Erreur lors de la recherche de l’adresse de départ.';
+            if (query.length < 3) {
+                stop.list.innerHTML = '';
+                return;
             }
-        }
+
+            // Une requete par pause de frappe, pas une par touche : Nominatim
+            // limite le nombre d'appels.
+            stop.timer = setTimeout(async () => {
+                const req = ++stop.req;
+
+                try {
+                    const places = await searchAddress(query);
+                    if (req === stop.req) showSuggestions(stop, places);
+                } catch (e) {
+                    if (req === stop.req) {
+                        $('routeError').textContent = "La recherche d'adresse ne répond pas. Réessayez dans un instant.";
+                    }
+                }
+            }, 350);
+        });
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | AUTOCOMPLÉTION ARRIVÉE
-    |--------------------------------------------------------------------------
-    */
-
-    arrivalInput.addEventListener('input', async function() {
-
-        const query = this.value.trim();
-        const requestId = ++arrivalRequestId;
-
-        selectedDestination = false;
-
-        arrivalLatInput.value = '';
-        arrivalLngInput.value = '';
-
-        document.getElementById('recapArrival').textContent =
-            query || 'À renseigner';
-
-        resetCalculation();
-
-        if (query.length < 3) {
-            arrivalSuggestions.style.display = 'none';
-            return;
-        }
-
-        try {
-            const results = await searchAddress(query);
-
-            if (requestId !== arrivalRequestId) return;
-
-            displaySuggestions(
-                results,
-                arrivalSuggestions,
-                selectArrival
-            );
-
-        } catch (error) {
-            if (requestId === arrivalRequestId) {
-                document.getElementById('routeError').textContent =
-                    'Erreur lors de la recherche de l’adresse d’arrivée.';
+    document.addEventListener('click', (event) => {
+        Object.values(stops).forEach((stop) => {
+            if (!stop.input.contains(event.target) && !stop.list.contains(event.target)) {
+                stop.list.innerHTML = '';
             }
-        }
+        });
     });
-
-    /*
-    |--------------------------------------------------------------------------
-    | CALCULER LA DISTANCE AVEC OSRM
-    |--------------------------------------------------------------------------
-    */
 
     async function calculateRoute() {
+        const a = stops.departure.place;
+        const b = stops.arrival.place;
 
-        if (!selectedDeparture || !selectedDestination) {
+        if (!a || !b) return;
+
+        if (a.lat === b.lat && a.lon === b.lon) {
+            resetRoute("Les adresses de départ et d'arrivée doivent être différentes.");
             return;
         }
 
-        const startLat = departureLatInput.value;
-        const startLng = departureLngInput.value;
+        const req = ++routeReq;
 
-        const endLat = arrivalLatInput.value;
-        const endLng = arrivalLngInput.value;
-
-        if (
-            !startLat || !startLng ||
-            !endLat || !endLng
-        ) {
-            return;
-        }
-
-        if (
-            startLat === endLat &&
-            startLng === endLng
-        ) {
-            document.getElementById('routeError').textContent =
-                'Les adresses de départ et d’arrivée doivent être différentes.';
-
-            resetCalculation();
-            return;
-        }
-
-        submitBtn.disabled = true;
-
-        document.getElementById('routeError').textContent =
-            'Calcul de votre trajet en cours...';
+        resetRoute();
+        $('submitHint').textContent = 'Calcul du trajet en cours…';
 
         try {
-
-            const url =
-                `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=false`;
-
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                throw new Error('Erreur lors du calcul du trajet.');
-            }
-
+            const response = await fetch(
+                `https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=false`
+            );
             const data = await response.json();
 
-            if (
-                data.code !== 'Ok' ||
-                !data.routes ||
-                !data.routes.length
-            ) {
-                throw new Error('Aucun itinéraire trouvé entre ces deux adresses.');
+            if (req !== routeReq) return;
+
+            if (!response.ok || data.code !== 'Ok' || !data.routes?.length) {
+                throw new Error('Aucun itinéraire routier trouvé entre ces deux adresses.');
             }
 
-            const route = data.routes[0];
+            // Memes arrondis que BookingController::pay() : distance au
+            // centieme de km, prix au centime.
+            const distance = Math.round(data.routes[0].distance / 10) / 100;
+            const total    = Math.round(distance * RATE * 100) / 100;
 
-            // Distance en kilomètres, arrondie à deux décimales.
-            const distance = route.distance / 1000;
-            const roundedDistance = Math.round(distance * 100) / 100;
+            if (total < MIN_TOTAL) {
+                resetRoute('Ce trajet est trop court pour être payé en ligne (minimum 0,50 €).');
+                return;
+            }
 
-            const cost = roundedDistance * pricePerKm;
-            const roundedCost = Math.round(cost * 100) / 100;
+            route = { distance, total };
 
-            currentDistance = roundedDistance;
-            currentCost = roundedCost;
+            $('routeLabel').innerHTML =
+                `<strong>${km(distance)}</strong> par la route · ${euros.format(RATE)} / km`;
+            $('routeResult').hidden = false;
+            $('routeError').textContent = '';
 
-            distanceInput.value = roundedDistance;
-            costInput.value = roundedCost;
-
-            document.getElementById('finalPriceInput').value =
-                roundedCost.toFixed(2);
-
-            document.getElementById('distanceDisplay').textContent =
-                roundedDistance.toFixed(2) + ' km';
-
-            document.getElementById('distanceLabel').textContent =
-                roundedCost.toFixed(2) + ' €';
-
-            document.getElementById('recapDistance').textContent =
-                roundedDistance.toFixed(2) + ' km';
-
-            document.getElementById('grandTotal').textContent =
-                roundedCost.toFixed(2) + ' €';
-
-            document.getElementById('distanceResult').style.display =
-                'block';
-
-            document.getElementById('routeError').textContent = '';
+            $('recapDistance').textContent = km(distance);
+            $('grandTotal').textContent = euros.format(total);
+            $('submitHint').textContent = 'Le livreur confirme votre demande. En cas de refus, vous êtes intégralement remboursé.';
 
             submitBtn.disabled = false;
-
         } catch (error) {
-
-            resetCalculation();
-
-            document.getElementById('routeError').textContent =
-                error.message || 'Impossible de calculer votre trajet.';
+            if (req === routeReq) {
+                resetRoute(error.message || 'Impossible de calculer ce trajet.');
+            }
         }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | FERMER LES SUGGESTIONS EN CLIQUANT AILLEURS
-    |--------------------------------------------------------------------------
-    */
+    /* ------------------------------------------------------------------
+       Paiement
+       ------------------------------------------------------------------ */
 
-    document.addEventListener('click', function(event) {
-
-        if (
-            !departureInput.contains(event.target) &&
-            !departureSuggestions.contains(event.target)
-        ) {
-            departureSuggestions.style.display = 'none';
-        }
-
-        if (
-            !arrivalInput.contains(event.target) &&
-            !arrivalSuggestions.contains(event.target)
-        ) {
-            arrivalSuggestions.style.display = 'none';
-        }
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | PAIEMENT
-    |--------------------------------------------------------------------------
-    */
-
-    submitBtn.addEventListener('click', async (e) => {
-
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        if (!selectedDeparture || !selectedDestination) {
-            alert('Veuillez sélectionner les deux adresses.');
-            return;
-        }
-
-        // if (!currentDistance || !currentCost) {
-        //     alert('Veuillez attendre le calcul de votre trajet.');
-        //     return;
-        // }
+        if (!route) return;
 
         if (!iti.isValidNumber()) {
-            document.getElementById('card-errors').textContent =
-                'Veuillez saisir un numéro de téléphone valide.';
+            $('phone-error').textContent = 'Saisissez un numéro de téléphone valide.';
             phoneInput.focus();
             return;
         }
 
-        // Verrouiller le bouton pendant le paiement
+        // Le paiement part une seule fois : le bouton se verrouille le temps de l'aller-retour
         submitBtn.disabled = true;
-        submitBtn.innerHTML = 'Traitement du paiement...';
+        submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Paiement en cours...';
 
         const releaseButton = () => {
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Procéder au paiement';
+            submitBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Payer &amp; Réserver';
         };
 
+        const { paymentMethod, error } = await stripe.createPaymentMethod({ type: 'card', card });
+
+        if (error) {
+            $('card-errors').textContent = error.message;
+            releaseButton();
+            return;
+        }
+
         try {
-
-            /*
-            |--------------------------------------------------------------------------
-            | 1. CRÉATION DU MOYEN DE PAIEMENT STRIPE
-            |--------------------------------------------------------------------------
-            */
-
-            const { paymentMethod, error } = await stripe.createPaymentMethod({
-                type: 'card',
-                card: card
-            });
-
-            if (error) {
-                document.getElementById('card-errors').textContent =
-                    error.message;
-
-                releaseButton();
-                return;
-            }
-
-            /*
-            |--------------------------------------------------------------------------
-            | 2. ENVOI AU CONTRÔLEUR COMMUN bookings.pay
-            |--------------------------------------------------------------------------
-            */
-
-            const response = await fetch(@json(route('bookings.pay')), {
-
+            const response = await fetch(PAY_URL, {
                 method: 'POST',
-
                 credentials: 'same-origin',
-
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
+                    'X-CSRF-TOKEN': csrf
                 },
-
                 body: JSON.stringify({
-
                     payment_method: paymentMethod.id,
-
                     phone: iti.getNumber(),
-
-                    ad_id: adId,
-
-                    // Livraison
-                    delivery_requested: 1,
-
-                    departure_address: departureInput.value,
-                    arrival_address: arrivalInput.value,
-
-                    delivery_address: arrivalInput.value,
-
-                    departure_latitude: departureLatInput.value,
-                    departure_longitude: departureLngInput.value,
-
-                    arrival_latitude: arrivalLatInput.value,
-                    arrival_longitude: arrivalLngInput.value,
-
-                    delivery_distance: currentDistance,
-                    delivery_cost: currentCost,
-
-                    // Montant total de la livraison
-                    finalPrice: document.getElementById('finalPriceInput').value
-
+                    ad_id: AD_ID,
+                    departure_address: stops.departure.place.label,
+                    arrival_address: stops.arrival.place.label,
+                    delivery_distance: route.distance,
+                    // Indicatif : le serveur recalcule le montant au tarif de l'annonce
+                    finalPrice: route.total.toFixed(2)
                 })
             });
 
-            const data = await response.json();
-
-            /*
-            |--------------------------------------------------------------------------
-            | 3. RÉPONSE DU CONTRÔLEUR
-            |--------------------------------------------------------------------------
-            */
+            const data = await response.json().catch(() => ({}));
 
             if (data.success) {
-
                 window.location.href = data.redirect;
-
-            } else {
-
-                document.getElementById('card-errors').textContent =
-                    data.message || 'Le paiement a échoué.';
-
-                releaseButton();
+                return;
             }
 
-        } catch (error) {
-
-            console.error(error);
-
-            document.getElementById('card-errors').textContent =
-                "Le paiement n'a pas pu aboutir. Réessayez.";
-
+            $('card-errors').textContent = data.message || 'Le paiement a échoué.';
+            releaseButton();
+        } catch (e) {
+            $('card-errors').textContent = "Le paiement n'a pas pu aboutir. Réessayez.";
             releaseButton();
         }
     });
-
 });
 </script>
-
 @endpush

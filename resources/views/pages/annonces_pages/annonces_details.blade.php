@@ -19,6 +19,10 @@
     $estPrestation = $ad->isPrestation();
     $prestation    = $prestation ?? null;
 
+    /* Une offre de livraison se paie au kilometre : pas de calendrier, le
+       client saisit son trajet sur la page de paiement. */
+    $estLivraison = $ad->isDelivery();
+
     $bookable = ! $expired && ! $isOwner && ! $estVente && ! $estPrestation;
     $favorited = auth()->check() && auth()->user()->hasFavorited($ad);
 
@@ -168,9 +172,9 @@
                             <small>Budget indicatif</small>
                         @endif
                         <strong>{{ number_format((float) $ad->price_per_day, 2, ',', ' ') }} €</strong>
-                        @unless ($estVente || $estPrestation)
-                            <small>@if($ad->category->slug !== 'livraison') / jour @else / KM @endif</small>
-                        @endunless
+                        @if ($ad->priceSuffix())
+                            <small>{{ $ad->priceSuffix() }}</small>
+                        @endif
                     </div>
 
                     @if ($prestation)
@@ -182,11 +186,16 @@
                              popin de connexion (assets/js/auth.js) au lieu d'etre
                              renvoye sur /login par le middleware. Il revient sur
                              cette annonce une fois connecte. --}}
-                        <form action="{{ route('bookings.store', $ad) }}" method="POST" 
+                        <form action="{{ route('bookings.store', $ad) }}" method="POST"
                               data-auth-required data-auth-redirect="{{ url()->current() }}">
                             @csrf
 
-                            @if($ad->category->slug !== 'livraison')
+                            @if ($estLivraison)
+                                <p class="dt-hint">
+                                    <i class="fa-solid fa-route"></i>
+                                    Indiquez votre trajet à l'étape suivante : le prix est calculé sur la distance.
+                                </p>
+                            @else
                                 <div class="dt-field">
                                     <label class="dt-label" for="reservation_dates">
                                         <i class="fa-solid fa-calendar-days"></i>
@@ -194,15 +203,21 @@
                                     </label>
 
                                     <input type="text" id="reservation_dates" class="dt-input"
-                                        placeholder="Sélectionner vos dates" readonly>
+                                           placeholder="Sélectionner vos dates" readonly>
 
                                     <input type="hidden" name="start_date" id="start_date">
                                     <input type="hidden" name="end_date" id="end_date">
                                 </div>
                             @endif
+
                             <button type="submit" class="dt-btn">
-                                <i class="fa-regular fa-calendar-check"></i>
-                                Réserver maintenant
+                                @if ($estLivraison)
+                                    <i class="fa-solid fa-truck-fast"></i>
+                                    Réserver cette livraison
+                                @else
+                                    <i class="fa-regular fa-calendar-check"></i>
+                                    Réserver maintenant
+                                @endif
                             </button>
                         </form>
                     @endif

@@ -150,7 +150,7 @@
 
         {{-- 2. Disponibilites — masquee pour une categorie de vente ; pour une
              prestation, fenetre dans laquelle le travail doit etre realise --}}
-        <section class="sp-form-section" id="section-disponibilites" data-mode-hide="vente prestation livraison">
+        <section class="sp-form-section" id="section-disponibilites" data-mode-hide="vente livraison">
             <div class="sp-form-head">
                 <span class="sp-step">2</span>
                 <div>
@@ -259,6 +259,7 @@
                             step="0.01"
                             min="0"
                             value="{{ old('price_per_day', $ad->price_per_day) }}"
+                            required
                         >
 
                         <span class="sp-input-suffix"
@@ -267,37 +268,6 @@
                             data-vente="€"
                             data-prestation="€">
                             € / jour
-                        </span>
-                    </div>
-                </div>
-
-                {{-- Tarif kilométrique : livraison --}}
-                <div class="sp-box" data-mode-only="livraison" hidden>
-
-                    <div class="sp-box-head">
-                        <label class="sp-label" for="price_per_km">
-                            Tarif kilométrique
-                            <span class="sp-req">*</span>
-                        </label>
-
-                        <span class="sp-help">
-                            Indiquez le prix facturé pour chaque kilomètre parcouru.
-                        </span>
-                    </div>
-
-                    <div class="sp-input-group">
-                        <input
-                            type="number"
-                            name="price_per_km"
-                            id="price_per_km"
-                            class="sp-input"
-                            step="0.01"
-                            min="0"
-                            value="{{ old('price_per_km', $ad->price_per_km ?? '') }}"
-                        >
-
-                        <span class="sp-input-suffix">
-                            DA / km
                         </span>
                     </div>
                 </div>
@@ -367,7 +337,7 @@
                             placeholder="0,00"
                             step="0.01"
                             min="0"
-                            value="{{ old('price_per_day', $ad->price_per_km) }}"
+                            value="{{ old('price_per_day', $ad->isDelivery() ? $ad->deliveryRate() : null) }}"
                             required
                         >
 

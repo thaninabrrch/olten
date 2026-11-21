@@ -50,6 +50,13 @@
             <x-email.row label="Fin de location" :value="$au" />
         @endif
 
+        {{-- Offre de livraison : le trajet a effectuer remplace la periode --}}
+        @if($booking->isDelivery())
+            <x-email.row label="Départ" :value="$booking->address ?: '—'" />
+            <x-email.row label="Arrivée" :value="$booking->delivery_address ?: '—'" />
+            <x-email.row label="Distance" :value="number_format((float) $booking->delivery_distance_km, 1, ',', ' ') . ' km'" />
+        @endif
+
         @if($booking->delivery_requested)
             <x-email.row label="Livraison" value="Demandée par le locataire" />
 

@@ -137,7 +137,7 @@
 
         {{-- 2. Disponibilites — masquee pour une categorie de vente ; pour une
              prestation, fenetre dans laquelle le travail doit etre realise --}}
-        <section class="sp-form-section" id="section-disponibilites" data-mode-hide="vente prestation livraison">
+        <section class="sp-form-section" id="section-disponibilites" data-mode-hide="vente livraison">
             <div class="sp-form-head">
                 <span class="sp-step">2</span>
                 <div>

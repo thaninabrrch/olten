@@ -1,0 +1,596 @@
+/*
+ | Pages de paiement « checkout » (prefixe ck-)
+ |
+ | Partagee par la reservation d'une location
+ | (pages/annonces_pages/confirm_booking) et celle d'une offre de livraison
+ | (bookings/confirm-livraison) : les deux tunnels doivent se ressembler.
+ */
+
+.ck {
+    background:
+        radial-gradient(720px 420px at 92% 4%, rgba(255, 60, 0, .08), transparent 62%),
+        linear-gradient(180deg, #fffaf7 0%, var(--color-bg-body, #f8f9fa) 46%);
+    padding: 32px 0 90px;
+}
+
+.ck-wrap {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* ---- Progression ---- */
+.ck-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    list-style: none;
+    margin: 0 0 28px;
+    padding: 0;
+}
+
+.ck-steps li {
+    flex: 1 1 220px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 16px;
+    background: #fff;
+    border: 1px solid var(--color-divider, #e9ecef);
+    border-radius: 14px;
+}
+
+.ck-step-dot {
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f3f5;
+    color: #9aa0a6;
+    font-size: 12.5px;
+    font-weight: 700;
+}
+
+.ck-steps li.is-done { border-color: #b7e4c7; }
+.ck-steps li.is-done .ck-step-dot { background: #2f9e5f; color: #fff; }
+
+.ck-steps li.is-current { border-color: rgba(255, 60, 0, .45); box-shadow: 0 0 0 3px rgba(255, 60, 0, .08); }
+.ck-steps li.is-current .ck-step-dot { background: var(--color-primary, #ff3c00); color: #fff; }
+
+.ck-step-text strong { display: block; font-size: 13.5px; font-weight: 700; line-height: 1.3; }
+.ck-step-text small { font-size: 11.5px; color: #8a9099; }
+
+/* ---- En-tête ---- */
+.ck-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    margin-bottom: 26px;
+}
+
+.ck-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(26, 157, 92, .12);
+    color: #14794a;
+    font-size: .73rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    margin-bottom: 14px;
+}
+
+.ck-title {
+    font-size: clamp(1.6rem, 3vw, 2.3rem);
+    font-weight: 800;
+    letter-spacing: -.02em;
+    line-height: 1.16;
+    margin: 0 0 12px;
+}
+
+.ck-title em { font-style: normal; color: var(--color-primary, #ff3c00); }
+
+.ck-lead {
+    font-size: .98rem;
+    line-height: 1.7;
+    color: var(--color-grey-dark, #555);
+    margin: 0;
+    max-width: 560px;
+}
+
+.ck-illu { flex: 0 0 300px; }
+.ck-illu svg { width: 100%; height: auto; }
+
+.ck-float   { animation: ck-float 5.2s ease-in-out infinite; transform-box: view-box; transform-origin: center; }
+.ck-float-2 { animation: ck-float 6.4s ease-in-out infinite .6s; transform-box: view-box; transform-origin: center; }
+.ck-twinkle { animation: ck-twinkle 3.2s ease-in-out infinite; }
+
+@keyframes ck-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-9px); }
+}
+
+@keyframes ck-twinkle {
+    0%, 100% { opacity: .25; }
+    50%      { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ck-float, .ck-float-2, .ck-twinkle { animation: none; }
+}
+
+/* ---- Grille ---- */
+.ck-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.ck-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+.ck-card {
+    background: #fff;
+    border: 1px solid var(--color-divider, #e9ecef);
+    border-radius: 18px;
+    padding: 22px;
+}
+
+.ck-card-title {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 18px;
+}
+
+.ck-card-title span {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border-radius: 9px;
+    background: rgba(255, 60, 0, .1);
+    color: var(--color-primary, #ff3c00);
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ---- Champs ---- */
+.ck-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.ck-field--full { grid-column: 1 / -1; }
+
+.ck-label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-grey-dark, #555);
+    margin-bottom: 7px;
+}
+
+.ck-required { color: var(--color-primary, #ff3c00); }
+
+.ck-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--color-divider, #e9ecef);
+    border-radius: 11px;
+    font-size: 13.5px;
+    background: #fff;
+    color: var(--color-black, #111);
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.ck-input:focus {
+    outline: none;
+    border-color: var(--color-primary, #ff3c00);
+    box-shadow: 0 0 0 3px rgba(255, 60, 0, .12);
+}
+
+.ck-input[readonly] { background: var(--color-grey-light, #f6f7f9); color: #6b7280; }
+
+.ck-hint { display: block; margin-top: 6px; font-size: 11.5px; color: #8a9099; }
+
+/* intl-tel-input occupe toute la largeur du champ */
+.iti { width: 100%; }
+
+/* ---- Interrupteur livraison ---- */
+.ck-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--color-divider, #e9ecef);
+    border-radius: 14px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.ck-switch-text strong { display: block; font-size: 13.5px; font-weight: 700; }
+.ck-switch-text small { font-size: 11.5px; color: #8a9099; }
+
+.ck-switch-box input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.ck-switch-track {
+    display: block;
+    width: 46px;
+    height: 26px;
+    border-radius: 999px;
+    background: #dfe3e8;
+    position: relative;
+    transition: background .2s ease;
+}
+
+.ck-switch-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, .2);
+    transition: transform .2s ease;
+}
+
+.ck-switch-box input:checked + .ck-switch-track { background: var(--color-primary, #ff3c00); }
+.ck-switch-box input:checked + .ck-switch-track .ck-switch-knob { transform: translateX(20px); }
+
+/* ---- Suggestions d'adresse ---- */
+.ck-suggestions {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    border: 1px solid var(--color-divider, #e9ecef);
+    border-radius: 11px;
+    overflow: hidden;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.ck-suggestions:empty { display: none; }
+
+.ck-suggestions li {
+    padding: 10px 13px;
+    font-size: 12.5px;
+    color: var(--color-grey-dark, #555);
+    cursor: pointer;
+    border-bottom: 1px solid #f1f3f5;
+    transition: background .15s ease;
+}
+
+.ck-suggestions li:last-child { border-bottom: 0; }
+.ck-suggestions li:hover { background: var(--color-grey-light, #f6f7f9); color: #111; }
+
+.ck-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 12px 15px;
+    border-radius: 12px;
+    background: #eef3fd;
+    border: 1px solid #d3e0fa;
+    color: #2c4e9c;
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+/* ---- Stripe ---- */
+.ck-card-element {
+    padding: 14px;
+    border: 1px solid var(--color-divider, #e9ecef);
+    border-radius: 11px;
+    background: #fff;
+}
+
+.ck-card-element.StripeElement--focus {
+    border-color: var(--color-primary, #ff3c00);
+    box-shadow: 0 0 0 3px rgba(255, 60, 0, .12);
+}
+
+.ck-error {
+    margin-top: 8px;
+    font-size: 12.5px;
+    color: #b42318;
+    min-height: 16px;
+}
+
+.ck-trust {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 0;
+    padding: 0;
+}
+
+.ck-trust li {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--color-grey-light, #f6f7f9);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-grey-dark, #555);
+}
+
+.ck-trust i { color: #1a9d5c; font-size: 11px; }
+
+/* ---- Récapitulatif ---- */
+.ck-aside { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 14px; }
+
+.ck-recap {
+    background: #fff;
+    border: 1px solid var(--color-divider, #e9ecef);
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: 0 12px 32px rgba(17, 17, 17, .06);
+}
+
+.ck-recap-ad {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--color-divider, #e9ecef);
+    margin-bottom: 14px;
+}
+
+.ck-recap-ad img {
+    width: 66px;
+    height: 52px;
+    flex: 0 0 66px;
+    border-radius: 11px;
+    object-fit: cover;
+    background: #eef0f3;
+}
+
+.ck-recap-ad-info { min-width: 0; }
+
+.ck-recap-ad-info strong {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.ck-recap-ad-info small {
+    display: block;
+    font-size: 11px;
+    color: #8a9099;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ck-recap-dates {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--color-grey-light, #f6f7f9);
+    margin-bottom: 16px;
+}
+
+.ck-recap-dates small { display: block; font-size: 10.5px; color: #8a9099; text-transform: uppercase; letter-spacing: .05em; }
+.ck-recap-dates strong { font-size: 13px; font-weight: 700; }
+.ck-recap-dates i { color: var(--color-primary, #ff3c00); font-size: 11px; }
+
+.ck-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 0;
+    font-size: 13px;
+    color: var(--color-grey-dark, #555);
+}
+
+.ck-line--total {
+    margin-top: 6px;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-divider, #e9ecef);
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--color-black, #111);
+}
+
+.ck-line--total span:last-child { font-size: 21px; }
+
+.ck-submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    margin-top: 16px;
+    padding: 15px 20px;
+    border: 0;
+    border-radius: 13px;
+    background: var(--color-primary, #ff3c00);
+    color: #fff;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s ease, transform .15s ease, box-shadow .2s ease;
+    box-shadow: 0 10px 24px rgba(255, 60, 0, .24);
+}
+
+.ck-submit:hover {
+    background: var(--color-primary-dark, #e13800);
+    transform: translateY(-1px);
+    box-shadow: 0 14px 30px rgba(255, 60, 0, .3);
+}
+
+.ck-submit:disabled { background: #e9ecef; color: #9aa0a6; box-shadow: none; cursor: not-allowed; transform: none; }
+
+.ck-recap-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin: 14px 0 0;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: #8a9099;
+}
+
+.ck-recap-note i { color: var(--color-primary, #ff3c00); margin-top: 2px; }
+
+.ck-mini {
+    display: flex;
+    gap: 10px;
+}
+
+.ck-mini span {
+    flex: 1;
+    background: #fff;
+    border: 1px solid var(--color-divider, #e9ecef);
+    border-radius: 13px;
+    padding: 12px 14px;
+}
+
+.ck-mini small { display: block; font-size: 10.5px; color: #8a9099; text-transform: uppercase; letter-spacing: .05em; }
+.ck-mini strong { font-size: 15px; font-weight: 800; }
+
+/* ---- Trajet (offre de livraison) ---- */
+.ck-route {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.ck-route-stop {
+    position: relative;
+    padding-left: 42px;
+}
+
+/* Pastille alignee sur le champ (label ~22px + moitie du champ ~21px) */
+.ck-route-pin {
+    position: absolute;
+    left: 0;
+    top: 29px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    background: rgba(255, 60, 0, .1);
+    color: var(--color-primary, #ff3c00);
+}
+
+.ck-route-stop.is-end .ck-route-pin {
+    background: #1c2026;
+    color: #fff;
+}
+
+/* Fil pointille du depart vers l'arrivee : il descend jusqu'a la pastille
+   suivante (ecart entre les etapes + decalage de la pastille). */
+.ck-route-stop:not(.is-end)::after {
+    content: "";
+    position: absolute;
+    left: 13px;
+    top: 61px;
+    bottom: -43px;
+    border-left: 2px dashed var(--color-divider, #dfe3e8);
+}
+
+.ck-route-stop .ck-suggestions {
+    position: relative;
+    z-index: 2;
+    background: #fff;
+}
+
+.ck-note[hidden] { display: none; }
+
+.ck-note strong { font-weight: 700; }
+
+/* Recapitulatif du trajet dans la colonne de droite */
+.ck-recap-route {
+    list-style: none;
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--color-grey-light, #f6f7f9);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ck-recap-route li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+}
+
+.ck-recap-route li > i {
+    flex: 0 0 12px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--color-primary, #ff3c00);
+}
+
+.ck-recap-route li > span { min-width: 0; }
+
+.ck-recap-route small {
+    display: block;
+    font-size: 10.5px;
+    color: #8a9099;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.ck-recap-route strong {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.ck-recap-route li.is-empty strong {
+    color: #9aa0a6;
+    font-weight: 500;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 991.98px) {
+    .ck-grid { grid-template-columns: 1fr; }
+    .ck-aside { position: static; }
+    .ck-head { flex-direction: column-reverse; align-items: flex-start; gap: 16px; }
+    .ck-illu { flex: none; width: 220px; align-self: center; }
+}
+
+@media (max-width: 575.98px) {
+    .ck { padding: 22px 0 64px; }
+    .ck-fields { grid-template-columns: 1fr; }
+    .ck-card, .ck-recap { padding: 17px; }
+    .ck-steps li { flex: 1 1 100%; }
+}

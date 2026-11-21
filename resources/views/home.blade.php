@@ -266,11 +266,11 @@
                             @endif
 
                             <div class="card-footer">
-                                {{-- Une annonce de vente affiche un prix ferme, sans « / jour » --}}
+                                {{-- Unite selon l'offre : « / jour », « / km » (livraison), rien pour une vente --}}
                                 <span class="card-price-block">
                                     <span class="card-price-label">{{ \Illuminate\Support\Str::lower($ad->priceLabel()) }}</span>
                                     <span class="card-price">
-                                        {{ number_format($ad->price_per_day, 2) }} €<small>@if($ad->category->slug == 'livraison') / KM @else ($ad->priceSuffix()){{ $ad->priceSuffix() }}@endif</small>
+                                        {{ number_format($ad->price_per_day, 2) }} €@if($ad->priceSuffix())<small>{{ $ad->priceSuffix() }}</small>@endif
                                     </span>
                                 </span>
 
